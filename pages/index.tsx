@@ -13,13 +13,13 @@ function parseAnalysis(text: string) {
   const sections: { type: 'correct' | 'missing' | 'incorrect' | 'note' | 'text'; content: string }[] = [];
   const lines = text.split('\n');
   for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    if (trimmed.startsWith('✅')) sections.push({ type: 'correct', content: trimmed.replace('✅', '').trim() });
-    else if (trimmed.startsWith('⚠️')) sections.push({ type: 'missing', content: trimmed.replace('⚠️', '').trim() });
-    else if (trimmed.startsWith('❌')) sections.push({ type: 'incorrect', content: trimmed.replace('❌', '').trim() });
-    else if (trimmed.startsWith('📝')) sections.push({ type: 'note', content: trimmed.replace('📝', '').trim() });
-    else sections.push({ type: 'text', content: trimmed });
+    const t = line.trim();
+    if (!t) continue;
+    if (t.startsWith('\u2705')) sections.push({ type: 'correct', content: t.replace('\u2705', '').trim() });
+    else if (t.startsWith('\u26A0')) sections.push({ type: 'missing', content: t.replace('\u26A0\uFE0F', '').trim() });
+    else if (t.startsWith('\u274C')) sections.push({ type: 'incorrect', content: t.replace('\u274C', '').trim() });
+    else if (t.startsWith('\uD83D\uDCDD')) sections.push({ type: 'note', content: t.replace('\uD83D\uDCDD', '').trim() });
+    else sections.push({ type: 'text', content: t });
   }
   return sections;
 }
@@ -27,28 +27,37 @@ function parseAnalysis(text: string) {
 export default function Home() {
   const [dark, setDark] = useState(true);
   const [mode, setMode] = useState<Mode>('estimate');
-  useEffect(() => {
-    const saved = localStorage.getItem('hail-theme');
-    if (saved !== null) setDark(saved === 'dark');
-  }, []);
-  const toggleTheme = () => {
-    setDark(prev => { localStorage.setItem('hail-theme', !prev ? 'dark' : 'light'); return !prev; });
-  };
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<Status>('idle');
   const [result, setResult] = useState<AnalysisResult | null>(null);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState('');
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('hail-theme');
+    if (saved) setDark(saved === 'dark');
+  }, []);
+
+  const toggleTheme = () => {
+    setDark(prev => {
+      localStorage.setItem('hail-theme', !prev ? 'dark' : 'light');
+      return !prev;
+    });
+  };
+
   const handleFile = (f: File) => {
     const allowed = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
     if (!allowed.includes(f.type)) { setError('Please upload a PDF or image (JPG, PNG).'); return; }
     setFile(f); setResult(null); setError('');
   };
+
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault(); setDragOver(false);
-    const f = e.dataTransfer.files[0]; if (f) handleFile(f);
+    const f = e.dataTransfer.files[0];
+    if (f) handleFile(f);
   }, []);
+
   const handleAnalyze = async () => {
     if (!file) return;
     setStatus('loading'); setError(''); setResult(null);
@@ -58,7 +67,8 @@ export default function Home() {
         const base64 = (e.target?.result as string).split(',')[1];
         const fileType = file.type === 'application/pdf' ? 'pdf' : 'image';
         const res = await fetch('/api/analyze', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ fileData: base64, fileType, fileName: file.name, mode }),
         });
         const data = await res.json();
@@ -71,7 +81,9 @@ export default function Home() {
       setStatus('error');
     }
   };
+
   const parsed = result ? parseAnalysis(result.analysis) : [];
+
   return (
     <>
       <Head>
@@ -79,39 +91,140 @@ export default function Home() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet" />
       </Head>
-      <div className={`app ${dark ? 'dark' : 'light'}`}>
+      <div className={dark ? 'app dark' : 'app light'}>
         <header>
           <div className="header-inner">
-            <div className="logo"><span className="logo-icon">⬡</span><div><div className="logo-title">HAIL ESTIMATOR PRO</div><div className="logo-sub">PDR · USAA Matrix 2025</div></div></div>
+            <div className="logo">
+              <span className="logo-icon">H</span>
+              <div>
+                <div className="logo-title">HAIL ESTIMATOR PRO</div>
+                <div className="logo-sub">PDR - USAA Matrix 2025</div>
+              </div>
+            </div>
             <div className="header-right">
-              <button className="theme-toggle" onClick={toggleTheme}>{dark ? '☀️' : '🌙'}</button>
+              <button className="theme-toggle" onClick={toggleTheme}>{dark ? 'Light' : 'Dark'}</button>
               <div className="header-badge">BETA</div>
             </div>
           </div>
         </header>
         <main>
           <div className="mode-toggle">
-            <button className={`mode-btn ${mode === 'estimate' ? 'active' : ''}`} onClick={() => setMode('estimate')}><span className="mode-icon">📋</span><div><div className="mode-label">Scope / Estimate</div><div className="mode-desc">Audit CCCONE estimate</div></div></button>
-            <button className={`mode-btn ${mode === 'invoice' ? 'active' : ''}`} onClick={() => setMode('invoice')}><span className="mode-icon">🧾</span><div><div className="mode-label">Invoice / Parts</div><div className="mode-desc">Extract line items</div></div></button>
+            <button className={'mode-btn' + (mode === 'estimate' ? ' active' : '')} onClick={() => setMode('estimate')}>
+              <div><div className="mode-label">Scope / Estimate</div><div className="mode-desc">Audit CCC ONE estimate</div></div>
+            </button>
+            <button className={'mode-btn' + (mode === 'invoice' ? ' active' : '')} onClick={() => setMode('invoice')}>
+              <div><div className="mode-label">Invoice / Parts</div><div className="mode-desc">Extract line items</div></div>
+            </button>
           </div>
-          <div className={`upload-zone ${dragOver ? 'drag-over' : ''} ${file ? 'has-file' : ''}`} onClick={() => fileInputRef.current?.click()} onDrop={handleDrop} onDragOver={(e) => { e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)}>
+          <div
+            className={'upload-zone' + (dragOver ? ' drag-over' : '') + (file ? ' has-file' : '')}
+            onClick={() => fileInputRef.current?.click()}
+            onDrop={handleDrop}
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+          >
             <input ref={fileInputRef} type="file" accept=".pdf,image/jpeg,image/png" style={{ display: 'none' }} onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
-            {file ? (<div className="file-selected"><div className="file-icon">{file.type === 'application/pdf' ? '📄' : '🖎️'}</div><div className="file-name">{file.name}</div><div className="file-size">{(file.size / 1024).toFixed(1)} KB</div><div className="file-change">Click to change</div></div>) : (<div className="upload-prompt"><div className="upload-icon">↑</div><div className="upload-title">Drop file here or click to upload</div><div className="upload-sub">PDF · JPG · PNG</div></div>)}
+            {file ? (
+              <div className="file-selected">
+                <div className="file-name">{file.name}</div>
+                <div className="file-size">{(file.size / 1024).toFixed(1)} KB</div>
+                <div className="file-change">Click to change</div>
+              </div>
+            ) : (
+              <div className="upload-prompt">
+                <div className="upload-title">Drop file here or click to upload</div>
+                <div className="upload-sub">PDF - JPG - PNG</div>
+              </div>
+            )}
           </div>
-          <button className={`analyze-btn ${status === 'loading' ? 'loading' : ''}`} onClick={handleAnalyze} disabled={!file || status === 'loading'}>
-            {status === 'loading' ? (<><span className="spinner" />Analyzing...</>) : (<><span>⚡</span>{mode === 'estimate' ? 'Audit Estimate' : 'Extract Invoice Items'}</>)}
+          <button className={'analyze-btn' + (status === 'loading' ? ' loading' : '')} onClick={handleAnalyze} disabled={!file || status === 'loading'}>
+            {status === 'loading' ? 'Analyzing...' : (mode === 'estimate' ? 'Audit Estimate' : 'Extract Invoice Items')}
           </button>
-          {error && (<div className="error-box"><span>⚠️</span> {error}</div>)}
+          {error && <div className="error-box">{error}</div>}
           {status === 'done' && result && (
             <div className="results">
-              <div className="results-header"><div className="results-title">Analysis Complete</div>{result.usage && <div className="results-usage">{result.usage.input_tokens + result.usage.output_tokens} tokens used</div>}</div>
-              <div className="results-body">{parsed.map((item, i) => (<div key={i} className={`result-item result-${item.type}`}>{item.type === 'correct' && <span className="result-icon">✅</span>}{item.type === 'missing' && <span className="result-icon">⚠️</span>}{item.type === 'incorrect' && <span className="result-icon">❌</span>}{item.type === 'note' && <span className="result-icon">📝</span>}<span className="result-content">{item.content}</span></div>))}</div>
+              <div className="results-header">
+                <div className="results-title">Analysis Complete</div>
+                {result.usage && <div className="results-usage">{result.usage.input_tokens + result.usage.output_tokens} tokens</div>}
+              </div>
+              <div className="results-body">
+                {parsed.map((item, i) => (
+                  <div key={i} className={'result-item result-' + item.type}>
+                    <span className="result-content">{item.content}</span>
+                  </div>
+                ))}
+              </div>
               <button className="copy-btn" onClick={() => navigator.clipboard.writeText(result.analysis)}>Copy Full Analysis</button>
             </div>
           )}
-          <div className="rules-card"><div className="rules-title">Active Rules</div><div className="rules-list"><div className="rule-item"><span className="rule-dot" />Roof replacement → R&amp;I Windshield + Urethane Kit ($30)</div><div className="rule-item"><span className="rule-dot" />O/S Dent = $50 each (manual only) </div><div className="rule-item"><span className="rule-dot" />Aluminum +25% only when explicitly marked (ALU)</div><div className="rule-item"><span className="rule-dot" />Roof Rail: rock pillar, drip rail, cant rail</div><div className="rule-item"><span className="rule-dot" />+25% Roof for SUV/Van/Truck/Wagon</div><div className="rule-item"><span className="rule-dot" />USAA {Matrix 2025 | panel × dents × size</div></div></div>
+          <div className="rules-card">
+            <div className="rules-title">Active Rules</div>
+            <div className="rules-list">
+              <div className="rule-item"><span className="rule-dot" />Roof replacement - R&amp;I Windshield + Urethane Kit ($30)</div>
+              <div className="rule-item"><span className="rule-dot" />O/S Dent = $50 each (manual entries only)</div>
+              <div className="rule-item"><span className="rule-dot" />Aluminum +25% only when explicitly marked (ALU)</div>
+              <div className="rule-item"><span className="rule-dot" />Roof Rail ID: rock pillar, drip rail, cant rail</div>
+              <div className="rule-item"><span className="rule-dot" />+25% Roof for SUV/Van/Truck/Wagon</div>
+              <div className="rule-item"><span className="rule-dot" />USAA Matrix 2025 - full panel x dent count x size</div>
+            </div>
+          </div>
         </main>
-        <style jsx global>{`*{ box-sizing:border-box;margin:0;padding:0 }body{font-family:'Sora',sans-serif;min-height:100vh}.app.dark{--bg:#0a0b0f;--surface:#0d0e14;--surface2:#11121a;--border:#1e2028;--border2:#2e3040;--text:#e8e6e0;--text2:#6a6d7c;--text3:#4a4d5c;--accent:#e8a020;--accent-hover:#f0b030;--accent-bg:#161408;--correct-bg:#0a1a0d;--correct-border:#1a3d20;--missing-bg:#1a1500;--missing-border:#3d3000;--incorrect-bg:#1a0d0d;--incorrect-border:#3d1515;--note-bg:#0d1020;--note-border:#1e2540;--error-bg:#1a0d0d;--error-border:#3d1515;--error-text:#e06060;--spinner-border:rgba(0,0,0,.2);--btn-text:#0a0b0f}.app.light{--bg:#f5f4f0;--surface:#fff;--surface2:#f0eeea;--border:#ddd9d0;--border2:#c4bfb5;--text:#1a1810;--text2:#6a6458;--text3:#9a9488;--accent:#c47a10;--accent-hover:#d98a18;--accent-bg:#fdf5e6;--correct-bg:#eef7f0;--correct-border:#b8dfc0;--missing-bg:#fdf8e6;--missing-border:#e0cc80;--incorrect-bg:#fdf0f0;--incorrect-border:#e0b0b0;--note-bg:#eef2fd;--note-border:#b8c8e8;--error-bg:#fdf0f0;--error-border:#e0b0b0;--error-text:#c04040;--spinner-border:rgba(0,0,0,.15);--btn-text:#fff}.app{min-height:100vh;background:var(--bg);color:var(--text);transition:background .2s ease,color .2s ease}header{border-bottom:1px solid var(--border);background:var(--surface)}.header-inner{max-width:720px;margin:0 auto;padding:20px 24px;display:flex;align-items:center;justify-content:space-between}.logo{display:flex;align-items:center;gap:14px}.logo-icon{font-size:28px;color:var(--accent);line-height:1}.logo-title{font-family:'DM Mono',monospace;font-size:13px;font-weight:500;letter-spacing:.12em;color:var(--text)}.logo-sub{font-family:'DM Mono',onospace;font-size:10px;color:var(--text3);letter-spacing:.08em;margin-top:2px}.header-right{display:flex;align-items:center;gap:10px}.theme-toggle{background:none;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:16px;cursor:pointer;transition:border-color .15s ease;line-height:1}.theme-toggle:hover{border-color:var(--border2)}.header-badge{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.15em;background:var(--accent);color:var(--btn-text);padding:3px 8px;border-radius:3px;font-weight:500}main{max-width:720px;margin:0 auto;padding:40px 24px 80px;display:flex;flex-direction:column;gap:20px}.mode-toggle{display:grid;grid-template-columns:1fr 1fr;gap:12px}.mode-btn{display:flex;align-items:center;gap:14px;padding:18px 20px;background:var(--surface);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s ease;text-align:left;color:var(--text)}.mode-btn:hover{border-color:var(--border2);background:var(--surface2)}.mode-btn.active{border-color:var(--accent);background:var(--accent-bg)}.mode-icon{font-size:24px;flex-shrink:0}.mode-label{font-size:13px;font-weight:600;color:var(--text)}.mode-desc{font-size:11px;color:var(--text3);margin-top:2px}.upload-zone{border:1.5px dashed var(--border);border-radius:12px;padding:48px 24px;text-align:center;cursor:pointer;transition:all .15s ease;background:var(--surface)}.upload-zone:hover,.upload-zone.drag-over{border-color:var(--accent);background:var(--accent-bg)}.upload-zone.has-file{border-style:solid;border-color:var(--border2);padding:28px 24px}.upload-icon{align-items:center;font-size:36px;color:var(--border2);margin-bottom:12px}.upload-title{font-size:14px;color:var(--text2);margin-bottom:6px}.upload-sub{font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);letter-spacing:.1em}.file-selected{display:flex;flex-direction:column;align-items:center;gap:6px}.file-icon{font-size:32px}.file-name{font-size:14px;font-weight:600;color:var(--text)}.file-size{font-family:'DM Mono',monospace;font-size:11px;color:var(--text3)}.file-changepfont-size:11px;color:var(--accent);margin-top:4px}.analyze-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:16px;background:var(--accent);color:#0a0b0f;border:none;border-radius:10px;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;letter-spacing:.03em;cursor:pointer;transition:all .15s ease}.analyze-btn:hover:not(:disabled){background:var(--accent-hover);transform:translateY(-1px)}.analyze-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}.analyze-btn.loading{opacity:.8}.spinner{width:16px;height:16px;border:2px solid var(--spinner-border);border-top-color:#0a0b0f;border-radius:50%;animation:spin .7s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}.error-box{background:var(--error-bg);border:1px solid var(--error-border);border-radius:8px;padding:14px 16px;font-size:13px;color:var(--error-text);display:flex;align-items:center;gap:10px}.results{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}.results-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);background:var(--surface2)}.results-title{font-size:13px;font-weight:700;letter-spacing:.05em;color:var(--accent)}.results-usage{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)}.results-body{padding:20px;display:flex;flex-direction:column;gap:10px}.result-item{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:8px;font-size:13px;line-height:1.5}.result-correct{background:var(--correct-bg);border:1px solid var(--correct-border)}.result-missing{background:var(--missing-bg);border:1px solid var(--missing-border)}.result-incorrect{background:var(--incorrect-bg);border:1px solid var(--incorrect-border)}.result-note{background:var(--note-bg);border:1px solid var(--note-border)}.result-text{background:transparent;border:none;padding:4px 0;color:var(--text2);font-size:12px}.result-icon{-shrink:0;font-size:16px;margin-top:1px}.result-content{color:var(--text)}.copy-btn{display:block;width:calc(100% - 40px);margin:0 20px 20px;padding:12px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--text2);font-family:'Sora',sans-serif;font-size:12px;cursor:pointer;transition:all .15s ease}.copy-btn:hover{border-color:var(--border2);color:var(--text)}.rules-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px}.rules-title{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.15em;color:var(--text3);margin-bottom:14px;text-transform:uppercase}.rules-list{display:flex;flex-direction:column;gap:10px}.rule-item{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text2)}.rule-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);flex-shrink:0}`}</style>
+        <style jsx global>{`
+          *{box-sizing:border-box;margin:0;padding:0}
+          body{font-family:'Sora',sans-serif;min-height:100vh}
+          .app.dark{--bg:#0a0b0f;--surface:#0d0e14;--surface2:#11121a;--border:#1e2028;--border2:#2e3040;--text:#e8e6e0;--text2:#6a6d7c;--text3:#4a4d5c;--accent:#e8a020;--accent-hover:#f0b030;--accent-bg:#161408;--correct-bg:#0a1a0d;--correct-border:#1a3d20;--missing-bg:#1a1500;--missing-border:#3d3000;--incorrect-bg:#1a0d0d;--incorrect-border:#3d1515;--note-bg:#0d1020;--note-border:#1e2540;--error-bg:#1a0d0d;--error-border:#3d1515;--error-text:#e06060}
+          .app.light{--bg:#f5f4f0;--surface:#fff;--surface2:#f0eeea;--border:#ddd9d0;--border2:#c4bfb5;--text:#1a1810;--text2:#6a6458;--text3:#9a9488;--accent:#c47a10;--accent-hover:#d98a18;--accent-bg:#fdf5e6;--correct-bg:#eef7f0;--correct-border:#b8dfc0;--missing-bg:#fdf8e6;--missing-border:#e0cc80;--incorrect-bg:#fdf0f0;--incorrect-border:#e0b0b0;--note-bg:#eef2fd;--note-border:#b8c8e8;--error-bg:#fdf0f0;--error-border:#e0b0b0;--error-text:#c04040}
+          .app{min-height:100vh;background:var(--bg);color:var(--text);transition:background .2s,color .2s}
+          header{border-bottom:1px solid var(--border);background:var(--surface)}
+          .header-inner{max-width:720px;margin:0 auto;padding:20px 24px;display:flex;align-items:center;justify-content:space-between}
+          .logo{display:flex;align-items:center;gap:14px}
+          .logo-icon{font-size:28px;color:var(--accent);font-weight:700}
+          .logo-title{font-family:'DM Mono',monospace;font-size:13px;font-weight:500;letter-spacing:.12em;color:var(--text)}
+          .logo-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);letter-spacing:.08em;margin-top:2px}
+          .header-right{display:flex;align-items:center;gap:10px}
+          .theme-toggle{background:none;border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;color:var(--text2);transition:border-color .15s}
+          .theme-toggle:hover{border-color:var(--border2)}
+          .header-badge{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.15em;background:var(--accent);color:#0a0b0f;padding:3px 8px;border-radius:3px;font-weight:500}
+          main{max-width:720px;margin:0 auto;padding:40px 24px 80px;display:flex;flex-direction:column;gap:20px}
+          .mode-toggle{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+          .mode-btn{display:flex;align-items:center;gap:14px;padding:18px 20px;background:var(--surface);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s;text-align:left;color:var(--text)}
+          .mode-btn:hover{border-color:var(--border2);background:var(--surface2)}
+          .mode-btn.active{border-color:var(--accent);background:var(--accent-bg)}
+          .mode-label{font-size:13px;font-weight:600;color:var(--text)}
+          .mode-desc{font-size:11px;color:var(--text3);margin-top:2px}
+          .upload-zone{border:1.5px dashed var(--border);border-radius:12px;padding:48px 24px;text-align:center;cursor:pointer;transition:all .15s;background:var(--surface)}
+          .upload-zone:hover,.upload-zone.drag-over{border-color:var(--accent);background:var(--accent-bg)}
+          .upload-zone.has-file{border-style:solid;border-color:var(--border2);padding:28px 24px}
+          .upload-title{font-size:14px;color:var(--text2);margin-bottom:6px}
+          .upload-sub{font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);letter-spacing:.1em}
+          .file-selected{display:flex;flex-direction:column;align-items:center;gap:6px}
+          .file-name{font-size:14px;font-weight:600;color:var(--text)}
+          .file-size{font-family:'DM Mono',monospace;font-size:11px;color:var(--text3)}
+          .file-change{font-size:11px;color:var(--accent);margin-top:4px}
+          .analyze-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:16px;background:var(--accent);color:#0a0b0f;border:none;border-radius:10px;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .15s}
+          .analyze-btn:hover:not(:disabled){background:var(--accent-hover);transform:translateY(-1px)}
+          .analyze-btn:disabled{opacity:.4;cursor:not-allowed}
+          .error-box{background:var(--error-bg);border:1px solid var(--error-border);border-radius:8px;padding:14px 16px;font-size:13px;color:var(--error-text)}
+          .results{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+          .results-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);background:var(--surface2)}
+          .results-title{font-size:13px;font-weight:700;letter-spacing:.05em;color:var(--accent)}
+          .results-usage{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)}
+          .results-body{padding:20px;display:flex;flex-direction:column;gap:10px}
+          .result-item{padding:12px 14px;border-radius:8px;font-size:13px;line-height:1.5}
+          .result-correct{background:var(--correct-bg);border:1px solid var(--correct-border)}
+          .result-missing{background:var(--missing-bg);border:1px solid var(--missing-border)}
+          .result-incorrect{background:var(--incorrect-bg);border:1px solid var(--incorrect-border)}
+          .result-note{background:var(--note-bg);border:1px solid var(--note-border)}
+          .result-text{background:transparent;border:none;color:var(--text2);font-size:12px}
+          .result-content{color:var(--text)}
+          .copy-btn{display:block;width:calc(100% - 40px);margin:0 20px 20px;padding:12px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--text2);font-family:'Sora',sans-serif;font-size:12px;cursor:pointer;transition:all .15s}
+          .copy-btn:hover{border-color:var(--border2);color:var(--text)}
+          .rules-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px}
+          .rules-title{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.15em;color:var(--text3);margin-bottom:14px;text-transform:uppercase}
+          .rules-list{display:flex;flex-direction:column;gap:10px}
+          .rule-item{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text2)}
+          .rule-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);flex-shrink:0}
+        `}</style>
       </div>
     </>
   );
