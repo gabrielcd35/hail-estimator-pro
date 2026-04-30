@@ -3,6 +3,7 @@ import { BUSINESS_RULES_PROMPT } from '../../lib/rules';
 
 export const config = {
   api: { bodyParser: { sizeLimit: '10mb' } },
+  maxDuration: 60,
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -24,11 +25,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       messages: [{
         role: 'user',
         content: [
-          {
-            type: 'document',
-            source: { type: 'base64', media_type: mediaType, data: fileData },
-          },
-          { type: 'text', text: `${modeLabel}\n\nFile: ${fileName}` },
+          { type: 'document', source: { type: 'base64', media_type: mediaType, data: fileData } },
+          { type: 'text', text: modeLabel + '\n\nFile: ' + fileName },
         ],
       }],
     };
