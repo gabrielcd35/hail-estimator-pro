@@ -6,15 +6,16 @@ export const config = {
 };
 
 // CCC ONE standard estimate layout (US Letter: 612 x 792 pts, y=0 at bottom-left)
-// Header block at top of page 1 (shop name, address, phone, email)
-const HEADER_HEIGHT_PT = 112;
+// Header block at top of page 1 — 160pt covers shops that have large logos in their CCC header
+const HEADER_HEIGHT_PT = 160;
 
 // Inspection Location content area (middle column, below the label)
-// Covers approximately 33%–54% from top, middle third of page
-const INSP_X = 188;
-const INSP_Y_FROM_BOTTOM = 360;
-const INSP_W = 200;
-const INSP_H = 168;
+// y=395, height=140 → covers y=395–535 from bottom (32%–50% from top)
+// Stops before the Vehicle VIN table (~55% from top) to avoid cutting that area
+const INSP_X = 190;
+const INSP_Y_FROM_BOTTOM = 395;
+const INSP_W = 195;
+const INSP_H = 140;
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -46,12 +47,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { width: lw, height: lh } = logoImage.size();
     const hasBusinessText = businessName || businessAddress || businessPhone;
 
-    // Max space for logo — shrink if we also need to show text lines below
-    const maxLogoW = 320 * sx;
-    const maxLogoH = (hasBusinessText ? 55 : 88) * sy;
+    // Max space for logo — more room when there's no business text below
+    const maxLogoW = 420 * sx;
+    const maxLogoH = (hasBusinessText ? 85 : 130) * sy;
 
-    // Scale proportionally, never upscale
-    const logoScale = Math.min(maxLogoW / lw, maxLogoH / lh, 1);
+    // Scale proportionally — allow upscaling so small logos fill the available space
+    const logoScale = Math.min(maxLogoW / lw, maxLogoH / lh);
     const scaledW = lw * logoScale;
     const scaledH = lh * logoScale;
 
