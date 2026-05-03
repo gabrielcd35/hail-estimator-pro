@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { PDFDocument, rgb, StandardFonts, PDFName, PDFArray } from 'pdf-lib';
 
 export const config = {
   api: { bodyParser: { sizeLimit: '15mb' } },
@@ -91,6 +91,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       height: INSP_H * sy,
       color: rgb(1, 1, 1),
     });
+
+    // CRITICAL: pdf-lib prepends new drawing commands to the page content stream,
+    // which causes the original PDF content to render ON TOP of our white rectangles.
+    // Fix: move our stream from position 0 to the END so it renders last (on top).
+    const contentsEntry = page.node.get(PDFName.of('Contents'));
+    if (contentsEntry instanceof PDFArray && contentsEntry.size() > 1) {
+      const refs = [];
+      for (let i = 0; i < contentsEntry.size(); i++) refs.push(contentsEntry.get(i));
+      const [ourRef, ...existingRefs] = refs;
+      page.node.set(PDFName.of('Contents'), pdfDoc.context.obj([...existingRefs, ourRef]));
+    }
 
     const modified = await pdfDoc.save();
     return res.status(200).json({ pdfBase64: Buffer.from(modified).toString('base64') });
