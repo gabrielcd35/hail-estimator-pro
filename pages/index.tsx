@@ -103,7 +103,7 @@ export default function Home() {
     try {
       // Load pdfjs — dynamically imported so it only runs in the browser
       const pdfjsLib = await import('pdfjs-dist');
-      pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
       // Render page 1 to canvas (pdfjs is the reference renderer — always correct)
       const pdfBytes = new Uint8Array(await file.arrayBuffer());
