@@ -101,15 +101,98 @@ export default function Home() {
     if (!file || !logoFile) return;
     setStatus('loading'); setError(''); setHeaderPdf(null);
     try {
-      const [pdfBase64, logoBase64] = await Promise.all([readFileBase64(file), readFileBase64(logoFile)]);
-      const res = await fetch('/api/header', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pdfBase64, logoBase64, logoType: logoFile.type, businessName, businessAddress, businessPhone }),
+      // Load pdfjs — dynamically imported so it only runs in the browser
+      const pdfjsLib = await import('pdfjs-dist');
+      pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+
+      // Render page 1 to canvas (pdfjs is the reference renderer — always correct)
+      const pdfBytes = new Uint8Array(await file.arrayBuffer());
+      const pdfJsDoc = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
+      const totalPages = pdfJsDoc.numPages;
+      const page1 = await pdfJsDoc.getPage(1);
+
+      const SCALE = 2.0; // 2× for print-quality output
+      const viewport = page1.getViewport({ scale: SCALE });
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      const ctx = canvas.getContext('2d')!;
+      await page1.render({ canvasContext: ctx as unknown as CanvasRenderingContext2D, viewport }).promise;
+
+      // ── 1. Erase original shop header (top 160 PDF points) ──
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, 160 * SCALE);
+
+      // ── 2. Draw logo centered in the cleared header band ──
+      const logoUrl = URL.createObjectURL(logoFile);
+      const logoImg = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('Failed to load logo'));
+        img.src = logoUrl;
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Processing failed');
-      setHeaderPdf(data.pdfBase64); setStatus('done');
+      URL.revokeObjectURL(logoUrl);
+
+      const hasText = !!(businessName || businessAddress || businessPhone);
+      const maxLogoW = 420 * SCALE;
+      const maxLogoH = (hasText ? 85 : 130) * SCALE;
+      const logoFit = Math.min(maxLogoW / logoImg.naturalWidth, maxLogoH / logoImg.naturalHeight);
+      const lw = logoImg.naturalWidth * logoFit;
+      const lh = logoImg.naturalHeight * logoFit;
+      const padTop = 8 * SCALE;
+      ctx.drawImage(logoImg, (canvas.width - lw) / 2, padTop, lw, lh);
+
+      // ── 3. Business info text centered below logo ──
+      if (hasText) {
+        const fontSize = 8 * SCALE;
+        const lineH = 11 * SCALE;
+        let ty = padTop + lh + fontSize + 10 * SCALE; // ty = baseline of first line
+
+        const drawCentered = (text: string, bold: boolean) => {
+          ctx.font = `${bold ? '700 ' : ''}${fontSize}px Arial, Helvetica, sans-serif`;
+          ctx.fillStyle = '#000000';
+          const tw = ctx.measureText(text).width;
+          ctx.fillText(text, (canvas.width - tw) / 2, ty);
+          ty += lineH;
+        };
+
+        if (businessName) drawCentered(businessName, true);
+        if (businessAddress) drawCentered(businessAddress, false);
+        if (businessPhone) drawCentered(businessPhone, false);
+      }
+
+      // ── 4. Erase Inspection Location content ──
+      // PDF coords: x=190, y=360 from bottom, w=195, h=175 (PAGE_H=792)
+      // Canvas coords (y=0 at top): inspY = (792-360-175)*SCALE = 257*SCALE
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(190 * SCALE, 257 * SCALE, 195 * SCALE, 175 * SCALE);
+
+      // ── 5. Canvas → PNG → embed in new PDF ──
+      const pngDataUrl = canvas.toDataURL('image/png');
+      const pngBase64 = pngDataUrl.split(',')[1];
+      let binary = '';
+      const pngBytesArr = Uint8Array.from(atob(pngBase64), c => c.charCodeAt(0));
+      for (let i = 0; i < pngBytesArr.length; i++) binary += String.fromCharCode(pngBytesArr[i]);
+
+      const { PDFDocument } = await import('pdf-lib');
+      const outPdf = await PDFDocument.create();
+      const pngImage = await outPdf.embedPng(pngBytesArr);
+      const p1 = outPdf.addPage([612, 792]);
+      p1.drawImage(pngImage, { x: 0, y: 0, width: 612, height: 792 });
+
+      // Copy remaining pages unchanged
+      if (totalPages > 1) {
+        const origPdfLib = await PDFDocument.load(pdfBytes);
+        const indices = Array.from({ length: totalPages - 1 }, (_, i) => i + 1);
+        const copied = await outPdf.copyPages(origPdfLib, indices);
+        copied.forEach(pg => outPdf.addPage(pg));
+      }
+
+      const outputBytes = await outPdf.save();
+      let outBinary = '';
+      for (let i = 0; i < outputBytes.length; i++) outBinary += String.fromCharCode(outputBytes[i]);
+      setHeaderPdf(btoa(outBinary));
+      setStatus('done');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Unknown error');
       setStatus('error');
