@@ -73,6 +73,7 @@ interface DiagramPanel {
   lbl: string;
   x: number; y: number; w: number; h: number;
   lx: number; ly: number; fs: number;
+  rot?: boolean; // rotate label 90° for narrow vertical panels (e.g. roof rails)
 }
 
 // ── Sedan panels (viewBox "0 0 200 490") ─────────────────────────────────────
@@ -81,11 +82,13 @@ interface DiagramPanel {
 const DIAGRAM_PANELS: DiagramPanel[] = [
   { id: 'front-bumper',  lbl: 'Front Bumper', x: 0,   y: 0,   w: 200, h: 54,  lx: 100, ly: 32,  fs: 7   },
   { id: 'hood',          lbl: 'Hood',         x: 0,   y: 54,  w: 200, h: 96,  lx: 100, ly: 104, fs: 11  },
-  { id: 'lt-front-door', lbl: 'LT Front',     x: 0,   y: 186, w: 58,  h: 68,  lx: 37,  ly: 221, fs: 6   },
-  { id: 'lt-rear-door',  lbl: 'LT Rear',      x: 0,   y: 254, w: 58,  h: 68,  lx: 37,  ly: 289, fs: 6   },
-  { id: 'roof',          lbl: 'Roof',         x: 58,  y: 186, w: 84,  h: 136, lx: 100, ly: 254, fs: 10  },
-  { id: 'rt-front-door', lbl: 'RT Front',     x: 142, y: 186, w: 58,  h: 68,  lx: 163, ly: 221, fs: 6   },
-  { id: 'rt-rear-door',  lbl: 'RT Rear',      x: 142, y: 254, w: 58,  h: 68,  lx: 163, ly: 289, fs: 6   },
+  { id: 'lt-front-door', lbl: 'LT Front',     x: 0,   y: 186, w: 58,  h: 68,  lx: 37,  ly: 221, fs: 6        },
+  { id: 'lt-rear-door',  lbl: 'LT Rear',      x: 0,   y: 254, w: 58,  h: 68,  lx: 37,  ly: 289, fs: 6        },
+  { id: 'lt-roof-rail',  lbl: 'LT Rail',      x: 58,  y: 186, w: 8,   h: 136, lx: 62,  ly: 254, fs: 5, rot: true },
+  { id: 'roof',          lbl: 'Roof',         x: 66,  y: 186, w: 68,  h: 136, lx: 100, ly: 254, fs: 10       },
+  { id: 'rt-roof-rail',  lbl: 'RT Rail',      x: 134, y: 186, w: 8,   h: 136, lx: 138, ly: 254, fs: 5, rot: true },
+  { id: 'rt-front-door', lbl: 'RT Front',     x: 142, y: 186, w: 58,  h: 68,  lx: 163, ly: 221, fs: 6        },
+  { id: 'rt-rear-door',  lbl: 'RT Rear',      x: 142, y: 254, w: 58,  h: 68,  lx: 163, ly: 289, fs: 6        },
   { id: 'lt-quarter',    lbl: 'LT QP',        x: 0,   y: 358, w: 58,  h: 106, lx: 37,  ly: 411, fs: 7.5 },
   { id: 'lift-gate',     lbl: 'Lift Gate',    x: 58,  y: 358, w: 84,  h: 106, lx: 100, ly: 411, fs: 8   },
   { id: 'rt-quarter',    lbl: 'RT QP',        x: 142, y: 358, w: 58,  h: 106, lx: 163, ly: 411, fs: 7.5 },
@@ -97,11 +100,13 @@ const DIAGRAM_PANELS: DiagramPanel[] = [
 const DIAGRAM_PANELS_TRUCK_CAB: DiagramPanel[] = [
   { id: 'front-bumper',  lbl: 'Front Bumper',  x: 0,   y: 0,   w: 200, h: 45,  lx: 100, ly: 27,  fs: 7   },
   { id: 'hood',          lbl: 'Hood',           x: 0,   y: 45,  w: 200, h: 97,  lx: 100, ly: 95,  fs: 11  },
-  { id: 'lt-front-door', lbl: 'LT Front',       x: 0,   y: 168, w: 62,  h: 45,  lx: 37,  ly: 193, fs: 5.5 },
-  { id: 'lt-rear-door',  lbl: 'LT Rear',        x: 0,   y: 213, w: 62,  h: 45,  lx: 37,  ly: 238, fs: 5.5 },
-  { id: 'roof',          lbl: 'Roof',           x: 62,  y: 168, w: 76,  h: 90,  lx: 100, ly: 213, fs: 9   },
-  { id: 'rt-front-door', lbl: 'RT Front',       x: 138, y: 168, w: 62,  h: 45,  lx: 163, ly: 193, fs: 5.5 },
-  { id: 'rt-rear-door',  lbl: 'RT Rear',        x: 138, y: 213, w: 62,  h: 45,  lx: 163, ly: 238, fs: 5.5 },
+  { id: 'lt-front-door', lbl: 'LT Front',       x: 0,   y: 168, w: 62,  h: 45,  lx: 37,  ly: 193, fs: 5.5           },
+  { id: 'lt-rear-door',  lbl: 'LT Rear',        x: 0,   y: 213, w: 62,  h: 45,  lx: 37,  ly: 238, fs: 5.5           },
+  { id: 'lt-roof-rail',  lbl: 'LT Rail',        x: 62,  y: 168, w: 8,   h: 90,  lx: 66,  ly: 213, fs: 5, rot: true  },
+  { id: 'roof',          lbl: 'Roof',           x: 70,  y: 168, w: 58,  h: 90,  lx: 99,  ly: 213, fs: 9             },
+  { id: 'rt-roof-rail',  lbl: 'RT Rail',        x: 128, y: 168, w: 8,   h: 90,  lx: 132, ly: 213, fs: 5, rot: true  },
+  { id: 'rt-front-door', lbl: 'RT Front',       x: 136, y: 168, w: 64,  h: 45,  lx: 163, ly: 193, fs: 5.5           },
+  { id: 'rt-rear-door',  lbl: 'RT Rear',        x: 136, y: 213, w: 64,  h: 45,  lx: 163, ly: 238, fs: 5.5           },
   { id: 'lt-cab-corner', lbl: 'LT Cab Cor',     x: 0,   y: 258, w: 62,  h: 20,  lx: 37,  ly: 270, fs: 5.5 },
   { id: 'rt-cab-corner', lbl: 'RT Cab Cor',     x: 138, y: 258, w: 62,  h: 20,  lx: 163, ly: 270, fs: 5.5 },
 ];
@@ -149,14 +154,16 @@ function CarDiagram({ selected, onSelect, vehicleType }: {
   const PanelLabel = ({ p }: { p: DiagramPanel }) => {
     const count = opCount(p.id);
     const sel = selected === p.id;
-    const bx = p.lx + Math.ceil(p.lbl.length * p.fs * 0.29) + 5;
-    const by = p.ly - p.fs;
+    // For rotated (rail) panels, put badge near top-centre of strip
+    const bx = p.rot ? p.lx                                          : p.lx + Math.ceil(p.lbl.length * p.fs * 0.29) + 5;
+    const by = p.rot ? p.y + 8                                       : p.ly - p.fs;
     return (
       <g style={{ pointerEvents: 'none', userSelect: 'none' }}>
         <text x={p.lx} y={p.ly} textAnchor="middle" fontSize={p.fs}
           fontFamily="Arial, Helvetica, sans-serif"
           fontWeight={sel ? 700 : 400}
-          fill={sel ? '#fcd34d' : '#3d5a78'}>
+          fill={sel ? '#fcd34d' : '#3d5a78'}
+          transform={p.rot ? `rotate(-90,${p.lx},${p.ly})` : undefined}>
           {p.lbl}
         </text>
         {count > 0 && (
@@ -200,23 +207,21 @@ function CarDiagram({ selected, onSelect, vehicleType }: {
           {/* Rear door windows */}
           <rect x={18} y={219} width={37} height={32} rx={2} fill="#07111e" style={{ pointerEvents: 'none' }} />
           <rect x={145} y={219} width={37} height={32} rx={2} fill="#07111e" style={{ pointerEvents: 'none' }} />
-          {/* Roof rails */}
-          <rect x={62} y={170} width={5} height={86} rx={1} fill="#0c1825" style={{ pointerEvents: 'none' }} />
-          <rect x={133} y={170} width={5} height={86} rx={1} fill="#0c1825" style={{ pointerEvents: 'none' }} />
-          <line x1={67} y1={170} x2={67} y2={256} stroke="#243a54" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
-          <line x1={133} y1={170} x2={133} y2={256} stroke="#243a54" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
+            {/* Rail inner edge highlight */}
+          <line x1={70} y1={168} x2={70} y2={258} stroke="#243a54" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
+          <line x1={128} y1={168} x2={128} y2={258} stroke="#243a54" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
         </g>
 
         {/* Cab detail lines */}
         {/* A-pillars */}
         <line x1={22} y1={142} x2={30} y2={168} stroke="#2a3f58" strokeWidth={1.2} style={{ pointerEvents: 'none' }} />
         <line x1={178} y1={142} x2={170} y2={168} stroke="#2a3f58" strokeWidth={1.2} style={{ pointerEvents: 'none' }} />
-        {/* B-pillar */}
+        {/* Outer B-pillar edge (left side of LT rail, right side of RT rail) */}
         <line x1={62} y1={168} x2={62} y2={258} stroke="#1a2d42" strokeWidth={1} style={{ pointerEvents: 'none' }} />
-        <line x1={138} y1={168} x2={138} y2={258} stroke="#1a2d42" strokeWidth={1} style={{ pointerEvents: 'none' }} />
+        <line x1={136} y1={168} x2={136} y2={258} stroke="#1a2d42" strokeWidth={1} style={{ pointerEvents: 'none' }} />
         {/* Front/rear door divider */}
         <line x1={18} y1={213} x2={62} y2={213} stroke="#1a2d42" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
-        <line x1={138} y1={213} x2={182} y2={213} stroke="#1a2d42" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
+        <line x1={136} y1={213} x2={182} y2={213} stroke="#1a2d42" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
         {/* Hood crease */}
         <line x1={100} y1={45} x2={100} y2={142} stroke="#1a2d42" strokeWidth={0.8} opacity={0.7} style={{ pointerEvents: 'none' }} />
         {/* Side mirrors */}
@@ -286,11 +291,9 @@ function CarDiagram({ selected, onSelect, vehicleType }: {
         {/* Rear door windows */}
         <rect x={18} y={258} width={37} height={55} rx={2} fill="#07111e" style={{ pointerEvents: 'none' }} />
         <rect x={145} y={258} width={37} height={55} rx={2} fill="#07111e" style={{ pointerEvents: 'none' }} />
-        {/* Roof rails (dark strip along each side of roof panel) */}
-        <rect x={58} y={188} width={6} height={130} rx={1} fill="#0c1825" style={{ pointerEvents: 'none' }} />
-        <rect x={136} y={188} width={6} height={130} rx={1} fill="#0c1825" style={{ pointerEvents: 'none' }} />
-        <line x1={64} y1={188} x2={64} y2={318} stroke="#243a54" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
-        <line x1={136} y1={188} x2={136} y2={318} stroke="#243a54" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
+        {/* Rail inner edge highlight */}
+        <line x1={66} y1={186} x2={66} y2={322} stroke="#243a54" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
+        <line x1={134} y1={186} x2={134} y2={322} stroke="#243a54" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
       </g>
 
       {/* Structural detail lines (rendered on top of body) */}
@@ -300,7 +303,7 @@ function CarDiagram({ selected, onSelect, vehicleType }: {
       {/* C-pillars */}
       <line x1={22} y1={360} x2={30} y2={322} stroke="#2a3f58" strokeWidth={1.2} style={{ pointerEvents: 'none' }} />
       <line x1={178} y1={360} x2={170} y2={322} stroke="#2a3f58" strokeWidth={1.2} style={{ pointerEvents: 'none' }} />
-      {/* B-pillar (vertical, between side doors and roof) */}
+      {/* B-pillar outer edge (left of LT rail strip, right of RT rail strip) */}
       <line x1={58} y1={186} x2={58} y2={322} stroke="#1a2d42" strokeWidth={1} style={{ pointerEvents: 'none' }} />
       <line x1={142} y1={186} x2={142} y2={322} stroke="#1a2d42" strokeWidth={1} style={{ pointerEvents: 'none' }} />
       {/* Front/rear door divider (horizontal, at B-pillar gap y=254) */}

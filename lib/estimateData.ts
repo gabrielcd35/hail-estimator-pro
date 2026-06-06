@@ -695,6 +695,46 @@ export const PANELS: CarPanel[] = [
     operations: [],
   },
 
+  // ── LT Roof Rail ─────────────────────────────────────────────────────────
+  {
+    id: 'lt-roof-rail',
+    label: 'LT Roof Rail',
+    onDiagram: true,
+    onTruckDiagram: true,
+    operations: [
+      {
+        id: 'ltr-airbag',
+        name: 'Roof Rail Repair/R&R → R&I LT Head Airbag',
+        notes: [
+          {
+            id: 'ltr-ab-1',
+            text: 'R&I LT Head Airbag required when repairing or replacing the LT roof rail — head airbags are mounted inside the roof rail channel. Heat, sparks, or vibration during repair creates accidental deployment risk. Add under Restraint Systems group in CCC ONE.',
+          },
+        ],
+      },
+    ],
+  },
+
+  // ── RT Roof Rail ─────────────────────────────────────────────────────────
+  {
+    id: 'rt-roof-rail',
+    label: 'RT Roof Rail',
+    onDiagram: true,
+    onTruckDiagram: true,
+    operations: [
+      {
+        id: 'rtr-airbag',
+        name: 'Roof Rail Repair/R&R → R&I RT Head Airbag',
+        notes: [
+          {
+            id: 'rtr-ab-1',
+            text: 'R&I RT Head Airbag required when repairing or replacing the RT roof rail — head airbags are mounted inside the roof rail channel. Heat, sparks, or vibration during repair creates accidental deployment risk. Add under Restraint Systems group in CCC ONE.',
+          },
+        ],
+      },
+    ],
+  },
+
   // ── Rear Bumper ───────────────────────────────────────────────────────────
   {
     id: 'rear-bumper',
