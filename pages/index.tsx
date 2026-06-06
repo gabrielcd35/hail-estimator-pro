@@ -92,9 +92,9 @@ function CarDiagram({ selected, onSelect }: { selected: string | null; onSelect:
   const [hovered, setHovered] = useState<string | null>(null);
 
   const panelFill = (id: string) => {
-    if (selected === id) return '#1e3a8a';
-    if (hovered === id) return '#1e2d45';
-    return '#111827';
+    if (selected === id) return '#7c3d00';   // amber-dark when selected
+    if (hovered === id) return '#1e3048';
+    return '#172032';
   };
 
   const opCount = (id: string) => PANELS.find(p => p.id === id)?.operations.length ?? 0;
@@ -112,7 +112,7 @@ function CarDiagram({ selected, onSelect }: { selected: string | null; onSelect:
       </defs>
 
       {/* Car body background */}
-      <path d={CAR_PATH} fill="#0d1117" stroke="#1e2d3d" strokeWidth="1.5" />
+      <path d={CAR_PATH} fill="#101c2c" stroke="#2d4a6a" strokeWidth="1.5" />
 
       <g clipPath="url(#car-clip)">
         {/* Clickable panels */}
@@ -157,13 +157,13 @@ function CarDiagram({ selected, onSelect }: { selected: string | null; onSelect:
               fontSize={p.fs}
               fontFamily="Arial, Helvetica, sans-serif"
               fontWeight={sel ? 700 : 400}
-              fill={sel ? '#93c5fd' : '#3d5470'}
+              fill={sel ? '#fcd34d' : '#3d5a78'}
             >
               {p.lbl}
             </text>
             {count > 0 && (
               <>
-                <circle cx={badgeX} cy={badgeY} r={4.5} fill={sel ? '#2563eb' : '#1e3a5f'} />
+                <circle cx={badgeX} cy={badgeY} r={4.5} fill={sel ? '#f59e0b' : '#1e3a5f'} />
                 <text x={badgeX} y={badgeY + 3} textAnchor="middle" fontSize={5} fontFamily="Arial" fill="white" fontWeight={700}>
                   {count}
                 </text>
@@ -219,16 +219,16 @@ function PanelOps({ panel }: { panel: CarPanel }) {
       {panel.operations.length === 0 ? (
         <div style={{
           padding: '20px',
-          background: '#0d1117',
-          border: '1px dashed #1e2d3d',
+          background: '#172032',
+          border: '1px dashed #2d4a6a',
           borderRadius: 10,
-          color: '#334155',
+          color: '#4d6a84',
           fontSize: 13,
           textAlign: 'center',
         }}>
           No operations yet for this panel.<br />
-          <span style={{ fontSize: 12, color: '#1e3a5f' }}>
-            Add entries in <code style={{ color: '#3b82f6' }}>lib/estimateData.ts</code>
+          <span style={{ fontSize: 12, color: '#3d5470' }}>
+            Add entries in <code style={{ color: '#f59e0b' }}>lib/estimateData.ts</code>
           </span>
         </div>
       ) : (
@@ -236,8 +236,8 @@ function PanelOps({ panel }: { panel: CarPanel }) {
           <div
             key={op.id}
             style={{
-              background: '#0d1117',
-              border: '1px solid #1e2d3d',
+              background: '#172032',
+              border: '1px solid #243e5c',
               borderRadius: 10,
               padding: '14px 18px',
             }}
@@ -248,8 +248,9 @@ function PanelOps({ panel }: { panel: CarPanel }) {
               gap: 8,
               marginBottom: op.notes.length ? 12 : 0,
               fontSize: 13,
-              fontWeight: 600,
-              color: '#7dd3fc',
+              fontWeight: 700,
+              color: '#f59e0b',
+              letterSpacing: '0.2px',
             }}>
               <span style={{ opacity: 0.8 }}>⚙</span>
               {op.name}
@@ -261,18 +262,18 @@ function PanelOps({ panel }: { panel: CarPanel }) {
                 style={{
                   marginTop: ni > 0 ? 10 : 0,
                   paddingTop: ni > 0 ? 10 : 0,
-                  borderTop: ni > 0 ? '1px solid #0f1a2a' : 'none',
+                  borderTop: ni > 0 ? '1px solid #1a2d40' : 'none',
                 }}
               >
                 <p style={{
                   margin: 0,
                   padding: '10px 14px',
-                  background: '#070d18',
-                  border: '1px solid #12203a',
+                  background: '#0f1c2e',
+                  border: '1px solid #1e3450',
                   borderRadius: 6,
                   fontSize: 12.5,
                   lineHeight: 1.65,
-                  color: '#94a3b8',
+                  color: '#b0c4d8',
                   fontFamily: "ui-monospace, 'Cascadia Code', 'Fira Code', Menlo, monospace",
                   whiteSpace: 'pre-wrap',
                   wordBreak: 'break-word',
@@ -356,19 +357,19 @@ export default function Home() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <style>{`
           * { box-sizing: border-box; }
-          body { margin: 0; background: #070d18; }
+          body { margin: 0; background: #131e2d; }
           ::-webkit-scrollbar { width: 6px; }
-          ::-webkit-scrollbar-track { background: #0d1117; }
-          ::-webkit-scrollbar-thumb { background: #1e2d3d; border-radius: 3px; }
-          input::placeholder { color: #2d4258; }
-          input:focus { outline: none; border-color: #1d4ed8 !important; box-shadow: 0 0 0 2px rgba(29,78,216,0.2); }
+          ::-webkit-scrollbar-track { background: #1a2535; }
+          ::-webkit-scrollbar-thumb { background: #2d4258; border-radius: 3px; }
+          input::placeholder { color: #3d5470; }
+          input:focus { outline: none; border-color: #f59e0b !important; box-shadow: 0 0 0 2px rgba(245,158,11,0.2); }
         `}</style>
       </Head>
 
       <div style={{
         minHeight: '100vh',
         maxHeight: '100vh',
-        background: '#070d18',
+        background: '#131e2d',
         color: '#e2e8f0',
         fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif",
         display: 'flex',
@@ -378,28 +379,40 @@ export default function Home() {
 
         {/* ── Header ── */}
         <header style={{
-          borderBottom: '1px solid #0f1e30',
-          padding: '12px 20px',
+          borderBottom: '2px solid #f59e0b',
+          padding: '10px 20px',
           display: 'flex',
           alignItems: 'center',
           gap: 20,
-          background: '#0a1120',
+          background: '#0d1623',
           flexShrink: 0,
           zIndex: 10,
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+            {/* Yellow/black college badge */}
             <div style={{
-              width: 36, height: 36,
-              background: 'linear-gradient(135deg, #1d4ed8, #0ea5e9)',
-              borderRadius: 8,
+              width: 42, height: 42,
+              background: '#f59e0b',
+              borderRadius: 6,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 18,
-            }}>🔩</div>
+              fontSize: 22,
+              boxShadow: '0 2px 8px rgba(245,158,11,0.35)',
+              flexShrink: 0,
+            }}>⛏️</div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 15, color: '#e2e8f0', letterSpacing: '-0.2px' }}>
+              <div style={{
+                fontWeight: 900,
+                fontSize: 17,
+                color: '#f59e0b',
+                letterSpacing: '1.5px',
+                textTransform: 'uppercase',
+                fontFamily: "Georgia, 'Times New Roman', serif",
+                lineHeight: 1.1,
+                textShadow: '0 1px 6px rgba(245,158,11,0.3)',
+              }}>
                 Hail Estimator Pro
               </div>
-              <div style={{ fontSize: 10.5, color: '#2d4258', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+              <div style={{ fontSize: 10, color: '#4d6a84', letterSpacing: '2px', textTransform: 'uppercase', marginTop: 1 }}>
                 Estimate Assistant
               </div>
             </div>
@@ -417,8 +430,8 @@ export default function Home() {
                 placeholder="Search panels, operations, notes..."
                 style={{
                   width: '100%',
-                  background: '#0d1117',
-                  border: '1px solid #1a2838',
+                  background: '#172032',
+                  border: '1px solid #2d4a6a',
                   borderRadius: 8,
                   padding: '8px 34px 8px 33px',
                   color: '#e2e8f0',
@@ -437,7 +450,7 @@ export default function Home() {
             {showDropdown && hits.length > 0 && (
               <div style={{
                 position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
-                background: '#0d1520', border: '1px solid #1a2838',
+                background: '#172032', border: '1px solid #2d4a6a',
                 borderRadius: 8, boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
                 zIndex: 200, overflow: 'hidden',
               }}>
@@ -451,7 +464,7 @@ export default function Home() {
                       borderBottom: i < hits.length - 1 ? '1px solid #0f1e30' : 'none',
                       cursor: 'pointer', color: '#e2e8f0', transition: 'background 0.1s', fontFamily: 'inherit',
                     }}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#111f33')}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#1e3248')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'none')}
                   >
                     <div style={{ fontSize: 12, color: '#3d5470', marginBottom: hit.snippet ? 2 : 0 }}>
@@ -478,8 +491,8 @@ export default function Home() {
           <aside style={{
             width: 264,
             flexShrink: 0,
-            borderRight: '1px solid #0f1e30',
-            background: '#090e1a',
+            borderRight: '1px solid #1e3a5f',
+            background: '#0f1a2a',
             display: 'flex',
             flexDirection: 'column',
             overflowY: 'auto',
@@ -510,9 +523,9 @@ export default function Home() {
                         borderRadius: 20,
                         fontSize: 11.5,
                         cursor: 'pointer',
-                        background: sel ? '#1e3a8a' : '#0d1525',
-                        color: sel ? '#93c5fd' : '#3d5470',
-                        border: `1px solid ${sel ? '#1d4ed8' : '#132030'}`,
+                        background: sel ? '#7c3d00' : '#172032',
+                        color: sel ? '#fcd34d' : '#4d6a84',
+                        border: `1px solid ${sel ? '#f59e0b' : '#2d4a6a'}`,
                         transition: 'all 0.12s',
                         fontFamily: 'inherit',
                         display: 'flex',
@@ -523,8 +536,8 @@ export default function Home() {
                       {p.label}
                       {count > 0 && (
                         <span style={{
-                          background: sel ? '#2563eb' : '#1a3050',
-                          color: sel ? 'white' : '#3d5470',
+                          background: sel ? '#f59e0b' : '#1e3448',
+                          color: sel ? '#000' : '#4d6a84',
                           borderRadius: 10, fontSize: 9,
                           padding: '0 4px', lineHeight: '14px', fontWeight: 700,
                         }}>
@@ -539,7 +552,7 @@ export default function Home() {
           </aside>
 
           {/* Right: operations + notes */}
-          <main style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
+          <main style={{ flex: 1, overflowY: 'auto', padding: '24px 28px', background: '#131e2d' }}>
             {!selectedPanel ? (
               <EmptyState />
             ) : (
@@ -547,12 +560,16 @@ export default function Home() {
                 <div style={{
                   display: 'flex', alignItems: 'baseline', gap: 12,
                   marginBottom: 20, paddingBottom: 16,
-                  borderBottom: '1px solid #0f1e30',
+                  borderBottom: '2px solid #1e3a5f',
                 }}>
-                  <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#e2e8f0' }}>
+                  <h2 style={{
+                    margin: 0, fontSize: 20, fontWeight: 900, color: '#f59e0b',
+                    textTransform: 'uppercase', letterSpacing: '1px',
+                    fontFamily: "Georgia, 'Times New Roman', serif",
+                  }}>
                     {selectedPanel.label}
                   </h2>
-                  <span style={{ fontSize: 12, color: '#1e3a5f' }}>
+                  <span style={{ fontSize: 12, color: '#3d5a78' }}>
                     {selectedPanel.operations.length} operation{selectedPanel.operations.length !== 1 ? 's' : ''}
                   </span>
                 </div>
