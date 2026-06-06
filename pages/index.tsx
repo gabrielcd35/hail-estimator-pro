@@ -77,26 +77,31 @@ interface DiagramPanel {
 
 // ── Sedan panels (viewBox "0 0 200 490") ─────────────────────────────────────
 // Glass bands (windshield y=150–186, rear glass y=322–358) are visual-only, not panels
+// Door area y=186–322 split at y=254 (B-pillar gap): front doors above, rear below
 const DIAGRAM_PANELS: DiagramPanel[] = [
-  { id: 'front-bumper', lbl: 'Front Bumper', x: 0,   y: 0,   w: 200, h: 54,  lx: 100, ly: 32,  fs: 7   },
-  { id: 'hood',         lbl: 'Hood',         x: 0,   y: 54,  w: 200, h: 96,  lx: 100, ly: 104, fs: 11  },
-  { id: 'left-doors',   lbl: 'L Doors',      x: 0,   y: 186, w: 58,  h: 136, lx: 37,  ly: 254, fs: 7.5 },
-  { id: 'roof',         lbl: 'Roof',         x: 58,  y: 186, w: 84,  h: 136, lx: 100, ly: 254, fs: 10  },
-  { id: 'right-doors',  lbl: 'R Doors',      x: 142, y: 186, w: 58,  h: 136, lx: 163, ly: 254, fs: 7.5 },
-  { id: 'lt-quarter',   lbl: 'LT QP',        x: 0,   y: 358, w: 58,  h: 106, lx: 37,  ly: 411, fs: 7.5 },
-  { id: 'lift-gate',    lbl: 'Lift Gate',    x: 58,  y: 358, w: 84,  h: 106, lx: 100, ly: 411, fs: 8   },
-  { id: 'rt-quarter',   lbl: 'RT QP',        x: 142, y: 358, w: 58,  h: 106, lx: 163, ly: 411, fs: 7.5 },
-  { id: 'rear-bumper',  lbl: 'Rear Bumper',  x: 0,   y: 464, w: 200, h: 26,  lx: 100, ly: 478, fs: 7   },
+  { id: 'front-bumper',  lbl: 'Front Bumper', x: 0,   y: 0,   w: 200, h: 54,  lx: 100, ly: 32,  fs: 7   },
+  { id: 'hood',          lbl: 'Hood',         x: 0,   y: 54,  w: 200, h: 96,  lx: 100, ly: 104, fs: 11  },
+  { id: 'lt-front-door', lbl: 'LT Front',     x: 0,   y: 186, w: 58,  h: 68,  lx: 37,  ly: 221, fs: 6   },
+  { id: 'lt-rear-door',  lbl: 'LT Rear',      x: 0,   y: 254, w: 58,  h: 68,  lx: 37,  ly: 289, fs: 6   },
+  { id: 'roof',          lbl: 'Roof',         x: 58,  y: 186, w: 84,  h: 136, lx: 100, ly: 254, fs: 10  },
+  { id: 'rt-front-door', lbl: 'RT Front',     x: 142, y: 186, w: 58,  h: 68,  lx: 163, ly: 221, fs: 6   },
+  { id: 'rt-rear-door',  lbl: 'RT Rear',      x: 142, y: 254, w: 58,  h: 68,  lx: 163, ly: 289, fs: 6   },
+  { id: 'lt-quarter',    lbl: 'LT QP',        x: 0,   y: 358, w: 58,  h: 106, lx: 37,  ly: 411, fs: 7.5 },
+  { id: 'lift-gate',     lbl: 'Lift Gate',    x: 58,  y: 358, w: 84,  h: 106, lx: 100, ly: 411, fs: 8   },
+  { id: 'rt-quarter',    lbl: 'RT QP',        x: 142, y: 358, w: 58,  h: 106, lx: 163, ly: 411, fs: 7.5 },
+  { id: 'rear-bumper',   lbl: 'Rear Bumper',  x: 0,   y: 464, w: 200, h: 26,  lx: 100, ly: 478, fs: 7   },
 ];
 
 // ── Truck panels (cab) ────────────────────────────────────────────────────────
-// Windshield visual band y=142–168; doors y=168–258; cab corners y=258–278
+// Windshield visual band y=142–168; door area y=168–258 split at y=213 (front/rear)
 const DIAGRAM_PANELS_TRUCK_CAB: DiagramPanel[] = [
   { id: 'front-bumper',  lbl: 'Front Bumper',  x: 0,   y: 0,   w: 200, h: 45,  lx: 100, ly: 27,  fs: 7   },
   { id: 'hood',          lbl: 'Hood',           x: 0,   y: 45,  w: 200, h: 97,  lx: 100, ly: 95,  fs: 11  },
-  { id: 'left-doors',    lbl: 'L Doors',        x: 0,   y: 168, w: 62,  h: 90,  lx: 37,  ly: 213, fs: 7.5 },
+  { id: 'lt-front-door', lbl: 'LT Front',       x: 0,   y: 168, w: 62,  h: 45,  lx: 37,  ly: 193, fs: 5.5 },
+  { id: 'lt-rear-door',  lbl: 'LT Rear',        x: 0,   y: 213, w: 62,  h: 45,  lx: 37,  ly: 238, fs: 5.5 },
   { id: 'roof',          lbl: 'Roof',           x: 62,  y: 168, w: 76,  h: 90,  lx: 100, ly: 213, fs: 9   },
-  { id: 'right-doors',   lbl: 'R Doors',        x: 138, y: 168, w: 62,  h: 90,  lx: 163, ly: 213, fs: 7.5 },
+  { id: 'rt-front-door', lbl: 'RT Front',       x: 138, y: 168, w: 62,  h: 45,  lx: 163, ly: 193, fs: 5.5 },
+  { id: 'rt-rear-door',  lbl: 'RT Rear',        x: 138, y: 213, w: 62,  h: 45,  lx: 163, ly: 238, fs: 5.5 },
   { id: 'lt-cab-corner', lbl: 'LT Cab Cor',     x: 0,   y: 258, w: 62,  h: 20,  lx: 37,  ly: 270, fs: 5.5 },
   { id: 'rt-cab-corner', lbl: 'RT Cab Cor',     x: 138, y: 258, w: 62,  h: 20,  lx: 163, ly: 270, fs: 5.5 },
 ];
@@ -189,9 +194,17 @@ function CarDiagram({ selected, onSelect, vehicleType }: {
           {DIAGRAM_PANELS_TRUCK_CAB.map(p => <PanelRect key={p.id} p={p} />)}
           {/* Windshield glass (trapezoidal) */}
           <path d="M 34,142 L 30,168 L 170,168 L 166,142 Z" fill="#06101c" style={{ pointerEvents: 'none' }} />
-          {/* Door windows */}
-          <rect x={18} y={174} width={37} height={76} rx={2} fill="#07111e" style={{ pointerEvents: 'none' }} />
-          <rect x={145} y={174} width={37} height={76} rx={2} fill="#07111e" style={{ pointerEvents: 'none' }} />
+          {/* Front door windows */}
+          <rect x={18} y={174} width={37} height={33} rx={2} fill="#07111e" style={{ pointerEvents: 'none' }} />
+          <rect x={145} y={174} width={37} height={33} rx={2} fill="#07111e" style={{ pointerEvents: 'none' }} />
+          {/* Rear door windows */}
+          <rect x={18} y={219} width={37} height={32} rx={2} fill="#07111e" style={{ pointerEvents: 'none' }} />
+          <rect x={145} y={219} width={37} height={32} rx={2} fill="#07111e" style={{ pointerEvents: 'none' }} />
+          {/* Roof rails */}
+          <rect x={62} y={170} width={5} height={86} rx={1} fill="#0c1825" style={{ pointerEvents: 'none' }} />
+          <rect x={133} y={170} width={5} height={86} rx={1} fill="#0c1825" style={{ pointerEvents: 'none' }} />
+          <line x1={67} y1={170} x2={67} y2={256} stroke="#243a54" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
+          <line x1={133} y1={170} x2={133} y2={256} stroke="#243a54" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
         </g>
 
         {/* Cab detail lines */}
@@ -201,6 +214,9 @@ function CarDiagram({ selected, onSelect, vehicleType }: {
         {/* B-pillar */}
         <line x1={62} y1={168} x2={62} y2={258} stroke="#1a2d42" strokeWidth={1} style={{ pointerEvents: 'none' }} />
         <line x1={138} y1={168} x2={138} y2={258} stroke="#1a2d42" strokeWidth={1} style={{ pointerEvents: 'none' }} />
+        {/* Front/rear door divider */}
+        <line x1={18} y1={213} x2={62} y2={213} stroke="#1a2d42" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
+        <line x1={138} y1={213} x2={182} y2={213} stroke="#1a2d42" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
         {/* Hood crease */}
         <line x1={100} y1={45} x2={100} y2={142} stroke="#1a2d42" strokeWidth={0.8} opacity={0.7} style={{ pointerEvents: 'none' }} />
         {/* Side mirrors */}
@@ -264,11 +280,17 @@ function CarDiagram({ selected, onSelect, vehicleType }: {
         <path d="M 34,150 L 30,186 L 170,186 L 166,150 Z" fill="#06101c" style={{ pointerEvents: 'none' }} />
         {/* Rear glass */}
         <path d="M 30,322 L 34,358 L 166,358 L 170,322 Z" fill="#06101c" style={{ pointerEvents: 'none' }} />
-        {/* Door windows (pass through clicks via pointerEvents:none) */}
+        {/* Front door windows */}
         <rect x={18} y={193} width={37} height={52} rx={2} fill="#07111e" style={{ pointerEvents: 'none' }} />
-        <rect x={18} y={255} width={37} height={58} rx={2} fill="#07111e" style={{ pointerEvents: 'none' }} />
         <rect x={145} y={193} width={37} height={52} rx={2} fill="#07111e" style={{ pointerEvents: 'none' }} />
-        <rect x={145} y={255} width={37} height={58} rx={2} fill="#07111e" style={{ pointerEvents: 'none' }} />
+        {/* Rear door windows */}
+        <rect x={18} y={258} width={37} height={55} rx={2} fill="#07111e" style={{ pointerEvents: 'none' }} />
+        <rect x={145} y={258} width={37} height={55} rx={2} fill="#07111e" style={{ pointerEvents: 'none' }} />
+        {/* Roof rails (dark strip along each side of roof panel) */}
+        <rect x={58} y={188} width={6} height={130} rx={1} fill="#0c1825" style={{ pointerEvents: 'none' }} />
+        <rect x={136} y={188} width={6} height={130} rx={1} fill="#0c1825" style={{ pointerEvents: 'none' }} />
+        <line x1={64} y1={188} x2={64} y2={318} stroke="#243a54" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
+        <line x1={136} y1={188} x2={136} y2={318} stroke="#243a54" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
       </g>
 
       {/* Structural detail lines (rendered on top of body) */}
@@ -278,9 +300,12 @@ function CarDiagram({ selected, onSelect, vehicleType }: {
       {/* C-pillars */}
       <line x1={22} y1={360} x2={30} y2={322} stroke="#2a3f58" strokeWidth={1.2} style={{ pointerEvents: 'none' }} />
       <line x1={178} y1={360} x2={170} y2={322} stroke="#2a3f58" strokeWidth={1.2} style={{ pointerEvents: 'none' }} />
-      {/* B-pillar (between door panels) */}
+      {/* B-pillar (vertical, between side doors and roof) */}
       <line x1={58} y1={186} x2={58} y2={322} stroke="#1a2d42" strokeWidth={1} style={{ pointerEvents: 'none' }} />
       <line x1={142} y1={186} x2={142} y2={322} stroke="#1a2d42" strokeWidth={1} style={{ pointerEvents: 'none' }} />
+      {/* Front/rear door divider (horizontal, at B-pillar gap y=254) */}
+      <line x1={16} y1={254} x2={58} y2={254} stroke="#1a2d42" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
+      <line x1={142} y1={254} x2={184} y2={254} stroke="#1a2d42" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
       {/* Hood center crease */}
       <line x1={100} y1={54} x2={100} y2={150} stroke="#1a2d42" strokeWidth={0.8} opacity={0.7} style={{ pointerEvents: 'none' }} />
       {/* Side mirrors */}

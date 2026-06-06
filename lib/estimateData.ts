@@ -219,33 +219,63 @@ export const PANELS: CarPanel[] = [
     ],
   },
 
-  // ── Left Doors ────────────────────────────────────────────────────────────
+  // ── LT Front Door ─────────────────────────────────────────────────────────
   {
-    id: 'left-doors',
-    label: 'Left Doors',
+    id: 'lt-front-door',
+    label: 'LT Front Door',
     onDiagram: true,
     onTruckDiagram: true,
     operations: [
       {
-        id: 'ld-belt-mirror',
+        id: 'lfd-belt-mirror',
         name: 'R&I Belt Molding → Mirror Overlap',
         notes: [
           {
-            id: 'ld-belt-1',
-            text: 'Mirror overlap belt molding — R&I needed in order to remove moldings.',
+            id: 'lfd-belt-1',
+            text: 'Mirror overlap belt molding on the front door — R&I needed in order to remove the mirror and moldings.',
           },
         ],
       },
       {
-        id: 'ld-door-trim',
+        id: 'lfd-door-trim',
         name: 'R&I Interior Door Trim',
         notes: [
           {
-            id: 'ld-trim-1',
-            text: 'In order to remove the mirrors, door trim must be removed.',
+            id: 'lfd-trim-1',
+            text: 'Door trim R&I required to remove the mirror — trim panel must come off to access mirror mounting bolts from the inside.',
           },
           {
-            id: 'ld-trim-2',
+            id: 'lfd-trim-2',
+            text: 'Door trim R&I required — door has 6 or more dents; interior trim removal is necessary for proper access and repair.',
+          },
+        ],
+      },
+    ],
+  },
+
+  // ── LT Rear Door ──────────────────────────────────────────────────────────
+  {
+    id: 'lt-rear-door',
+    label: 'LT Rear Door',
+    onDiagram: true,
+    onTruckDiagram: true,
+    operations: [
+      {
+        id: 'lrd-belt',
+        name: 'R&I Belt Molding',
+        notes: [
+          {
+            id: 'lrd-belt-1',
+            text: 'Belt molding R&I required on rear door — needed to access and remove door moldings for proper repair.',
+          },
+        ],
+      },
+      {
+        id: 'lrd-door-trim',
+        name: 'R&I Interior Door Trim',
+        notes: [
+          {
+            id: 'lrd-trim-1',
             text: 'Door trim R&I required — door has 6 or more dents; interior trim removal is necessary for proper access and repair.',
           },
         ],
@@ -347,33 +377,63 @@ export const PANELS: CarPanel[] = [
     ],
   },
 
-  // ── Right Doors ───────────────────────────────────────────────────────────
+  // ── RT Front Door ─────────────────────────────────────────────────────────
   {
-    id: 'right-doors',
-    label: 'Right Doors',
+    id: 'rt-front-door',
+    label: 'RT Front Door',
     onDiagram: true,
     onTruckDiagram: true,
     operations: [
       {
-        id: 'rd-belt-mirror',
+        id: 'rfd-belt-mirror',
         name: 'R&I Belt Molding → Mirror Overlap',
         notes: [
           {
-            id: 'rd-belt-1',
-            text: 'Mirror overlap belt molding — R&I needed in order to remove moldings.',
+            id: 'rfd-belt-1',
+            text: 'Mirror overlap belt molding on the front door — R&I needed in order to remove the mirror and moldings.',
           },
         ],
       },
       {
-        id: 'rd-door-trim',
+        id: 'rfd-door-trim',
         name: 'R&I Interior Door Trim',
         notes: [
           {
-            id: 'rd-trim-1',
-            text: 'In order to remove the mirrors, door trim must be removed.',
+            id: 'rfd-trim-1',
+            text: 'Door trim R&I required to remove the mirror — trim panel must come off to access mirror mounting bolts from the inside.',
           },
           {
-            id: 'rd-trim-2',
+            id: 'rfd-trim-2',
+            text: 'Door trim R&I required — door has 6 or more dents; interior trim removal is necessary for proper access and repair.',
+          },
+        ],
+      },
+    ],
+  },
+
+  // ── RT Rear Door ──────────────────────────────────────────────────────────
+  {
+    id: 'rt-rear-door',
+    label: 'RT Rear Door',
+    onDiagram: true,
+    onTruckDiagram: true,
+    operations: [
+      {
+        id: 'rrd-belt',
+        name: 'R&I Belt Molding',
+        notes: [
+          {
+            id: 'rrd-belt-1',
+            text: 'Belt molding R&I required on rear door — needed to access and remove door moldings for proper repair.',
+          },
+        ],
+      },
+      {
+        id: 'rrd-door-trim',
+        name: 'R&I Interior Door Trim',
+        notes: [
+          {
+            id: 'rrd-trim-1',
             text: 'Door trim R&I required — door has 6 or more dents; interior trim removal is necessary for proper access and repair.',
           },
         ],
