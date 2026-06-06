@@ -54,16 +54,19 @@ function doSearch(q: string): SearchHit[] {
 
 // ─── SVG paths & panel layouts ───────────────────────────────────────────────
 
-// Sedan — viewBox "0 0 200 480"
+// Sedan — viewBox "0 0 200 490"
+// Wheel arches: front at y=112–150 (bows to x≈13), rear at y=322–360
 const CAR_PATH =
-  'M 68,8 C 50,8 22,28 18,58 L 16,155 L 16,310 L 20,400 C 26,432 54,455 100,455 C 146,455 174,432 180,400 L 184,310 L 184,155 L 182,58 C 178,28 150,8 132,8 Z';
+  'M 78,8 C 60,8 28,22 20,54 L 16,112 C 13,125 13,138 16,150 L 16,322 C 13,335 13,348 16,360 L 22,432 C 28,460 62,476 100,476 C 138,476 172,460 178,432 L 184,360 C 187,348 187,335 184,322 L 184,150 C 187,138 187,125 184,112 L 180,54 C 172,22 140,8 122,8 Z';
 
-// Truck — viewBox "0 0 200 480"
-// Two separate silhouettes: cab (top) + bed (bottom, with gap)
+// Truck cab — viewBox "0 0 200 490"
+// Front wheel arches at y=108–142
 const TRUCK_CAB_PATH =
-  'M 65,8 C 48,8 20,22 18,52 L 16,148 L 16,275 L 184,275 L 184,148 L 182,52 C 180,22 152,8 135,8 Z';
+  'M 70,8 C 52,8 22,22 18,52 L 16,108 C 13,120 13,132 16,142 L 16,278 L 184,278 L 184,142 C 187,132 187,120 184,108 L 182,52 C 178,22 148,8 130,8 Z';
+
+// Truck bed — viewBox "0 0 200 490"
 const TRUCK_BED_PATH =
-  'M 20,295 L 20,452 C 20,460 28,465 36,465 L 164,465 C 172,465 180,460 180,452 L 180,295 Z';
+  'M 18,295 L 18,462 C 18,470 26,474 36,474 L 164,474 C 174,474 182,470 182,462 L 182,295 Z';
 
 interface DiagramPanel {
   id: string;
@@ -72,35 +75,38 @@ interface DiagramPanel {
   lx: number; ly: number; fs: number;
 }
 
-// ── Sedan panels ──────────────────────────────────────────────────────────────
+// ── Sedan panels (viewBox "0 0 200 490") ─────────────────────────────────────
+// Glass bands (windshield y=150–186, rear glass y=322–358) are visual-only, not panels
 const DIAGRAM_PANELS: DiagramPanel[] = [
-  { id: 'front-bumper', lbl: 'Front Bumper', x: 0,   y: 0,   w: 200, h: 48,  lx: 100, ly: 28,  fs: 7   },
-  { id: 'hood',         lbl: 'Hood',         x: 0,   y: 48,  w: 200, h: 107, lx: 100, ly: 104, fs: 11  },
-  { id: 'left-doors',   lbl: 'L Doors',      x: 0,   y: 182, w: 62,  h: 126, lx: 31,  ly: 248, fs: 7.5 },
-  { id: 'roof',         lbl: 'Roof',         x: 62,  y: 182, w: 76,  h: 126, lx: 100, ly: 248, fs: 10  },
-  { id: 'right-doors',  lbl: 'R Doors',      x: 138, y: 182, w: 62,  h: 126, lx: 169, ly: 248, fs: 7.5 },
-  { id: 'lt-quarter',   lbl: 'LT QP',        x: 0,   y: 332, w: 62,  h: 90,  lx: 31,  ly: 382, fs: 7.5 },
-  { id: 'lift-gate',    lbl: 'Lift Gate',    x: 62,  y: 332, w: 76,  h: 90,  lx: 100, ly: 382, fs: 8   },
-  { id: 'rt-quarter',   lbl: 'RT QP',        x: 138, y: 332, w: 62,  h: 90,  lx: 169, ly: 382, fs: 7.5 },
-  { id: 'rear-bumper',  lbl: 'Rear Bumper',  x: 0,   y: 422, w: 200, h: 33,  lx: 100, ly: 441, fs: 7   },
+  { id: 'front-bumper', lbl: 'Front Bumper', x: 0,   y: 0,   w: 200, h: 54,  lx: 100, ly: 32,  fs: 7   },
+  { id: 'hood',         lbl: 'Hood',         x: 0,   y: 54,  w: 200, h: 96,  lx: 100, ly: 104, fs: 11  },
+  { id: 'left-doors',   lbl: 'L Doors',      x: 0,   y: 186, w: 58,  h: 136, lx: 37,  ly: 254, fs: 7.5 },
+  { id: 'roof',         lbl: 'Roof',         x: 58,  y: 186, w: 84,  h: 136, lx: 100, ly: 254, fs: 10  },
+  { id: 'right-doors',  lbl: 'R Doors',      x: 142, y: 186, w: 58,  h: 136, lx: 163, ly: 254, fs: 7.5 },
+  { id: 'lt-quarter',   lbl: 'LT QP',        x: 0,   y: 358, w: 58,  h: 106, lx: 37,  ly: 411, fs: 7.5 },
+  { id: 'lift-gate',    lbl: 'Lift Gate',    x: 58,  y: 358, w: 84,  h: 106, lx: 100, ly: 411, fs: 8   },
+  { id: 'rt-quarter',   lbl: 'RT QP',        x: 142, y: 358, w: 58,  h: 106, lx: 163, ly: 411, fs: 7.5 },
+  { id: 'rear-bumper',  lbl: 'Rear Bumper',  x: 0,   y: 464, w: 200, h: 26,  lx: 100, ly: 478, fs: 7   },
 ];
 
 // ── Truck panels (cab) ────────────────────────────────────────────────────────
+// Windshield visual band y=142–168; doors y=168–258; cab corners y=258–278
 const DIAGRAM_PANELS_TRUCK_CAB: DiagramPanel[] = [
   { id: 'front-bumper',  lbl: 'Front Bumper',  x: 0,   y: 0,   w: 200, h: 45,  lx: 100, ly: 27,  fs: 7   },
-  { id: 'hood',          lbl: 'Hood',           x: 0,   y: 45,  w: 200, h: 103, lx: 100, ly: 98,  fs: 11  },
-  { id: 'left-doors',    lbl: 'L Doors',        x: 0,   y: 168, w: 62,  h: 80,  lx: 31,  ly: 210, fs: 7.5 },
-  { id: 'roof',          lbl: 'Roof',           x: 62,  y: 168, w: 76,  h: 80,  lx: 100, ly: 210, fs: 9   },
-  { id: 'right-doors',   lbl: 'R Doors',        x: 138, y: 168, w: 62,  h: 80,  lx: 169, ly: 210, fs: 7.5 },
-  { id: 'lt-cab-corner', lbl: 'LT Cab Corner',  x: 0,   y: 248, w: 62,  h: 27,  lx: 31,  ly: 264, fs: 5.5 },
-  { id: 'rt-cab-corner', lbl: 'RT Cab Corner',  x: 138, y: 248, w: 62,  h: 27,  lx: 169, ly: 264, fs: 5.5 },
+  { id: 'hood',          lbl: 'Hood',           x: 0,   y: 45,  w: 200, h: 97,  lx: 100, ly: 95,  fs: 11  },
+  { id: 'left-doors',    lbl: 'L Doors',        x: 0,   y: 168, w: 62,  h: 90,  lx: 37,  ly: 213, fs: 7.5 },
+  { id: 'roof',          lbl: 'Roof',           x: 62,  y: 168, w: 76,  h: 90,  lx: 100, ly: 213, fs: 9   },
+  { id: 'right-doors',   lbl: 'R Doors',        x: 138, y: 168, w: 62,  h: 90,  lx: 163, ly: 213, fs: 7.5 },
+  { id: 'lt-cab-corner', lbl: 'LT Cab Cor',     x: 0,   y: 258, w: 62,  h: 20,  lx: 37,  ly: 270, fs: 5.5 },
+  { id: 'rt-cab-corner', lbl: 'RT Cab Cor',     x: 138, y: 258, w: 62,  h: 20,  lx: 163, ly: 270, fs: 5.5 },
 ];
 
 // ── Truck panels (bed) ────────────────────────────────────────────────────────
+// Bed path y=295–474; center floor (x=72–128) is visual-only
 const DIAGRAM_PANELS_TRUCK_BED: DiagramPanel[] = [
-  { id: 'lt-bed',   lbl: 'LT Bed',   x: 0,   y: 295, w: 72,  h: 140, lx: 36,  ly: 368, fs: 7.5 },
-  { id: 'rt-bed',   lbl: 'RT Bed',   x: 128, y: 295, w: 72,  h: 140, lx: 164, ly: 368, fs: 7.5 },
-  { id: 'tailgate', lbl: 'Tailgate', x: 0,   y: 435, w: 200, h: 30,  lx: 100, ly: 452, fs: 7   },
+  { id: 'lt-bed',   lbl: 'LT Bed',   x: 0,   y: 295, w: 72,  h: 155, lx: 45,  ly: 370, fs: 7.5 },
+  { id: 'rt-bed',   lbl: 'RT Bed',   x: 128, y: 295, w: 72,  h: 155, lx: 155, ly: 370, fs: 7.5 },
+  { id: 'tailgate', lbl: 'Tailgate', x: 0,   y: 450, w: 200, h: 24,  lx: 100, ly: 463, fs: 7   },
 ];
 
 // ─── Car/Truck SVG diagram ────────────────────────────────────────────────────
@@ -163,22 +169,44 @@ function CarDiagram({ selected, onSelect, vehicleType }: {
 
   if (vehicleType === 'truck') {
     return (
-      <svg viewBox="0 0 200 480" style={{ width: '100%', maxWidth: 210, height: 'auto', display: 'block', margin: '0 auto' }}>
+      <svg viewBox="0 0 200 490" style={{ width: '100%', maxWidth: 210, height: 'auto', display: 'block', margin: '0 auto' }}>
         <defs>
           <clipPath id="truck-cab-clip"><path d={TRUCK_CAB_PATH} /></clipPath>
           <clipPath id="truck-bed-clip"><path d={TRUCK_BED_PATH} /></clipPath>
         </defs>
 
-        {/* Cab */}
+        {/* Cab tires (drawn before body so body clips over → wheel arch effect) */}
+        {([{x:0,y:104,w:18,h:42},{x:182,y:104,w:18,h:42}] as const).map((t,i) => (
+          <g key={i} style={{ pointerEvents: 'none' }}>
+            <rect x={t.x} y={t.y} width={t.w} height={t.h} rx={5} fill="#060d18" />
+            <rect x={t.x+3} y={t.y+6} width={t.w-6} height={t.h-12} rx={3} fill="#0d1a2e" opacity={0.6} />
+          </g>
+        ))}
+
+        {/* Cab body */}
         <path d={TRUCK_CAB_PATH} fill="#101c2c" stroke="#2d4a6a" strokeWidth="1.5" />
         <g clipPath="url(#truck-cab-clip)">
           {DIAGRAM_PANELS_TRUCK_CAB.map(p => <PanelRect key={p.id} p={p} />)}
-          {/* Windshield */}
-          <rect x={0} y={148} width={200} height={20} fill="#06101c" style={{ pointerEvents: 'none' }} />
+          {/* Windshield glass (trapezoidal) */}
+          <path d="M 34,142 L 30,168 L 170,168 L 166,142 Z" fill="#06101c" style={{ pointerEvents: 'none' }} />
           {/* Door windows */}
-          <rect x={20}  y={173} width={37} height={62} rx={2} fill="#06101c" style={{ pointerEvents: 'none' }} />
-          <rect x={143} y={173} width={37} height={62} rx={2} fill="#06101c" style={{ pointerEvents: 'none' }} />
+          <rect x={18} y={174} width={37} height={76} rx={2} fill="#07111e" style={{ pointerEvents: 'none' }} />
+          <rect x={145} y={174} width={37} height={76} rx={2} fill="#07111e" style={{ pointerEvents: 'none' }} />
         </g>
+
+        {/* Cab detail lines */}
+        {/* A-pillars */}
+        <line x1={22} y1={142} x2={30} y2={168} stroke="#2a3f58" strokeWidth={1.2} style={{ pointerEvents: 'none' }} />
+        <line x1={178} y1={142} x2={170} y2={168} stroke="#2a3f58" strokeWidth={1.2} style={{ pointerEvents: 'none' }} />
+        {/* B-pillar */}
+        <line x1={62} y1={168} x2={62} y2={258} stroke="#1a2d42" strokeWidth={1} style={{ pointerEvents: 'none' }} />
+        <line x1={138} y1={168} x2={138} y2={258} stroke="#1a2d42" strokeWidth={1} style={{ pointerEvents: 'none' }} />
+        {/* Hood crease */}
+        <line x1={100} y1={45} x2={100} y2={142} stroke="#1a2d42" strokeWidth={0.8} opacity={0.7} style={{ pointerEvents: 'none' }} />
+        {/* Side mirrors */}
+        <path d="M 12,144 C 5,147 4,157 8,162 L 15,160 L 14,144 Z" fill="#162233" stroke="#2a3f58" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
+        <path d="M 188,144 C 195,147 196,157 192,162 L 185,160 L 186,144 Z" fill="#162233" stroke="#2a3f58" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
+
         {DIAGRAM_PANELS_TRUCK_CAB.map(p => <PanelLabel key={`l-${p.id}`} p={p} />)}
 
         {/* Gap label */}
@@ -187,15 +215,19 @@ function CarDiagram({ selected, onSelect, vehicleType }: {
           ── CAB / BED GAP ──
         </text>
 
-        {/* Bed */}
+        {/* Bed body */}
         <path d={TRUCK_BED_PATH} fill="#101c2c" stroke="#2d4a6a" strokeWidth="1.5" />
         <g clipPath="url(#truck-bed-clip)">
           {DIAGRAM_PANELS_TRUCK_BED.map(p => <PanelRect key={p.id} p={p} />)}
-          {/* Bed floor (visual — not a panel) */}
-          <rect x={72} y={295} width={56} height={140} fill="#0b1826" style={{ pointerEvents: 'none' }} />
+          {/* Center floor (darker strip between bed sides) */}
+          <rect x={72} y={295} width={56} height={155} fill="#0b1826" style={{ pointerEvents: 'none' }} />
+          {/* Bed rib lines */}
+          <line x1={20} y1={338} x2={180} y2={338} stroke="#1a2d45" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
+          <line x1={20} y1={381} x2={180} y2={381} stroke="#1a2d45" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
+          <line x1={20} y1={424} x2={180} y2={424} stroke="#1a2d45" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
           {/* Bed rail lines */}
-          <line x1={72} y1={295} x2={72} y2={435} stroke="#1a2d45" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
-          <line x1={128} y1={295} x2={128} y2={435} stroke="#1a2d45" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
+          <line x1={72} y1={295} x2={72} y2={450} stroke="#1a2d45" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
+          <line x1={128} y1={295} x2={128} y2={450} stroke="#1a2d45" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
         </g>
         {DIAGRAM_PANELS_TRUCK_BED.map(p => <PanelLabel key={`l-${p.id}`} p={p} />)}
       </svg>
@@ -204,20 +236,57 @@ function CarDiagram({ selected, onSelect, vehicleType }: {
 
   // ── Sedan ──────────────────────────────────────────────────────────────────
   return (
-    <svg viewBox="0 0 200 480" style={{ width: '100%', maxWidth: 210, height: 'auto', display: 'block', margin: '0 auto' }}>
+    <svg viewBox="0 0 200 490" style={{ width: '100%', maxWidth: 210, height: 'auto', display: 'block', margin: '0 auto' }}>
       <defs>
         <clipPath id="car-clip"><path d={CAR_PATH} /></clipPath>
       </defs>
+
+      {/* Tires (drawn before car body so body clips over → wheel arch effect) */}
+      {([
+        {x:0,   y:108, w:18, h:46},  // FL
+        {x:182, y:108, w:18, h:46},  // FR
+        {x:0,   y:318, w:18, h:46},  // RL
+        {x:182, y:318, w:18, h:46},  // RR
+      ] as const).map((t, i) => (
+        <g key={i} style={{ pointerEvents: 'none' }}>
+          <rect x={t.x} y={t.y} width={t.w} height={t.h} rx={5} fill="#060d18" />
+          <rect x={t.x+3} y={t.y+6} width={t.w-6} height={t.h-12} rx={3} fill="#0d1a2e" opacity={0.6} />
+        </g>
+      ))}
+
+      {/* Car body */}
       <path d={CAR_PATH} fill="#101c2c" stroke="#2d4a6a" strokeWidth="1.5" />
+
+      {/* Panels + glass overlays (clipped to car silhouette) */}
       <g clipPath="url(#car-clip)">
         {DIAGRAM_PANELS.map(p => <PanelRect key={p.id} p={p} />)}
-        <rect x={0}   y={155} width={200} height={27} fill="#06101c" style={{ pointerEvents: 'none' }} />
-        <rect x={0}   y={308} width={200} height={24} fill="#06101c" style={{ pointerEvents: 'none' }} />
-        <rect x={20}  y={192} width={37}  height={48} rx={2} fill="#06101c" style={{ pointerEvents: 'none' }} />
-        <rect x={143} y={192} width={37}  height={48} rx={2} fill="#06101c" style={{ pointerEvents: 'none' }} />
-        <rect x={20}  y={256} width={37}  height={38} rx={2} fill="#06101c" style={{ pointerEvents: 'none' }} />
-        <rect x={143} y={256} width={37}  height={38} rx={2} fill="#06101c" style={{ pointerEvents: 'none' }} />
+        {/* Windshield glass (trapezoidal A-pillar taper) */}
+        <path d="M 34,150 L 30,186 L 170,186 L 166,150 Z" fill="#06101c" style={{ pointerEvents: 'none' }} />
+        {/* Rear glass */}
+        <path d="M 30,322 L 34,358 L 166,358 L 170,322 Z" fill="#06101c" style={{ pointerEvents: 'none' }} />
+        {/* Door windows (pass through clicks via pointerEvents:none) */}
+        <rect x={18} y={193} width={37} height={52} rx={2} fill="#07111e" style={{ pointerEvents: 'none' }} />
+        <rect x={18} y={255} width={37} height={58} rx={2} fill="#07111e" style={{ pointerEvents: 'none' }} />
+        <rect x={145} y={193} width={37} height={52} rx={2} fill="#07111e" style={{ pointerEvents: 'none' }} />
+        <rect x={145} y={255} width={37} height={58} rx={2} fill="#07111e" style={{ pointerEvents: 'none' }} />
       </g>
+
+      {/* Structural detail lines (rendered on top of body) */}
+      {/* A-pillars */}
+      <line x1={22} y1={150} x2={30} y2={186} stroke="#2a3f58" strokeWidth={1.2} style={{ pointerEvents: 'none' }} />
+      <line x1={178} y1={150} x2={170} y2={186} stroke="#2a3f58" strokeWidth={1.2} style={{ pointerEvents: 'none' }} />
+      {/* C-pillars */}
+      <line x1={22} y1={360} x2={30} y2={322} stroke="#2a3f58" strokeWidth={1.2} style={{ pointerEvents: 'none' }} />
+      <line x1={178} y1={360} x2={170} y2={322} stroke="#2a3f58" strokeWidth={1.2} style={{ pointerEvents: 'none' }} />
+      {/* B-pillar (between door panels) */}
+      <line x1={58} y1={186} x2={58} y2={322} stroke="#1a2d42" strokeWidth={1} style={{ pointerEvents: 'none' }} />
+      <line x1={142} y1={186} x2={142} y2={322} stroke="#1a2d42" strokeWidth={1} style={{ pointerEvents: 'none' }} />
+      {/* Hood center crease */}
+      <line x1={100} y1={54} x2={100} y2={150} stroke="#1a2d42" strokeWidth={0.8} opacity={0.7} style={{ pointerEvents: 'none' }} />
+      {/* Side mirrors */}
+      <path d="M 12,152 C 5,155 4,165 8,170 L 15,168 L 14,152 Z" fill="#162233" stroke="#2a3f58" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
+      <path d="M 188,152 C 195,155 196,165 192,170 L 185,168 L 186,152 Z" fill="#162233" stroke="#2a3f58" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
+
       {DIAGRAM_PANELS.map(p => <PanelLabel key={`l-${p.id}`} p={p} />)}
     </svg>
   );
