@@ -22,7 +22,8 @@ export interface EstimateOperation {
 export interface CarPanel {
   id: string;
   label: string;
-  onDiagram?: boolean; // true = shown as clickable area in car SVG
+  onDiagram?: boolean;       // shown on sedan/SUV SVG diagram
+  onTruckDiagram?: boolean;  // shown on pickup truck SVG diagram
   operations: EstimateOperation[];
 }
 
@@ -134,6 +135,7 @@ export const PANELS: CarPanel[] = [
     id: 'front-bumper',
     label: 'Front Bumper',
     onDiagram: true,
+    onTruckDiagram: true,
     operations: [
       {
         id: 'fb-ri',
@@ -163,6 +165,7 @@ export const PANELS: CarPanel[] = [
     id: 'hood',
     label: 'Hood',
     onDiagram: true,
+    onTruckDiagram: true,
     operations: [
       {
         id: 'hood-rr-labels',
@@ -221,6 +224,7 @@ export const PANELS: CarPanel[] = [
     id: 'left-doors',
     label: 'Left Doors',
     onDiagram: true,
+    onTruckDiagram: true,
     operations: [
       {
         id: 'ld-belt-mirror',
@@ -254,6 +258,7 @@ export const PANELS: CarPanel[] = [
     id: 'roof',
     label: 'Roof',
     onDiagram: true,
+    onTruckDiagram: true,
     operations: [
       {
         id: 'roof-pdr-markup',
@@ -347,6 +352,7 @@ export const PANELS: CarPanel[] = [
     id: 'right-doors',
     label: 'Right Doors',
     onDiagram: true,
+    onTruckDiagram: true,
     operations: [
       {
         id: 'rd-belt-mirror',
@@ -458,6 +464,175 @@ export const PANELS: CarPanel[] = [
         ],
       },
     ],
+  },
+
+  // ── LT Cab Corner (Truck only) ────────────────────────────────────────────
+  {
+    id: 'lt-cab-corner',
+    label: 'LT Cab Corner',
+    onDiagram: false,
+    onTruckDiagram: true,
+    operations: [
+      {
+        id: 'ltcc-bed-setback',
+        name: 'Cab Corner Repair/Blend → Set Back Pickup Bed',
+        notes: [
+          {
+            id: 'ltcc-bed-1',
+            text: 'When repairing or blending the cab corners on a pickup truck, the bed must be set back to ensure proper access and a seamless finish. The tight gap between the cab and bed makes it difficult to sand, paint, or blend without overspray or uneven coverage.',
+          },
+        ],
+      },
+      {
+        id: 'ltcc-fuel',
+        name: 'Cab Corner → R&I Fuel Filler Pipe',
+        notes: [
+          {
+            id: 'ltcc-fuel-1',
+            text: 'Fuel filler pipe must be R&I when setting back the pickup bed — connected between fuel tank and bed-mounted fuel door. Moving bed without disconnecting risks bending, cracking, or breaking the pipe.',
+          },
+        ],
+      },
+      {
+        id: 'ltcc-rear-bumper',
+        name: 'Cab Corner → R&I Rear Bumper',
+        notes: [
+          {
+            id: 'ltcc-rb-1',
+            text: 'Bumper must be R&I when setting back bed — mounted to frame, can obstruct bed movement.',
+          },
+        ],
+      },
+      {
+        id: 'ltcc-spare',
+        name: 'Cab Corner → R&I Spare Tire Carrier',
+        notes: [
+          {
+            id: 'ltcc-spare-1',
+            text: 'Spare tire carrier must be R&I when setting back bed — frame-mounted, can obstruct movement or cause misalignment.',
+          },
+        ],
+      },
+    ],
+  },
+
+  // ── RT Cab Corner (Truck only) ────────────────────────────────────────────
+  {
+    id: 'rt-cab-corner',
+    label: 'RT Cab Corner',
+    onDiagram: false,
+    onTruckDiagram: true,
+    operations: [
+      {
+        id: 'rtcc-bed-setback',
+        name: 'Cab Corner Repair/Blend → Set Back Pickup Bed',
+        notes: [
+          {
+            id: 'rtcc-bed-1',
+            text: 'When repairing or blending the cab corners on a pickup truck, the bed must be set back to ensure proper access and a seamless finish. The tight gap between the cab and bed makes it difficult to sand, paint, or blend without overspray or uneven coverage.',
+          },
+        ],
+      },
+      {
+        id: 'rtcc-fuel',
+        name: 'Cab Corner → R&I Fuel Filler Pipe',
+        notes: [
+          {
+            id: 'rtcc-fuel-1',
+            text: 'Fuel filler pipe must be R&I when setting back the pickup bed — connected between fuel tank and bed-mounted fuel door. Moving bed without disconnecting risks bending, cracking, or breaking the pipe.',
+          },
+        ],
+      },
+      {
+        id: 'rtcc-rear-bumper',
+        name: 'Cab Corner → R&I Rear Bumper',
+        notes: [
+          {
+            id: 'rtcc-rb-1',
+            text: 'Bumper must be R&I when setting back bed — mounted to frame, can obstruct bed movement.',
+          },
+        ],
+      },
+      {
+        id: 'rtcc-spare',
+        name: 'Cab Corner → R&I Spare Tire Carrier',
+        notes: [
+          {
+            id: 'rtcc-spare-1',
+            text: 'Spare tire carrier must be R&I when setting back bed — frame-mounted, can obstruct movement or cause misalignment.',
+          },
+        ],
+      },
+    ],
+  },
+
+  // ── LT Bed Panel (Truck only) ─────────────────────────────────────────────
+  {
+    id: 'lt-bed',
+    label: 'LT Bed Panel',
+    onDiagram: false,
+    onTruckDiagram: true,
+    operations: [
+      {
+        id: 'ltb-markup',
+        name: 'Bed Panel PDR → 25% Extended Panel Markup',
+        notes: [
+          {
+            id: 'ltb-markup-1',
+            text: 'For Pickup Trucks: add 25% markup on the Pick Up Box group — LT and RT bed panels marked as Extended Panel Markup.',
+          },
+        ],
+      },
+      {
+        id: 'ltb-taillamp',
+        name: 'R&I LT Tail Lamp',
+        notes: [
+          {
+            id: 'ltb-tl-1',
+            text: 'R&I LT Tail Lamp required on every estimate under the Rear Lamps group — needed for bed panel access.',
+          },
+        ],
+      },
+    ],
+  },
+
+  // ── RT Bed Panel (Truck only) ─────────────────────────────────────────────
+  {
+    id: 'rt-bed',
+    label: 'RT Bed Panel',
+    onDiagram: false,
+    onTruckDiagram: true,
+    operations: [
+      {
+        id: 'rtb-markup',
+        name: 'Bed Panel PDR → 25% Extended Panel Markup',
+        notes: [
+          {
+            id: 'rtb-markup-1',
+            text: 'For Pickup Trucks: add 25% markup on the Pick Up Box group — LT and RT bed panels marked as Extended Panel Markup.',
+          },
+        ],
+      },
+      {
+        id: 'rtb-taillamp',
+        name: 'R&I RT Tail Lamp',
+        notes: [
+          {
+            id: 'rtb-tl-1',
+            text: 'R&I RT Tail Lamp required on every estimate under the Rear Lamps group — needed for bed panel access.',
+          },
+        ],
+      },
+    ],
+  },
+
+  // ── Tailgate (Truck only) ─────────────────────────────────────────────────
+  {
+    id: 'tailgate',
+    label: 'Tailgate',
+    onDiagram: false,
+    onTruckDiagram: true,
+    operations: [],
   },
 
   // ── Rear Bumper ───────────────────────────────────────────────────────────

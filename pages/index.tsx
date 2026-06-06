@@ -52,22 +52,18 @@ function doSearch(q: string): SearchHit[] {
   return hits.slice(0, 8);
 }
 
-// ─── Car SVG diagram ──────────────────────────────────────────────────────────
-//
-// viewBox "0 0 200 480" — top-down sedan silhouette.
-// Panels are <rect> elements clipped to the car outline.
-//
-// Y zones:
-//   0–48    Front bumper
-//   48–155  Hood
-//   155–182 Windshield (visual only)
-//   182–308 Doors + Roof
-//   308–332 Rear window (visual only)
-//   332–422 Quarter Panels + Lift Gate
-//   422–455 Rear bumper
+// ─── SVG paths & panel layouts ───────────────────────────────────────────────
 
+// Sedan — viewBox "0 0 200 480"
 const CAR_PATH =
   'M 68,8 C 50,8 22,28 18,58 L 16,155 L 16,310 L 20,400 C 26,432 54,455 100,455 C 146,455 174,432 180,400 L 184,310 L 184,155 L 182,58 C 178,28 150,8 132,8 Z';
+
+// Truck — viewBox "0 0 200 480"
+// Two separate silhouettes: cab (top) + bed (bottom, with gap)
+const TRUCK_CAB_PATH =
+  'M 65,8 C 48,8 20,22 18,52 L 16,148 L 16,275 L 184,275 L 184,148 L 182,52 C 180,22 152,8 135,8 Z';
+const TRUCK_BED_PATH =
+  'M 20,295 L 20,452 C 20,460 28,465 36,465 L 164,465 C 172,465 180,460 180,452 L 180,295 Z';
 
 interface DiagramPanel {
   id: string;
@@ -76,6 +72,7 @@ interface DiagramPanel {
   lx: number; ly: number; fs: number;
 }
 
+// ── Sedan panels ──────────────────────────────────────────────────────────────
 const DIAGRAM_PANELS: DiagramPanel[] = [
   { id: 'front-bumper', lbl: 'Front Bumper', x: 0,   y: 0,   w: 200, h: 48,  lx: 100, ly: 28,  fs: 7   },
   { id: 'hood',         lbl: 'Hood',         x: 0,   y: 48,  w: 200, h: 107, lx: 100, ly: 104, fs: 11  },
@@ -88,90 +85,140 @@ const DIAGRAM_PANELS: DiagramPanel[] = [
   { id: 'rear-bumper',  lbl: 'Rear Bumper',  x: 0,   y: 422, w: 200, h: 33,  lx: 100, ly: 441, fs: 7   },
 ];
 
-function CarDiagram({ selected, onSelect }: { selected: string | null; onSelect: (id: string) => void }) {
+// ── Truck panels (cab) ────────────────────────────────────────────────────────
+const DIAGRAM_PANELS_TRUCK_CAB: DiagramPanel[] = [
+  { id: 'front-bumper',  lbl: 'Front Bumper',  x: 0,   y: 0,   w: 200, h: 45,  lx: 100, ly: 27,  fs: 7   },
+  { id: 'hood',          lbl: 'Hood',           x: 0,   y: 45,  w: 200, h: 103, lx: 100, ly: 98,  fs: 11  },
+  { id: 'left-doors',    lbl: 'L Doors',        x: 0,   y: 168, w: 62,  h: 80,  lx: 31,  ly: 210, fs: 7.5 },
+  { id: 'roof',          lbl: 'Roof',           x: 62,  y: 168, w: 76,  h: 80,  lx: 100, ly: 210, fs: 9   },
+  { id: 'right-doors',   lbl: 'R Doors',        x: 138, y: 168, w: 62,  h: 80,  lx: 169, ly: 210, fs: 7.5 },
+  { id: 'lt-cab-corner', lbl: 'LT Cab Corner',  x: 0,   y: 248, w: 62,  h: 27,  lx: 31,  ly: 264, fs: 5.5 },
+  { id: 'rt-cab-corner', lbl: 'RT Cab Corner',  x: 138, y: 248, w: 62,  h: 27,  lx: 169, ly: 264, fs: 5.5 },
+];
+
+// ── Truck panels (bed) ────────────────────────────────────────────────────────
+const DIAGRAM_PANELS_TRUCK_BED: DiagramPanel[] = [
+  { id: 'lt-bed',   lbl: 'LT Bed',   x: 0,   y: 295, w: 72,  h: 140, lx: 36,  ly: 368, fs: 7.5 },
+  { id: 'rt-bed',   lbl: 'RT Bed',   x: 128, y: 295, w: 72,  h: 140, lx: 164, ly: 368, fs: 7.5 },
+  { id: 'tailgate', lbl: 'Tailgate', x: 0,   y: 435, w: 200, h: 30,  lx: 100, ly: 452, fs: 7   },
+];
+
+// ─── Car/Truck SVG diagram ────────────────────────────────────────────────────
+
+type VehicleType = 'sedan' | 'truck';
+
+function CarDiagram({ selected, onSelect, vehicleType }: {
+  selected: string | null;
+  onSelect: (id: string) => void;
+  vehicleType: VehicleType;
+}) {
   const [hovered, setHovered] = useState<string | null>(null);
 
-  const panelFill = (id: string) => {
-    if (selected === id) return '#7c3d00';   // amber-dark when selected
+  const fill = (id: string) => {
+    if (selected === id) return '#7c3d00';
     if (hovered === id) return '#1e3048';
     return '#172032';
   };
 
   const opCount = (id: string) => PANELS.find(p => p.id === id)?.operations.length ?? 0;
 
-  return (
-    <svg
-      viewBox="0 0 200 480"
-      style={{ width: '100%', maxWidth: 210, height: 'auto', display: 'block', margin: '0 auto' }}
-      aria-label="Car diagram — click a panel"
-    >
-      <defs>
-        <clipPath id="car-clip">
-          <path d={CAR_PATH} />
-        </clipPath>
-      </defs>
+  const PanelRect = ({ p }: { p: DiagramPanel }) => (
+    <rect
+      x={p.x} y={p.y} width={p.w} height={p.h}
+      fill={fill(p.id)}
+      stroke="#1a2535" strokeWidth="0.5"
+      style={{ cursor: 'pointer', transition: 'fill 0.12s ease' }}
+      onClick={() => onSelect(p.id)}
+      onMouseEnter={() => setHovered(p.id)}
+      onMouseLeave={() => setHovered(null)}
+      role="button" aria-label={p.lbl}
+    />
+  );
 
-      {/* Car body background */}
-      <path d={CAR_PATH} fill="#101c2c" stroke="#2d4a6a" strokeWidth="1.5" />
-
-      <g clipPath="url(#car-clip)">
-        {/* Clickable panels */}
-        {DIAGRAM_PANELS.map(p => (
-          <rect
-            key={p.id}
-            x={p.x} y={p.y} width={p.w} height={p.h}
-            fill={panelFill(p.id)}
-            stroke="#1a2535"
-            strokeWidth="0.5"
-            style={{ cursor: 'pointer', transition: 'fill 0.12s ease' }}
-            onClick={() => onSelect(p.id)}
-            onMouseEnter={() => setHovered(p.id)}
-            onMouseLeave={() => setHovered(null)}
-            role="button"
-            aria-label={p.lbl}
-          />
-        ))}
-
-        {/* Visual-only glass areas */}
-        <rect x={0} y={155} width={200} height={27} fill="#06101c" style={{ pointerEvents: 'none' }} />
-        <rect x={0} y={308} width={200} height={24} fill="#06101c" style={{ pointerEvents: 'none' }} />
-
-        {/* Door window shapes */}
-        <rect x={20}  y={192} width={37} height={48} rx={2} fill="#06101c" style={{ pointerEvents: 'none' }} />
-        <rect x={143} y={192} width={37} height={48} rx={2} fill="#06101c" style={{ pointerEvents: 'none' }} />
-        <rect x={20}  y={256} width={37} height={38} rx={2} fill="#06101c" style={{ pointerEvents: 'none' }} />
-        <rect x={143} y={256} width={37} height={38} rx={2} fill="#06101c" style={{ pointerEvents: 'none' }} />
-      </g>
-
-      {/* Panel labels + op-count badge */}
-      {DIAGRAM_PANELS.map(p => {
-        const count = opCount(p.id);
-        const sel = selected === p.id;
-        const badgeX = p.lx + Math.ceil(p.lbl.length * p.fs * 0.29) + 5;
-        const badgeY = p.ly - p.fs;
-        return (
-          <g key={`lbl-${p.id}`} style={{ pointerEvents: 'none', userSelect: 'none' }}>
-            <text
-              x={p.lx} y={p.ly}
-              textAnchor="middle"
-              fontSize={p.fs}
-              fontFamily="Arial, Helvetica, sans-serif"
-              fontWeight={sel ? 700 : 400}
-              fill={sel ? '#fcd34d' : '#3d5a78'}
-            >
-              {p.lbl}
+  const PanelLabel = ({ p }: { p: DiagramPanel }) => {
+    const count = opCount(p.id);
+    const sel = selected === p.id;
+    const bx = p.lx + Math.ceil(p.lbl.length * p.fs * 0.29) + 5;
+    const by = p.ly - p.fs;
+    return (
+      <g style={{ pointerEvents: 'none', userSelect: 'none' }}>
+        <text x={p.lx} y={p.ly} textAnchor="middle" fontSize={p.fs}
+          fontFamily="Arial, Helvetica, sans-serif"
+          fontWeight={sel ? 700 : 400}
+          fill={sel ? '#fcd34d' : '#3d5a78'}>
+          {p.lbl}
+        </text>
+        {count > 0 && (
+          <>
+            <circle cx={bx} cy={by} r={4.5} fill={sel ? '#f59e0b' : '#1e3a5f'} />
+            <text x={bx} y={by + 3} textAnchor="middle" fontSize={5}
+              fontFamily="Arial" fill={sel ? '#000' : 'white'} fontWeight={700}>
+              {count}
             </text>
-            {count > 0 && (
-              <>
-                <circle cx={badgeX} cy={badgeY} r={4.5} fill={sel ? '#f59e0b' : '#1e3a5f'} />
-                <text x={badgeX} y={badgeY + 3} textAnchor="middle" fontSize={5} fontFamily="Arial" fill="white" fontWeight={700}>
-                  {count}
-                </text>
-              </>
-            )}
-          </g>
-        );
-      })}
+          </>
+        )}
+      </g>
+    );
+  };
+
+  if (vehicleType === 'truck') {
+    return (
+      <svg viewBox="0 0 200 480" style={{ width: '100%', maxWidth: 210, height: 'auto', display: 'block', margin: '0 auto' }}>
+        <defs>
+          <clipPath id="truck-cab-clip"><path d={TRUCK_CAB_PATH} /></clipPath>
+          <clipPath id="truck-bed-clip"><path d={TRUCK_BED_PATH} /></clipPath>
+        </defs>
+
+        {/* Cab */}
+        <path d={TRUCK_CAB_PATH} fill="#101c2c" stroke="#2d4a6a" strokeWidth="1.5" />
+        <g clipPath="url(#truck-cab-clip)">
+          {DIAGRAM_PANELS_TRUCK_CAB.map(p => <PanelRect key={p.id} p={p} />)}
+          {/* Windshield */}
+          <rect x={0} y={148} width={200} height={20} fill="#06101c" style={{ pointerEvents: 'none' }} />
+          {/* Door windows */}
+          <rect x={20}  y={173} width={37} height={62} rx={2} fill="#06101c" style={{ pointerEvents: 'none' }} />
+          <rect x={143} y={173} width={37} height={62} rx={2} fill="#06101c" style={{ pointerEvents: 'none' }} />
+        </g>
+        {DIAGRAM_PANELS_TRUCK_CAB.map(p => <PanelLabel key={`l-${p.id}`} p={p} />)}
+
+        {/* Gap label */}
+        <text x={100} y={287} textAnchor="middle" fontSize={5} fill="#1e3a5f"
+          fontFamily="Arial" style={{ userSelect: 'none' as const, pointerEvents: 'none' as const }}>
+          ── CAB / BED GAP ──
+        </text>
+
+        {/* Bed */}
+        <path d={TRUCK_BED_PATH} fill="#101c2c" stroke="#2d4a6a" strokeWidth="1.5" />
+        <g clipPath="url(#truck-bed-clip)">
+          {DIAGRAM_PANELS_TRUCK_BED.map(p => <PanelRect key={p.id} p={p} />)}
+          {/* Bed floor (visual — not a panel) */}
+          <rect x={72} y={295} width={56} height={140} fill="#0b1826" style={{ pointerEvents: 'none' }} />
+          {/* Bed rail lines */}
+          <line x1={72} y1={295} x2={72} y2={435} stroke="#1a2d45" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
+          <line x1={128} y1={295} x2={128} y2={435} stroke="#1a2d45" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
+        </g>
+        {DIAGRAM_PANELS_TRUCK_BED.map(p => <PanelLabel key={`l-${p.id}`} p={p} />)}
+      </svg>
+    );
+  }
+
+  // ── Sedan ──────────────────────────────────────────────────────────────────
+  return (
+    <svg viewBox="0 0 200 480" style={{ width: '100%', maxWidth: 210, height: 'auto', display: 'block', margin: '0 auto' }}>
+      <defs>
+        <clipPath id="car-clip"><path d={CAR_PATH} /></clipPath>
+      </defs>
+      <path d={CAR_PATH} fill="#101c2c" stroke="#2d4a6a" strokeWidth="1.5" />
+      <g clipPath="url(#car-clip)">
+        {DIAGRAM_PANELS.map(p => <PanelRect key={p.id} p={p} />)}
+        <rect x={0}   y={155} width={200} height={27} fill="#06101c" style={{ pointerEvents: 'none' }} />
+        <rect x={0}   y={308} width={200} height={24} fill="#06101c" style={{ pointerEvents: 'none' }} />
+        <rect x={20}  y={192} width={37}  height={48} rx={2} fill="#06101c" style={{ pointerEvents: 'none' }} />
+        <rect x={143} y={192} width={37}  height={48} rx={2} fill="#06101c" style={{ pointerEvents: 'none' }} />
+        <rect x={20}  y={256} width={37}  height={38} rx={2} fill="#06101c" style={{ pointerEvents: 'none' }} />
+        <rect x={143} y={256} width={37}  height={38} rx={2} fill="#06101c" style={{ pointerEvents: 'none' }} />
+      </g>
+      {DIAGRAM_PANELS.map(p => <PanelLabel key={`l-${p.id}`} p={p} />)}
     </svg>
   );
 }
@@ -321,6 +368,7 @@ function EmptyState() {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function Home() {
+  const [vehicleType, setVehicleType] = useState<VehicleType>('sedan');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
@@ -340,6 +388,14 @@ export default function Home() {
   }, []);
 
   const handleSelect = (id: string) => setSelectedId(prev => (prev === id ? null : id));
+
+  const switchVehicle = (vt: VehicleType) => {
+    setVehicleType(vt);
+    setSelectedId(null);
+  };
+
+  const isOnCurrentDiagram = (p: { onDiagram?: boolean; onTruckDiagram?: boolean }) =>
+    vehicleType === 'sedan' ? !!p.onDiagram : !!p.onTruckDiagram;
 
   const selectFromSearch = (hit: SearchHit) => {
     setSelectedId(hit.panelId);
@@ -497,12 +553,38 @@ export default function Home() {
             flexDirection: 'column',
             overflowY: 'auto',
           }}>
-            <div style={{ padding: '20px 16px 0' }}>
+            <div style={{ padding: '16px 14px 0' }}>
+              {/* Vehicle type toggle */}
+              <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
+                {(['sedan', 'truck'] as const).map(vt => (
+                  <button
+                    key={vt}
+                    onClick={() => switchVehicle(vt)}
+                    style={{
+                      flex: 1,
+                      padding: '6px 0',
+                      borderRadius: 7,
+                      fontSize: 11.5,
+                      cursor: 'pointer',
+                      background: vehicleType === vt ? '#f59e0b' : '#172032',
+                      color: vehicleType === vt ? '#000' : '#4d6a84',
+                      border: `1px solid ${vehicleType === vt ? '#f59e0b' : '#2d4a6a'}`,
+                      fontWeight: vehicleType === vt ? 700 : 400,
+                      fontFamily: 'inherit',
+                      transition: 'all 0.15s',
+                      letterSpacing: '0.3px',
+                    }}
+                  >
+                    {vt === 'sedan' ? '🚗 Sedan / SUV' : '🛻 Pickup Truck'}
+                  </button>
+                ))}
+              </div>
+
               <div style={{
                 fontSize: 10, color: '#1e3a5f', textTransform: 'uppercase',
-                letterSpacing: '1.2px', textAlign: 'center', marginBottom: 14,
+                letterSpacing: '1.2px', textAlign: 'center', marginBottom: 10,
               }}>Click a panel</div>
-              <CarDiagram selected={selectedId} onSelect={handleSelect} />
+              <CarDiagram selected={selectedId} onSelect={handleSelect} vehicleType={vehicleType} />
             </div>
 
             {/* Chips for off-diagram panels */}
@@ -511,7 +593,7 @@ export default function Home() {
                 Other panels
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {PANELS.filter(p => !p.onDiagram).map(p => {
+                {PANELS.filter(p => !isOnCurrentDiagram(p)).map(p => {
                   const sel = selectedId === p.id;
                   const count = p.operations.length;
                   return (
