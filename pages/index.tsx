@@ -1,471 +1,566 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Head from 'next/head';
+import { PANELS } from '../lib/estimateData';
+import type { CarPanel } from '../lib/estimateData';
 
-type Mode = 'estimate' | 'invoice' | 'header';
-type Status = 'idle' | 'loading' | 'done' | 'error';
+// ─── Search ───────────────────────────────────────────────────────────────────
 
-interface AnalysisResult {
-  analysis: string;
-  usage?: { input_tokens: number; output_tokens: number };
+interface SearchHit {
+  panelId: string;
+  panelLabel: string;
+  opId?: string;
+  opName?: string;
+  type: 'panel' | 'op' | 'note';
+  snippet?: string;
 }
 
-function parseAnalysis(text: string) {
-  const sections: { type: 'correct' | 'missing' | 'incorrect' | 'note' | 'text'; content: string }[] = [];
-  for (const line of text.split('\n')) {
-    const t = line.trim();
-    if (!t) continue;
-    if (t.startsWith('✅')) sections.push({ type: 'correct', content: t.replace('✅', '').trim() });
-    else if (t.startsWith('⚠')) sections.push({ type: 'missing', content: t.replace(/⚠️?/, '').trim() });
-    else if (t.startsWith('❌')) sections.push({ type: 'incorrect', content: t.replace('❌', '').trim() });
-    else if (t.startsWith('📝')) sections.push({ type: 'note', content: t.replace('📝', '').trim() });
-    else sections.push({ type: 'text', content: t });
+function doSearch(q: string): SearchHit[] {
+  if (!q.trim()) return [];
+  const lq = q.toLowerCase();
+  const hits: SearchHit[] = [];
+  const seen = new Set<string>();
+
+  for (const panel of PANELS) {
+    if (panel.label.toLowerCase().includes(lq)) {
+      const key = panel.id;
+      if (!seen.has(key)) { seen.add(key); hits.push({ panelId: panel.id, panelLabel: panel.label, type: 'panel' }); }
+    }
+    for (const op of panel.operations) {
+      if (op.name.toLowerCase().includes(lq)) {
+        const key = `${panel.id}:${op.id}`;
+        if (!seen.has(key)) { seen.add(key); hits.push({ panelId: panel.id, panelLabel: panel.label, opId: op.id, opName: op.name, type: 'op' }); }
+      }
+      for (const note of op.notes) {
+        if (note.text.toLowerCase().includes(lq)) {
+          const key = `${panel.id}:${op.id}:${note.id}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            const idx = note.text.toLowerCase().indexOf(lq);
+            const s = Math.max(0, idx - 20);
+            const e = Math.min(note.text.length, idx + 70);
+            hits.push({
+              panelId: panel.id, panelLabel: panel.label,
+              opId: op.id, opName: op.name,
+              type: 'note',
+              snippet: (s > 0 ? '…' : '') + note.text.slice(s, e) + (e < note.text.length ? '…' : ''),
+            });
+          }
+        }
+      }
+    }
   }
-  return sections;
+  return hits.slice(0, 8);
 }
 
-function readFileBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => resolve((e.target?.result as string).split(',')[1]);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
+// ─── Car SVG diagram ──────────────────────────────────────────────────────────
+//
+// viewBox "0 0 200 480" — top-down sedan silhouette.
+// Panels are <rect> elements clipped to the car outline.
+//
+// Y zones:
+//   0–48    Front bumper
+//   48–155  Hood
+//   155–182 Windshield (visual only)
+//   182–308 Doors + Roof
+//   308–332 Rear window (visual only)
+//   332–422 Quarter Panels + Lift Gate
+//   422–455 Rear bumper
+
+const CAR_PATH =
+  'M 68,8 C 50,8 22,28 18,58 L 16,155 L 16,310 L 20,400 C 26,432 54,455 100,455 C 146,455 174,432 180,400 L 184,310 L 184,155 L 182,58 C 178,28 150,8 132,8 Z';
+
+interface DiagramPanel {
+  id: string;
+  lbl: string;
+  x: number; y: number; w: number; h: number;
+  lx: number; ly: number; fs: number;
 }
 
-export default function Home() {
-  const [dark, setDark] = useState(true);
-  const [mode, setMode] = useState<Mode>('estimate');
-  const [file, setFile] = useState<File | null>(null);
-  const [status, setStatus] = useState<Status>('idle');
-  const [result, setResult] = useState<AnalysisResult | null>(null);
-  const [error, setError] = useState('');
-  const [dragOver, setDragOver] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+const DIAGRAM_PANELS: DiagramPanel[] = [
+  { id: 'front-bumper', lbl: 'Front Bumper', x: 0,   y: 0,   w: 200, h: 48,  lx: 100, ly: 28,  fs: 7   },
+  { id: 'hood',         lbl: 'Hood',         x: 0,   y: 48,  w: 200, h: 107, lx: 100, ly: 104, fs: 11  },
+  { id: 'left-doors',   lbl: 'L Doors',      x: 0,   y: 182, w: 62,  h: 126, lx: 31,  ly: 248, fs: 7.5 },
+  { id: 'roof',         lbl: 'Roof',         x: 62,  y: 182, w: 76,  h: 126, lx: 100, ly: 248, fs: 10  },
+  { id: 'right-doors',  lbl: 'R Doors',      x: 138, y: 182, w: 62,  h: 126, lx: 169, ly: 248, fs: 7.5 },
+  { id: 'lt-quarter',   lbl: 'LT QP',        x: 0,   y: 332, w: 62,  h: 90,  lx: 31,  ly: 382, fs: 7.5 },
+  { id: 'lift-gate',    lbl: 'Lift Gate',    x: 62,  y: 332, w: 76,  h: 90,  lx: 100, ly: 382, fs: 8   },
+  { id: 'rt-quarter',   lbl: 'RT QP',        x: 138, y: 332, w: 62,  h: 90,  lx: 169, ly: 382, fs: 7.5 },
+  { id: 'rear-bumper',  lbl: 'Rear Bumper',  x: 0,   y: 422, w: 200, h: 33,  lx: 100, ly: 441, fs: 7   },
+];
 
-  // Header tab state
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [businessName, setBusinessName] = useState('');
-  const [businessAddress, setBusinessAddress] = useState('');
-  const [businessPhone, setBusinessPhone] = useState('');
-  const [headerPdf, setHeaderPdf] = useState<string | null>(null);
-  const logoInputRef = useRef<HTMLInputElement>(null);
+function CarDiagram({ selected, onSelect }: { selected: string | null; onSelect: (id: string) => void }) {
+  const [hovered, setHovered] = useState<string | null>(null);
 
-  useEffect(() => {
-    const saved = localStorage.getItem('hail-theme');
-    if (saved) setDark(saved === 'dark');
-  }, []);
+  const panelFill = (id: string) => {
+    if (selected === id) return '#1e3a8a';
+    if (hovered === id) return '#1e2d45';
+    return '#111827';
+  };
 
-  const toggleTheme = () => {
-    setDark(prev => {
-      localStorage.setItem('hail-theme', !prev ? 'dark' : 'light');
-      return !prev;
+  const opCount = (id: string) => PANELS.find(p => p.id === id)?.operations.length ?? 0;
+
+  return (
+    <svg
+      viewBox="0 0 200 480"
+      style={{ width: '100%', maxWidth: 210, height: 'auto', display: 'block', margin: '0 auto' }}
+      aria-label="Car diagram — click a panel"
+    >
+      <defs>
+        <clipPath id="car-clip">
+          <path d={CAR_PATH} />
+        </clipPath>
+      </defs>
+
+      {/* Car body background */}
+      <path d={CAR_PATH} fill="#0d1117" stroke="#1e2d3d" strokeWidth="1.5" />
+
+      <g clipPath="url(#car-clip)">
+        {/* Clickable panels */}
+        {DIAGRAM_PANELS.map(p => (
+          <rect
+            key={p.id}
+            x={p.x} y={p.y} width={p.w} height={p.h}
+            fill={panelFill(p.id)}
+            stroke="#1a2535"
+            strokeWidth="0.5"
+            style={{ cursor: 'pointer', transition: 'fill 0.12s ease' }}
+            onClick={() => onSelect(p.id)}
+            onMouseEnter={() => setHovered(p.id)}
+            onMouseLeave={() => setHovered(null)}
+            role="button"
+            aria-label={p.lbl}
+          />
+        ))}
+
+        {/* Visual-only glass areas */}
+        <rect x={0} y={155} width={200} height={27} fill="#06101c" style={{ pointerEvents: 'none' }} />
+        <rect x={0} y={308} width={200} height={24} fill="#06101c" style={{ pointerEvents: 'none' }} />
+
+        {/* Door window shapes */}
+        <rect x={20}  y={192} width={37} height={48} rx={2} fill="#06101c" style={{ pointerEvents: 'none' }} />
+        <rect x={143} y={192} width={37} height={48} rx={2} fill="#06101c" style={{ pointerEvents: 'none' }} />
+        <rect x={20}  y={256} width={37} height={38} rx={2} fill="#06101c" style={{ pointerEvents: 'none' }} />
+        <rect x={143} y={256} width={37} height={38} rx={2} fill="#06101c" style={{ pointerEvents: 'none' }} />
+      </g>
+
+      {/* Panel labels + op-count badge */}
+      {DIAGRAM_PANELS.map(p => {
+        const count = opCount(p.id);
+        const sel = selected === p.id;
+        const badgeX = p.lx + Math.ceil(p.lbl.length * p.fs * 0.29) + 5;
+        const badgeY = p.ly - p.fs;
+        return (
+          <g key={`lbl-${p.id}`} style={{ pointerEvents: 'none', userSelect: 'none' }}>
+            <text
+              x={p.lx} y={p.ly}
+              textAnchor="middle"
+              fontSize={p.fs}
+              fontFamily="Arial, Helvetica, sans-serif"
+              fontWeight={sel ? 700 : 400}
+              fill={sel ? '#93c5fd' : '#3d5470'}
+            >
+              {p.lbl}
+            </text>
+            {count > 0 && (
+              <>
+                <circle cx={badgeX} cy={badgeY} r={4.5} fill={sel ? '#2563eb' : '#1e3a5f'} />
+                <text x={badgeX} y={badgeY + 3} textAnchor="middle" fontSize={5} fontFamily="Arial" fill="white" fontWeight={700}>
+                  {count}
+                </text>
+              </>
+            )}
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+// ─── Copy button ──────────────────────────────────────────────────────────────
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2200);
     });
   };
+  return (
+    <button
+      onClick={copy}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 5,
+        marginTop: 8,
+        padding: '5px 12px',
+        background: copied ? '#052e16' : '#0f172a',
+        color: copied ? '#4ade80' : '#64748b',
+        border: `1px solid ${copied ? '#16a34a' : '#1e293b'}`,
+        borderRadius: 6,
+        fontSize: 12,
+        cursor: 'pointer',
+        transition: 'all 0.15s',
+        fontFamily: 'inherit',
+      }}
+    >
+      <span style={{ fontSize: 13 }}>{copied ? '✓' : '⎘'}</span>
+      {copied ? 'Copied!' : 'Copy note'}
+    </button>
+  );
+}
 
-  const handleFile = (f: File) => {
-    const allowed = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
-    if (!allowed.includes(f.type)) { setError('Upload a PDF or image (JPG, PNG).'); return; }
-    setFile(f); setResult(null); setError(''); setHeaderPdf(null);
-  };
+// ─── Operations panel ─────────────────────────────────────────────────────────
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault(); setDragOver(false);
-    const f = e.dataTransfer.files[0];
-    if (f) handleFile(f);
+function PanelOps({ panel }: { panel: CarPanel }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {panel.operations.length === 0 ? (
+        <div style={{
+          padding: '20px',
+          background: '#0d1117',
+          border: '1px dashed #1e2d3d',
+          borderRadius: 10,
+          color: '#334155',
+          fontSize: 13,
+          textAlign: 'center',
+        }}>
+          No operations yet for this panel.<br />
+          <span style={{ fontSize: 12, color: '#1e3a5f' }}>
+            Add entries in <code style={{ color: '#3b82f6' }}>lib/estimateData.ts</code>
+          </span>
+        </div>
+      ) : (
+        panel.operations.map(op => (
+          <div
+            key={op.id}
+            style={{
+              background: '#0d1117',
+              border: '1px solid #1e2d3d',
+              borderRadius: 10,
+              padding: '14px 18px',
+            }}
+          >
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              marginBottom: op.notes.length ? 12 : 0,
+              fontSize: 13,
+              fontWeight: 600,
+              color: '#7dd3fc',
+            }}>
+              <span style={{ opacity: 0.8 }}>⚙</span>
+              {op.name}
+            </div>
+
+            {op.notes.map((note, ni) => (
+              <div
+                key={note.id}
+                style={{
+                  marginTop: ni > 0 ? 10 : 0,
+                  paddingTop: ni > 0 ? 10 : 0,
+                  borderTop: ni > 0 ? '1px solid #0f1a2a' : 'none',
+                }}
+              >
+                <p style={{
+                  margin: 0,
+                  padding: '10px 14px',
+                  background: '#070d18',
+                  border: '1px solid #12203a',
+                  borderRadius: 6,
+                  fontSize: 12.5,
+                  lineHeight: 1.65,
+                  color: '#94a3b8',
+                  fontFamily: "ui-monospace, 'Cascadia Code', 'Fira Code', Menlo, monospace",
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                }}>
+                  {note.text}
+                </p>
+                <CopyButton text={note.text} />
+              </div>
+            ))}
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+// ─── Empty state ──────────────────────────────────────────────────────────────
+
+function EmptyState() {
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      height: '100%',
+      gap: 14,
+      padding: 40,
+    }}>
+      <svg width="72" height="72" viewBox="0 0 72 72" fill="none" style={{ opacity: 0.12 }}>
+        <ellipse cx="36" cy="36" rx="24" ry="30" stroke="#60a5fa" strokeWidth="2.5" />
+        <rect x="18" y="26" width="36" height="20" rx="2" stroke="#60a5fa" strokeWidth="1.5" />
+        <line x1="18" y1="36" x2="54" y2="36" stroke="#60a5fa" strokeWidth="1.5" />
+      </svg>
+      <div style={{ fontSize: 15, fontWeight: 600, color: '#1e3a5f', textAlign: 'center' }}>
+        Select a panel to see operations
+      </div>
+      <div style={{ fontSize: 13, color: '#0f2236', textAlign: 'center', maxWidth: 280, lineHeight: 1.6 }}>
+        Click any area on the car diagram, or use the search bar to find specific operations and copy notes into CCC ONE.
+      </div>
+    </div>
+  );
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
+
+export default function Home() {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+
+  const hits = doSearch(query);
+  const selectedPanel = PANELS.find(p => p.id === selectedId) ?? null;
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const switchMode = (m: Mode) => {
-    setMode(m); setStatus('idle'); setError(''); setResult(null); setHeaderPdf(null);
+  const handleSelect = (id: string) => setSelectedId(prev => (prev === id ? null : id));
+
+  const selectFromSearch = (hit: SearchHit) => {
+    setSelectedId(hit.panelId);
+    setQuery('');
+    setShowDropdown(false);
   };
 
-  const handleAnalyze = async () => {
-    if (!file) return;
-    setStatus('loading'); setError(''); setResult(null);
-    try {
-      const base64 = await readFileBase64(file);
-      const res = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileData: base64, fileType: file.type === 'application/pdf' ? 'pdf' : 'image', fileName: file.name, mode }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Analysis failed');
-      setResult(data); setStatus('done');
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-      setStatus('error');
-    }
-  };
-
-  const handleHeaderProcess = async () => {
-    if (!file || !logoFile) return;
-    setStatus('loading'); setError(''); setHeaderPdf(null);
-    try {
-      // Load pdfjs — dynamically imported so it only runs in the browser
-      const pdfjsLib = await import('pdfjs-dist');
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
-
-      // Render page 1 to canvas (pdfjs is the reference renderer — always correct)
-      const pdfBytes = new Uint8Array(await file.arrayBuffer());
-      const pdfJsDoc = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
-      const totalPages = pdfJsDoc.numPages;
-      const page1 = await pdfJsDoc.getPage(1);
-
-      const SCALE = 2.0; // 2× for print-quality output
-      const viewport = page1.getViewport({ scale: SCALE });
-      const canvas = document.createElement('canvas');
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      const ctx = canvas.getContext('2d')!;
-      await page1.render({ canvasContext: ctx as unknown as CanvasRenderingContext2D, viewport }).promise;
-
-      // ── 1. Erase original shop header (top 160 PDF points) ──
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, 160 * SCALE);
-
-      // ── 2. Draw logo centered in the cleared header band ──
-      const logoUrl = URL.createObjectURL(logoFile);
-      const logoImg = await new Promise<HTMLImageElement>((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => resolve(img);
-        img.onerror = () => reject(new Error('Failed to load logo'));
-        img.src = logoUrl;
-      });
-      URL.revokeObjectURL(logoUrl);
-
-      const hasText = !!(businessName || businessAddress || businessPhone);
-      const maxLogoW = 420 * SCALE;
-      const maxLogoH = (hasText ? 85 : 130) * SCALE;
-      const logoFit = Math.min(maxLogoW / logoImg.naturalWidth, maxLogoH / logoImg.naturalHeight);
-      const lw = logoImg.naturalWidth * logoFit;
-      const lh = logoImg.naturalHeight * logoFit;
-      const padTop = 8 * SCALE;
-      ctx.drawImage(logoImg, (canvas.width - lw) / 2, padTop, lw, lh);
-
-      // ── 3. Business info text centered below logo ──
-      if (hasText) {
-        const fontSize = 8 * SCALE;
-        const lineH = 11 * SCALE;
-        let ty = padTop + lh + fontSize + 10 * SCALE; // ty = baseline of first line
-
-        const drawCentered = (text: string, bold: boolean) => {
-          ctx.font = `${bold ? '700 ' : ''}${fontSize}px Arial, Helvetica, sans-serif`;
-          ctx.fillStyle = '#000000';
-          const tw = ctx.measureText(text).width;
-          ctx.fillText(text, (canvas.width - tw) / 2, ty);
-          ty += lineH;
-        };
-
-        if (businessName) drawCentered(businessName, true);
-        if (businessAddress) drawCentered(businessAddress, false);
-        if (businessPhone) drawCentered(businessPhone, false);
-      }
-
-      // ── 4. Erase Inspection Location content ──
-      // PDF coords: x=190, y=360 from bottom, w=195, h=175 (PAGE_H=792)
-      // Canvas coords (y=0 at top): inspY = (792-360-175)*SCALE = 257*SCALE
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(190 * SCALE, 257 * SCALE, 195 * SCALE, 175 * SCALE);
-
-      // ── 5. Canvas → PNG → embed in new PDF ──
-      const pngDataUrl = canvas.toDataURL('image/png');
-      const pngBase64 = pngDataUrl.split(',')[1];
-      let binary = '';
-      const pngBytesArr = Uint8Array.from(atob(pngBase64), c => c.charCodeAt(0));
-      for (let i = 0; i < pngBytesArr.length; i++) binary += String.fromCharCode(pngBytesArr[i]);
-
-      const { PDFDocument } = await import('pdf-lib');
-      const outPdf = await PDFDocument.create();
-      const pngImage = await outPdf.embedPng(pngBytesArr);
-      const p1 = outPdf.addPage([612, 792]);
-      p1.drawImage(pngImage, { x: 0, y: 0, width: 612, height: 792 });
-
-      // Copy remaining pages unchanged
-      if (totalPages > 1) {
-        const origPdfLib = await PDFDocument.load(pdfBytes);
-        const indices = Array.from({ length: totalPages - 1 }, (_, i) => i + 1);
-        const copied = await outPdf.copyPages(origPdfLib, indices);
-        copied.forEach(pg => outPdf.addPage(pg));
-      }
-
-      const outputBytes = await outPdf.save();
-      let outBinary = '';
-      for (let i = 0; i < outputBytes.length; i++) outBinary += String.fromCharCode(outputBytes[i]);
-      setHeaderPdf(btoa(outBinary));
-      setStatus('done');
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-      setStatus('error');
-    }
-  };
-
-  const downloadHeaderPdf = () => {
-    if (!headerPdf) return;
-    const bytes = atob(headerPdf);
-    const arr = new Uint8Array(bytes.length);
-    for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
-    const url = URL.createObjectURL(new Blob([arr], { type: 'application/pdf' }));
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = (file?.name || 'estimate').replace(/\.pdf$/i, '') + '_branded.pdf';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  const parsed = result ? parseAnalysis(result.analysis) : [];
+  const typeIcon = (t: SearchHit['type']) =>
+    t === 'panel' ? '📍' : t === 'op' ? '⚙️' : '📝';
 
   return (
     <>
       <Head>
         <title>Hail Estimator Pro</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet" />
+        <style>{`
+          * { box-sizing: border-box; }
+          body { margin: 0; background: #070d18; }
+          ::-webkit-scrollbar { width: 6px; }
+          ::-webkit-scrollbar-track { background: #0d1117; }
+          ::-webkit-scrollbar-thumb { background: #1e2d3d; border-radius: 3px; }
+          input::placeholder { color: #2d4258; }
+          input:focus { outline: none; border-color: #1d4ed8 !important; box-shadow: 0 0 0 2px rgba(29,78,216,0.2); }
+        `}</style>
       </Head>
-      <div className={dark ? 'app dark' : 'app light'}>
-        <header>
-          <div className="header-inner">
-            <div className="logo">
-              <span className="logo-icon">H</span>
-              <div>
-                <div className="logo-title">HAIL ESTIMATOR PRO</div>
-                <div className="logo-sub">PDR - USAA Matrix 2025</div>
+
+      <div style={{
+        minHeight: '100vh',
+        maxHeight: '100vh',
+        background: '#070d18',
+        color: '#e2e8f0',
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif",
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}>
+
+        {/* ── Header ── */}
+        <header style={{
+          borderBottom: '1px solid #0f1e30',
+          padding: '12px 20px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 20,
+          background: '#0a1120',
+          flexShrink: 0,
+          zIndex: 10,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+            <div style={{
+              width: 36, height: 36,
+              background: 'linear-gradient(135deg, #1d4ed8, #0ea5e9)',
+              borderRadius: 8,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 18,
+            }}>🔩</div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 15, color: '#e2e8f0', letterSpacing: '-0.2px' }}>
+                Hail Estimator Pro
+              </div>
+              <div style={{ fontSize: 10.5, color: '#2d4258', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                Estimate Assistant
               </div>
             </div>
-            <div className="header-right">
-              <button className="theme-toggle" onClick={toggleTheme}>{dark ? 'Light' : 'Dark'}</button>
-              <div className="header-badge">BETA</div>
+          </div>
+
+          {/* Search */}
+          <div ref={searchRef} style={{ flex: 1, maxWidth: 420, position: 'relative' }}>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <span style={{ position: 'absolute', left: 11, fontSize: 14, color: '#2d4258', pointerEvents: 'none', lineHeight: 1 }}>🔍</span>
+              <input
+                value={query}
+                onChange={e => { setQuery(e.target.value); setShowDropdown(true); }}
+                onFocus={() => query && setShowDropdown(true)}
+                onKeyDown={e => e.key === 'Escape' && setShowDropdown(false)}
+                placeholder="Search panels, operations, notes..."
+                style={{
+                  width: '100%',
+                  background: '#0d1117',
+                  border: '1px solid #1a2838',
+                  borderRadius: 8,
+                  padding: '8px 34px 8px 33px',
+                  color: '#e2e8f0',
+                  fontSize: 13.5,
+                  transition: 'border-color 0.15s, box-shadow 0.15s',
+                }}
+              />
+              {query && (
+                <button
+                  onClick={() => { setQuery(''); setShowDropdown(false); }}
+                  style={{ position: 'absolute', right: 10, background: 'none', border: 'none', color: '#2d4258', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: 2 }}
+                >×</button>
+              )}
             </div>
+
+            {showDropdown && hits.length > 0 && (
+              <div style={{
+                position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
+                background: '#0d1520', border: '1px solid #1a2838',
+                borderRadius: 8, boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
+                zIndex: 200, overflow: 'hidden',
+              }}>
+                {hits.map((hit, i) => (
+                  <button
+                    key={i}
+                    onClick={() => selectFromSearch(hit)}
+                    style={{
+                      display: 'block', width: '100%', textAlign: 'left',
+                      padding: '10px 14px', background: 'none', border: 'none',
+                      borderBottom: i < hits.length - 1 ? '1px solid #0f1e30' : 'none',
+                      cursor: 'pointer', color: '#e2e8f0', transition: 'background 0.1s', fontFamily: 'inherit',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#111f33')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                  >
+                    <div style={{ fontSize: 12, color: '#3d5470', marginBottom: hit.snippet ? 2 : 0 }}>
+                      {typeIcon(hit.type)}&nbsp;
+                      <span style={{ color: '#64748b' }}>{hit.panelLabel}</span>
+                      {hit.opName && <span style={{ color: '#3d5470' }}> → {hit.opName}</span>}
+                    </div>
+                    {hit.snippet && (
+                      <div style={{ fontSize: 12, color: '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {hit.snippet}
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </header>
 
-        <main>
-          <div className="mode-toggle">
-            <button className={'mode-btn' + (mode === 'estimate' ? ' active' : '')} onClick={() => switchMode('estimate')}>
-              <div><div className="mode-label">Scope / Estimate</div><div className="mode-desc">Audit CCC ONE estimate</div></div>
-            </button>
-            <button className={'mode-btn' + (mode === 'invoice' ? ' active' : '')} onClick={() => switchMode('invoice')}>
-              <div><div className="mode-label">Invoice / Parts</div><div className="mode-desc">Extract line items</div></div>
-            </button>
-            <button className={'mode-btn' + (mode === 'header' ? ' active' : '')} onClick={() => switchMode('header')}>
-              <div><div className="mode-label">Estimate Header</div><div className="mode-desc">Rebrand CCC estimate</div></div>
-            </button>
-          </div>
+        {/* ── Body ── */}
+        <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
-          {mode === 'header' ? (
-            <>
-              <div className="section-label">CCC Estimate PDF</div>
-              <div
-                className={'upload-zone' + (dragOver ? ' drag-over' : '') + (file ? ' has-file' : '')}
-                onClick={() => fileInputRef.current?.click()}
-                onDrop={handleDrop}
-                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                onDragLeave={() => setDragOver(false)}
-              >
-                <input ref={fileInputRef} type="file" accept=".pdf" style={{ display: 'none' }}
-                  onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
-                {file ? (
-                  <div className="file-selected">
-                    <div className="file-name">{file.name}</div>
-                    <div className="file-size">{(file.size / 1024).toFixed(1)} KB</div>
-                    <div className="file-change">Click to change</div>
-                  </div>
-                ) : (
-                  <div className="upload-prompt">
-                    <div className="upload-title">Drop CCC estimate here or click to upload</div>
-                    <div className="upload-sub">PDF only</div>
-                  </div>
-                )}
+          {/* Left: car diagram + chips */}
+          <aside style={{
+            width: 264,
+            flexShrink: 0,
+            borderRight: '1px solid #0f1e30',
+            background: '#090e1a',
+            display: 'flex',
+            flexDirection: 'column',
+            overflowY: 'auto',
+          }}>
+            <div style={{ padding: '20px 16px 0' }}>
+              <div style={{
+                fontSize: 10, color: '#1e3a5f', textTransform: 'uppercase',
+                letterSpacing: '1.2px', textAlign: 'center', marginBottom: 14,
+              }}>Click a panel</div>
+              <CarDiagram selected={selectedId} onSelect={handleSelect} />
+            </div>
+
+            {/* Chips for off-diagram panels */}
+            <div style={{ padding: '16px 14px 20px' }}>
+              <div style={{ fontSize: 10, color: '#1a2d42', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8, paddingLeft: 2 }}>
+                Other panels
               </div>
-
-              <div className="section-label">Logo</div>
-              <div
-                className={'upload-zone' + (logoFile ? ' has-file' : '')}
-                onClick={() => logoInputRef.current?.click()}
-              >
-                <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/jpg" style={{ display: 'none' }}
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) { setLogoFile(f); setError(''); setHeaderPdf(null); }
-                  }} />
-                {logoFile ? (
-                  <div className="file-selected">
-                    <div className="file-name">{logoFile.name}</div>
-                    <div className="file-size">{(logoFile.size / 1024).toFixed(1)} KB</div>
-                    <div className="file-change">Click to change</div>
-                  </div>
-                ) : (
-                  <div className="upload-prompt">
-                    <div className="upload-title">Drop logo here or click to upload</div>
-                    <div className="upload-sub">PNG or JPG</div>
-                  </div>
-                )}
-              </div>
-
-              <div className="section-label">Business Info</div>
-              <div className="form-card">
-                <input className="form-input" placeholder="Business name" value={businessName}
-                  onChange={(e) => setBusinessName(e.target.value)} />
-                <input className="form-input" placeholder="Address" value={businessAddress}
-                  onChange={(e) => setBusinessAddress(e.target.value)} />
-                <input className="form-input" placeholder="Phone" value={businessPhone}
-                  onChange={(e) => setBusinessPhone(e.target.value)} />
-              </div>
-
-              <button
-                className={'analyze-btn' + (status === 'loading' ? ' loading' : '')}
-                onClick={handleHeaderProcess}
-                disabled={!file || !logoFile || status === 'loading'}
-              >
-                {status === 'loading' ? 'Processing...' : 'Generate Branded Estimate'}
-              </button>
-
-              {error && <div className="error-box">{error}</div>}
-
-              {status === 'done' && headerPdf && (
-                <div className="results">
-                  <div className="results-header">
-                    <div className="results-title">Estimate branded successfully</div>
-                  </div>
-                  <div style={{ padding: '20px' }}>
-                    <button className="download-btn" onClick={downloadHeaderPdf}>
-                      Download Branded PDF
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {PANELS.filter(p => !p.onDiagram).map(p => {
+                  const sel = selectedId === p.id;
+                  const count = p.operations.length;
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => handleSelect(p.id)}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: 20,
+                        fontSize: 11.5,
+                        cursor: 'pointer',
+                        background: sel ? '#1e3a8a' : '#0d1525',
+                        color: sel ? '#93c5fd' : '#3d5470',
+                        border: `1px solid ${sel ? '#1d4ed8' : '#132030'}`,
+                        transition: 'all 0.12s',
+                        fontFamily: 'inherit',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                      }}
+                    >
+                      {p.label}
+                      {count > 0 && (
+                        <span style={{
+                          background: sel ? '#2563eb' : '#1a3050',
+                          color: sel ? 'white' : '#3d5470',
+                          borderRadius: 10, fontSize: 9,
+                          padding: '0 4px', lineHeight: '14px', fontWeight: 700,
+                        }}>
+                          {count}
+                        </span>
+                      )}
                     </button>
-                  </div>
-                </div>
-              )}
-            </>
-          ) : (
-            <>
-              <div
-                className={'upload-zone' + (dragOver ? ' drag-over' : '') + (file ? ' has-file' : '')}
-                onClick={() => fileInputRef.current?.click()}
-                onDrop={handleDrop}
-                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                onDragLeave={() => setDragOver(false)}
-              >
-                <input ref={fileInputRef} type="file" accept=".pdf,image/jpeg,image/png" style={{ display: 'none' }}
-                  onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
-                {file ? (
-                  <div className="file-selected">
-                    <div className="file-name">{file.name}</div>
-                    <div className="file-size">{(file.size / 1024).toFixed(1)} KB</div>
-                    <div className="file-change">Click to change</div>
-                  </div>
-                ) : (
-                  <div className="upload-prompt">
-                    <div className="upload-title">Drop file here or click to upload</div>
-                    <div className="upload-sub">PDF - JPG - PNG</div>
-                  </div>
-                )}
+                  );
+                })}
               </div>
+            </div>
+          </aside>
 
-              <button
-                className={'analyze-btn' + (status === 'loading' ? ' loading' : '')}
-                onClick={handleAnalyze}
-                disabled={!file || status === 'loading'}
-              >
-                {status === 'loading' ? 'Analyzing...' : (mode === 'estimate' ? 'Audit Estimate' : 'Extract Invoice Items')}
-              </button>
-
-              {error && <div className="error-box">{error}</div>}
-
-              {status === 'done' && result && (
-                <div className="results">
-                  <div className="results-header">
-                    <div className="results-title">Analysis Complete</div>
-                    {result.usage && <div className="results-usage">{result.usage.input_tokens + result.usage.output_tokens} tokens</div>}
-                  </div>
-                  <div className="results-body">
-                    {parsed.map((item, i) => (
-                      <div key={i} className={'result-item result-' + item.type}>
-                        <span className="result-content">{item.content}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <button className="copy-btn" onClick={() => navigator.clipboard.writeText(result.analysis)}>Copy Full Analysis</button>
+          {/* Right: operations + notes */}
+          <main style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
+            {!selectedPanel ? (
+              <EmptyState />
+            ) : (
+              <>
+                <div style={{
+                  display: 'flex', alignItems: 'baseline', gap: 12,
+                  marginBottom: 20, paddingBottom: 16,
+                  borderBottom: '1px solid #0f1e30',
+                }}>
+                  <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#e2e8f0' }}>
+                    {selectedPanel.label}
+                  </h2>
+                  <span style={{ fontSize: 12, color: '#1e3a5f' }}>
+                    {selectedPanel.operations.length} operation{selectedPanel.operations.length !== 1 ? 's' : ''}
+                  </span>
                 </div>
-              )}
-
-              <div className="rules-card">
-                <div className="rules-title">Active Rules</div>
-                <div className="rules-list">
-                  <div className="rule-item"><span className="rule-dot" />Roof replacement - R&amp;I Windshield + Urethane Kit ($30)</div>
-                  <div className="rule-item"><span className="rule-dot" />O/S Dent = $50 each (manual entries only)</div>
-                  <div className="rule-item"><span className="rule-dot" />Aluminum +25% only when explicitly marked (ALU)</div>
-                  <div className="rule-item"><span className="rule-dot" />Roof Rail ID: rock pillar, drip rail, cant rail</div>
-                  <div className="rule-item"><span className="rule-dot" />+25% Roof for SUV/Van/Truck/Wagon</div>
-                  <div className="rule-item"><span className="rule-dot" />USAA Matrix 2025 - full panel x dent count x size</div>
-                </div>
-              </div>
-            </>
-          )}
-        </main>
-
-        <style jsx global>{`
-          *{box-sizing:border-box;margin:0;padding:0}
-          body{font-family:'Sora',sans-serif;min-height:100vh}
-          .app.dark{--bg:#0a0b0f;--surface:#0d0e14;--surface2:#11121a;--border:#1e2028;--border2:#2e3040;--text:#e8e6e0;--text2:#6a6d7c;--text3:#4a4d5c;--accent:#e8a020;--accent-hover:#f0b030;--accent-bg:#161408;--correct-bg:#0a1a0d;--correct-border:#1a3d20;--missing-bg:#1a1500;--missing-border:#3d3000;--incorrect-bg:#1a0d0d;--incorrect-border:#3d1515;--note-bg:#0d1020;--note-border:#1e2540;--error-bg:#1a0d0d;--error-border:#3d1515;--error-text:#e06060}
-          .app.light{--bg:#f5f4f0;--surface:#fff;--surface2:#f0eeea;--border:#ddd9d0;--border2:#c4bfb5;--text:#1a1810;--text2:#6a6458;--text3:#9a9488;--accent:#c47a10;--accent-hover:#d98a18;--accent-bg:#fdf5e6;--correct-bg:#eef7f0;--correct-border:#b8dfc0;--missing-bg:#fdf8e6;--missing-border:#e0cc80;--incorrect-bg:#fdf0f0;--incorrect-border:#e0b0b0;--note-bg:#eef2fd;--note-border:#b8c8e8;--error-bg:#fdf0f0;--error-border:#e0b0b0;--error-text:#c04040}
-          .app{min-height:100vh;background:var(--bg);color:var(--text);transition:background .2s,color .2s}
-          header{border-bottom:1px solid var(--border);background:var(--surface)}
-          .header-inner{max-width:720px;margin:0 auto;padding:20px 24px;display:flex;align-items:center;justify-content:space-between}
-          .logo{display:flex;align-items:center;gap:14px}
-          .logo-icon{font-size:28px;color:var(--accent);font-weight:700}
-          .logo-title{font-family:'DM Mono',monospace;font-size:13px;font-weight:500;letter-spacing:.12em;color:var(--text)}
-          .logo-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);letter-spacing:.08em;margin-top:2px}
-          .header-right{display:flex;align-items:center;gap:10px}
-          .theme-toggle{background:none;border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;color:var(--text2);transition:border-color .15s}
-          .theme-toggle:hover{border-color:var(--border2)}
-          .header-badge{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.15em;background:var(--accent);color:#0a0b0f;padding:3px 8px;border-radius:3px;font-weight:500}
-          main{max-width:720px;margin:0 auto;padding:40px 24px 80px;display:flex;flex-direction:column;gap:20px}
-          .mode-toggle{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
-          .mode-btn{display:flex;align-items:center;padding:16px 16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s;text-align:left;color:var(--text)}
-          .mode-btn:hover{border-color:var(--border2);background:var(--surface2)}
-          .mode-btn.active{border-color:var(--accent);background:var(--accent-bg)}
-          .mode-label{font-size:12px;font-weight:600;color:var(--text)}
-          .mode-desc{font-size:10px;color:var(--text3);margin-top:2px}
-          .section-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--text3);text-transform:uppercase;margin-bottom:-10px}
-          .upload-zone{border:1.5px dashed var(--border);border-radius:12px;padding:40px 24px;text-align:center;cursor:pointer;transition:all .15s;background:var(--surface)}
-          .upload-zone:hover,.upload-zone.drag-over{border-color:var(--accent);background:var(--accent-bg)}
-          .upload-zone.has-file{border-style:solid;border-color:var(--border2);padding:24px}
-          .upload-title{font-size:14px;color:var(--text2);margin-bottom:6px}
-          .upload-sub{font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);letter-spacing:.1em}
-          .file-selected{display:flex;flex-direction:column;align-items:center;gap:6px}
-          .file-name{font-size:14px;font-weight:600;color:var(--text)}
-          .file-size{font-family:'DM Mono',monospace;font-size:11px;color:var(--text3)}
-          .file-change{font-size:11px;color:var(--accent);margin-top:4px}
-          .form-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px}
-          .form-input{width:100%;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Sora',sans-serif;font-size:13px;outline:none;transition:border-color .15s}
-          .form-input:focus{border-color:var(--accent)}
-          .form-input::placeholder{color:var(--text3)}
-          .analyze-btn{display:flex;align-items:center;justify-content:center;width:100%;padding:16px;background:var(--accent);color:#0a0b0f;border:none;border-radius:10px;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .15s}
-          .analyze-btn:hover:not(:disabled){background:var(--accent-hover);transform:translateY(-1px)}
-          .analyze-btn:disabled{opacity:.4;cursor:not-allowed}
-          .error-box{background:var(--error-bg);border:1px solid var(--error-border);border-radius:8px;padding:14px 16px;font-size:13px;color:var(--error-text)}
-          .results{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
-          .results-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);background:var(--surface2)}
-          .results-title{font-size:13px;font-weight:700;letter-spacing:.05em;color:var(--accent)}
-          .results-usage{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3)}
-          .results-body{padding:20px;display:flex;flex-direction:column;gap:10px}
-          .result-item{padding:12px 14px;border-radius:8px;font-size:13px;line-height:1.5}
-          .result-correct{background:var(--correct-bg);border:1px solid var(--correct-border)}
-          .result-missing{background:var(--missing-bg);border:1px solid var(--missing-border)}
-          .result-incorrect{background:var(--incorrect-bg);border:1px solid var(--incorrect-border)}
-          .result-note{background:var(--note-bg);border:1px solid var(--note-border)}
-          .result-text{background:transparent;border:none;color:var(--text2);font-size:12px}
-          .result-content{color:var(--text)}
-          .copy-btn{display:block;width:calc(100% - 40px);margin:0 20px 20px;padding:12px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--text2);font-family:'Sora',sans-serif;font-size:12px;cursor:pointer;transition:all .15s}
-          .copy-btn:hover{border-color:var(--border2);color:var(--text)}
-          .download-btn{width:100%;padding:14px;background:var(--accent);color:#0a0b0f;border:none;border-radius:8px;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .15s}
-          .download-btn:hover{background:var(--accent-hover)}
-          .rules-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px}
-          .rules-title{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.15em;color:var(--text3);margin-bottom:14px;text-transform:uppercase}
-          .rules-list{display:flex;flex-direction:column;gap:10px}
-          .rule-item{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text2)}
-          .rule-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);flex-shrink:0}
-        `}</style>
+                <PanelOps panel={selectedPanel} />
+              </>
+            )}
+          </main>
+        </div>
       </div>
     </>
   );
