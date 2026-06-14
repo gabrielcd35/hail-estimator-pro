@@ -131,9 +131,9 @@ function CarDiagram({ selected, onSelect, vehicleType }: {
   const [hovered, setHovered] = useState<string | null>(null);
 
   const fill = (id: string) => {
-    if (selected === id) return '#7c3d00';
-    if (hovered === id) return '#1e3048';
-    return '#172032';
+    if (selected === id) return 'var(--panel-selected)';
+    if (hovered === id) return 'var(--panel-hover)';
+    return 'var(--panel-default)';
   };
 
   const opCount = (id: string) => PANELS.find(p => p.id === id)?.operations.length ?? 0;
@@ -142,7 +142,7 @@ function CarDiagram({ selected, onSelect, vehicleType }: {
     <rect
       x={p.x} y={p.y} width={p.w} height={p.h}
       fill={fill(p.id)}
-      stroke="#1a2535" strokeWidth="0.5"
+      stroke="var(--panel-stroke)" strokeWidth="0.5"
       style={{ cursor: 'pointer', transition: 'fill 0.12s ease' }}
       onClick={() => onSelect(p.id)}
       onMouseEnter={() => setHovered(p.id)}
@@ -162,13 +162,13 @@ function CarDiagram({ selected, onSelect, vehicleType }: {
         <text x={p.lx} y={p.ly} textAnchor="middle" fontSize={p.fs}
           fontFamily="Arial, Helvetica, sans-serif"
           fontWeight={sel ? 700 : 400}
-          fill={sel ? '#fcd34d' : '#3d5a78'}
+          fill={sel ? 'var(--panel-sel-text)' : 'var(--panel-lbl)'}
           transform={p.rot ? `rotate(-90,${p.lx},${p.ly})` : undefined}>
           {p.lbl}
         </text>
         {count > 0 && (
           <>
-            <circle cx={bx} cy={by} r={4.5} fill={sel ? '#f59e0b' : '#1e3a5f'} />
+            <circle cx={bx} cy={by} r={4.5} fill={sel ? 'var(--amber)' : 'var(--badge-bg)'} />
             <text x={bx} y={by + 3} textAnchor="middle" fontSize={5}
               fontFamily="Arial" fill={sel ? '#000' : 'white'} fontWeight={700}>
               {count}
@@ -190,65 +190,65 @@ function CarDiagram({ selected, onSelect, vehicleType }: {
         {/* Cab tires (drawn before body so body clips over → wheel arch effect) */}
         {([{x:0,y:104,w:18,h:42},{x:182,y:104,w:18,h:42}] as const).map((t,i) => (
           <g key={i} style={{ pointerEvents: 'none' }}>
-            <rect x={t.x} y={t.y} width={t.w} height={t.h} rx={5} fill="#060d18" />
-            <rect x={t.x+3} y={t.y+6} width={t.w-6} height={t.h-12} rx={3} fill="#0d1a2e" opacity={0.6} />
+            <rect x={t.x} y={t.y} width={t.w} height={t.h} rx={5} fill="var(--tire)" />
+            <rect x={t.x+3} y={t.y+6} width={t.w-6} height={t.h-12} rx={3} fill="var(--tire-inner)" opacity={0.6} />
           </g>
         ))}
 
         {/* Cab body */}
-        <path d={TRUCK_CAB_PATH} fill="#101c2c" stroke="#2d4a6a" strokeWidth="1.5" />
+        <path d={TRUCK_CAB_PATH} fill="var(--car-body)" stroke="var(--car-stroke)" strokeWidth="1.5" />
         <g clipPath="url(#truck-cab-clip)">
           {DIAGRAM_PANELS_TRUCK_CAB.map(p => <PanelRect key={p.id} p={p} />)}
           {/* Windshield glass (trapezoidal) */}
-          <path d="M 34,142 L 30,168 L 170,168 L 166,142 Z" fill="#06101c" style={{ pointerEvents: 'none' }} />
+          <path d="M 34,142 L 30,168 L 170,168 L 166,142 Z" fill="var(--glass)" style={{ pointerEvents: 'none' }} />
           {/* Front door windows */}
-          <rect x={18} y={174} width={37} height={33} rx={2} fill="#07111e" style={{ pointerEvents: 'none' }} />
-          <rect x={145} y={174} width={37} height={33} rx={2} fill="#07111e" style={{ pointerEvents: 'none' }} />
+          <rect x={18} y={174} width={37} height={33} rx={2} fill="var(--window-g)" style={{ pointerEvents: 'none' }} />
+          <rect x={145} y={174} width={37} height={33} rx={2} fill="var(--window-g)" style={{ pointerEvents: 'none' }} />
           {/* Rear door windows */}
-          <rect x={18} y={219} width={37} height={32} rx={2} fill="#07111e" style={{ pointerEvents: 'none' }} />
-          <rect x={145} y={219} width={37} height={32} rx={2} fill="#07111e" style={{ pointerEvents: 'none' }} />
+          <rect x={18} y={219} width={37} height={32} rx={2} fill="var(--window-g)" style={{ pointerEvents: 'none' }} />
+          <rect x={145} y={219} width={37} height={32} rx={2} fill="var(--window-g)" style={{ pointerEvents: 'none' }} />
             {/* Rail inner edge highlight */}
-          <line x1={70} y1={168} x2={70} y2={258} stroke="#243a54" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
-          <line x1={128} y1={168} x2={128} y2={258} stroke="#243a54" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
+          <line x1={70} y1={168} x2={70} y2={258} stroke="var(--rail-hl)" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
+          <line x1={128} y1={168} x2={128} y2={258} stroke="var(--rail-hl)" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
         </g>
 
         {/* Cab detail lines */}
         {/* A-pillars */}
-        <line x1={22} y1={142} x2={30} y2={168} stroke="#2a3f58" strokeWidth={1.2} style={{ pointerEvents: 'none' }} />
-        <line x1={178} y1={142} x2={170} y2={168} stroke="#2a3f58" strokeWidth={1.2} style={{ pointerEvents: 'none' }} />
+        <line x1={22} y1={142} x2={30} y2={168} stroke="var(--pillar)" strokeWidth={1.2} style={{ pointerEvents: 'none' }} />
+        <line x1={178} y1={142} x2={170} y2={168} stroke="var(--pillar)" strokeWidth={1.2} style={{ pointerEvents: 'none' }} />
         {/* Outer B-pillar edge (left side of LT rail, right side of RT rail) */}
-        <line x1={62} y1={168} x2={62} y2={258} stroke="#1a2d42" strokeWidth={1} style={{ pointerEvents: 'none' }} />
-        <line x1={136} y1={168} x2={136} y2={258} stroke="#1a2d42" strokeWidth={1} style={{ pointerEvents: 'none' }} />
+        <line x1={62} y1={168} x2={62} y2={258} stroke="var(--detail)" strokeWidth={1} style={{ pointerEvents: 'none' }} />
+        <line x1={136} y1={168} x2={136} y2={258} stroke="var(--detail)" strokeWidth={1} style={{ pointerEvents: 'none' }} />
         {/* Front/rear door divider */}
-        <line x1={18} y1={213} x2={62} y2={213} stroke="#1a2d42" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
-        <line x1={136} y1={213} x2={182} y2={213} stroke="#1a2d42" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
+        <line x1={18} y1={213} x2={62} y2={213} stroke="var(--detail)" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
+        <line x1={136} y1={213} x2={182} y2={213} stroke="var(--detail)" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
         {/* Hood crease */}
-        <line x1={100} y1={45} x2={100} y2={142} stroke="#1a2d42" strokeWidth={0.8} opacity={0.7} style={{ pointerEvents: 'none' }} />
+        <line x1={100} y1={45} x2={100} y2={142} stroke="var(--detail)" strokeWidth={0.8} opacity={0.7} style={{ pointerEvents: 'none' }} />
         {/* Side mirrors */}
-        <path d="M 12,144 C 5,147 4,157 8,162 L 15,160 L 14,144 Z" fill="#162233" stroke="#2a3f58" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
-        <path d="M 188,144 C 195,147 196,157 192,162 L 185,160 L 186,144 Z" fill="#162233" stroke="#2a3f58" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
+        <path d="M 12,144 C 5,147 4,157 8,162 L 15,160 L 14,144 Z" fill="var(--mirror)" stroke="var(--pillar)" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
+        <path d="M 188,144 C 195,147 196,157 192,162 L 185,160 L 186,144 Z" fill="var(--mirror)" stroke="var(--pillar)" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
 
         {DIAGRAM_PANELS_TRUCK_CAB.map(p => <PanelLabel key={`l-${p.id}`} p={p} />)}
 
         {/* Gap label */}
-        <text x={100} y={287} textAnchor="middle" fontSize={5} fill="#1e3a5f"
+        <text x={100} y={287} textAnchor="middle" fontSize={5} fill="var(--gap-txt)"
           fontFamily="Arial" style={{ userSelect: 'none' as const, pointerEvents: 'none' as const }}>
           ── CAB / BED GAP ──
         </text>
 
         {/* Bed body */}
-        <path d={TRUCK_BED_PATH} fill="#101c2c" stroke="#2d4a6a" strokeWidth="1.5" />
+        <path d={TRUCK_BED_PATH} fill="var(--car-body)" stroke="var(--car-stroke)" strokeWidth="1.5" />
         <g clipPath="url(#truck-bed-clip)">
           {DIAGRAM_PANELS_TRUCK_BED.map(p => <PanelRect key={p.id} p={p} />)}
           {/* Center floor (darker strip between bed sides) */}
-          <rect x={72} y={295} width={56} height={155} fill="#0b1826" style={{ pointerEvents: 'none' }} />
+          <rect x={72} y={295} width={56} height={155} fill="var(--bed-floor)" style={{ pointerEvents: 'none' }} />
           {/* Bed rib lines */}
-          <line x1={20} y1={338} x2={180} y2={338} stroke="#1a2d45" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
-          <line x1={20} y1={381} x2={180} y2={381} stroke="#1a2d45" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
-          <line x1={20} y1={424} x2={180} y2={424} stroke="#1a2d45" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
+          <line x1={20} y1={338} x2={180} y2={338} stroke="var(--bed-line)" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
+          <line x1={20} y1={381} x2={180} y2={381} stroke="var(--bed-line)" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
+          <line x1={20} y1={424} x2={180} y2={424} stroke="var(--bed-line)" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
           {/* Bed rail lines */}
-          <line x1={72} y1={295} x2={72} y2={450} stroke="#1a2d45" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
-          <line x1={128} y1={295} x2={128} y2={450} stroke="#1a2d45" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
+          <line x1={72} y1={295} x2={72} y2={450} stroke="var(--bed-line)" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
+          <line x1={128} y1={295} x2={128} y2={450} stroke="var(--bed-line)" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
         </g>
         {DIAGRAM_PANELS_TRUCK_BED.map(p => <PanelLabel key={`l-${p.id}`} p={p} />)}
       </svg>
@@ -270,50 +270,50 @@ function CarDiagram({ selected, onSelect, vehicleType }: {
         {x:182, y:318, w:18, h:46},  // RR
       ] as const).map((t, i) => (
         <g key={i} style={{ pointerEvents: 'none' }}>
-          <rect x={t.x} y={t.y} width={t.w} height={t.h} rx={5} fill="#060d18" />
-          <rect x={t.x+3} y={t.y+6} width={t.w-6} height={t.h-12} rx={3} fill="#0d1a2e" opacity={0.6} />
+          <rect x={t.x} y={t.y} width={t.w} height={t.h} rx={5} fill="var(--tire)" />
+          <rect x={t.x+3} y={t.y+6} width={t.w-6} height={t.h-12} rx={3} fill="var(--tire-inner)" opacity={0.6} />
         </g>
       ))}
 
       {/* Car body */}
-      <path d={CAR_PATH} fill="#101c2c" stroke="#2d4a6a" strokeWidth="1.5" />
+      <path d={CAR_PATH} fill="var(--car-body)" stroke="var(--car-stroke)" strokeWidth="1.5" />
 
       {/* Panels + glass overlays (clipped to car silhouette) */}
       <g clipPath="url(#car-clip)">
         {DIAGRAM_PANELS.map(p => <PanelRect key={p.id} p={p} />)}
         {/* Windshield glass (trapezoidal A-pillar taper) */}
-        <path d="M 34,150 L 30,186 L 170,186 L 166,150 Z" fill="#06101c" style={{ pointerEvents: 'none' }} />
+        <path d="M 34,150 L 30,186 L 170,186 L 166,150 Z" fill="var(--glass)" style={{ pointerEvents: 'none' }} />
         {/* Rear glass */}
-        <path d="M 30,322 L 34,358 L 166,358 L 170,322 Z" fill="#06101c" style={{ pointerEvents: 'none' }} />
+        <path d="M 30,322 L 34,358 L 166,358 L 170,322 Z" fill="var(--glass)" style={{ pointerEvents: 'none' }} />
         {/* Front door windows */}
-        <rect x={18} y={193} width={37} height={52} rx={2} fill="#07111e" style={{ pointerEvents: 'none' }} />
-        <rect x={145} y={193} width={37} height={52} rx={2} fill="#07111e" style={{ pointerEvents: 'none' }} />
+        <rect x={18} y={193} width={37} height={52} rx={2} fill="var(--window-g)" style={{ pointerEvents: 'none' }} />
+        <rect x={145} y={193} width={37} height={52} rx={2} fill="var(--window-g)" style={{ pointerEvents: 'none' }} />
         {/* Rear door windows */}
-        <rect x={18} y={258} width={37} height={55} rx={2} fill="#07111e" style={{ pointerEvents: 'none' }} />
-        <rect x={145} y={258} width={37} height={55} rx={2} fill="#07111e" style={{ pointerEvents: 'none' }} />
+        <rect x={18} y={258} width={37} height={55} rx={2} fill="var(--window-g)" style={{ pointerEvents: 'none' }} />
+        <rect x={145} y={258} width={37} height={55} rx={2} fill="var(--window-g)" style={{ pointerEvents: 'none' }} />
         {/* Rail inner edge highlight */}
-        <line x1={66} y1={186} x2={66} y2={322} stroke="#243a54" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
-        <line x1={134} y1={186} x2={134} y2={322} stroke="#243a54" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
+        <line x1={66} y1={186} x2={66} y2={322} stroke="var(--rail-hl)" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
+        <line x1={134} y1={186} x2={134} y2={322} stroke="var(--rail-hl)" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
       </g>
 
       {/* Structural detail lines (rendered on top of body) */}
       {/* A-pillars */}
-      <line x1={22} y1={150} x2={30} y2={186} stroke="#2a3f58" strokeWidth={1.2} style={{ pointerEvents: 'none' }} />
-      <line x1={178} y1={150} x2={170} y2={186} stroke="#2a3f58" strokeWidth={1.2} style={{ pointerEvents: 'none' }} />
+      <line x1={22} y1={150} x2={30} y2={186} stroke="var(--pillar)" strokeWidth={1.2} style={{ pointerEvents: 'none' }} />
+      <line x1={178} y1={150} x2={170} y2={186} stroke="var(--pillar)" strokeWidth={1.2} style={{ pointerEvents: 'none' }} />
       {/* C-pillars */}
-      <line x1={22} y1={360} x2={30} y2={322} stroke="#2a3f58" strokeWidth={1.2} style={{ pointerEvents: 'none' }} />
-      <line x1={178} y1={360} x2={170} y2={322} stroke="#2a3f58" strokeWidth={1.2} style={{ pointerEvents: 'none' }} />
+      <line x1={22} y1={360} x2={30} y2={322} stroke="var(--pillar)" strokeWidth={1.2} style={{ pointerEvents: 'none' }} />
+      <line x1={178} y1={360} x2={170} y2={322} stroke="var(--pillar)" strokeWidth={1.2} style={{ pointerEvents: 'none' }} />
       {/* B-pillar outer edge (left of LT rail strip, right of RT rail strip) */}
-      <line x1={58} y1={186} x2={58} y2={322} stroke="#1a2d42" strokeWidth={1} style={{ pointerEvents: 'none' }} />
-      <line x1={142} y1={186} x2={142} y2={322} stroke="#1a2d42" strokeWidth={1} style={{ pointerEvents: 'none' }} />
+      <line x1={58} y1={186} x2={58} y2={322} stroke="var(--detail)" strokeWidth={1} style={{ pointerEvents: 'none' }} />
+      <line x1={142} y1={186} x2={142} y2={322} stroke="var(--detail)" strokeWidth={1} style={{ pointerEvents: 'none' }} />
       {/* Front/rear door divider (horizontal, at B-pillar gap y=254) */}
-      <line x1={16} y1={254} x2={58} y2={254} stroke="#1a2d42" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
-      <line x1={142} y1={254} x2={184} y2={254} stroke="#1a2d42" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
+      <line x1={16} y1={254} x2={58} y2={254} stroke="var(--detail)" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
+      <line x1={142} y1={254} x2={184} y2={254} stroke="var(--detail)" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
       {/* Hood center crease */}
-      <line x1={100} y1={54} x2={100} y2={150} stroke="#1a2d42" strokeWidth={0.8} opacity={0.7} style={{ pointerEvents: 'none' }} />
+      <line x1={100} y1={54} x2={100} y2={150} stroke="var(--detail)" strokeWidth={0.8} opacity={0.7} style={{ pointerEvents: 'none' }} />
       {/* Side mirrors */}
-      <path d="M 12,152 C 5,155 4,165 8,170 L 15,168 L 14,152 Z" fill="#162233" stroke="#2a3f58" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
-      <path d="M 188,152 C 195,155 196,165 192,170 L 185,168 L 186,152 Z" fill="#162233" stroke="#2a3f58" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
+      <path d="M 12,152 C 5,155 4,165 8,170 L 15,168 L 14,152 Z" fill="var(--mirror)" stroke="var(--pillar)" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
+      <path d="M 188,152 C 195,155 196,165 192,170 L 185,168 L 186,152 Z" fill="var(--mirror)" stroke="var(--pillar)" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
 
       {DIAGRAM_PANELS.map(p => <PanelLabel key={`l-${p.id}`} p={p} />)}
     </svg>
@@ -339,9 +339,9 @@ function CopyButton({ text }: { text: string }) {
         gap: 5,
         marginTop: 8,
         padding: '5px 12px',
-        background: copied ? '#052e16' : '#0f172a',
-        color: copied ? '#4ade80' : '#64748b',
-        border: `1px solid ${copied ? '#16a34a' : '#1e293b'}`,
+        background: copied ? 'var(--copy-ok-bg)' : 'var(--copy-bg)',
+        color: copied ? 'var(--copy-ok-color)' : 'var(--copy-color)',
+        border: `1px solid ${copied ? 'var(--copy-ok-border)' : 'var(--copy-border)'}`,
         borderRadius: 6,
         fontSize: 12,
         cursor: 'pointer',
@@ -363,16 +363,16 @@ function PanelOps({ panel }: { panel: CarPanel }) {
       {panel.operations.length === 0 ? (
         <div style={{
           padding: '20px',
-          background: '#172032',
-          border: '1px dashed #2d4a6a',
+          background: 'var(--bg-card)',
+          border: '1px dashed var(--border-input)',
           borderRadius: 10,
-          color: '#4d6a84',
+          color: 'var(--text-muted)',
           fontSize: 13,
           textAlign: 'center',
         }}>
           No operations yet for this panel.<br />
-          <span style={{ fontSize: 12, color: '#3d5470' }}>
-            Add entries in <code style={{ color: '#f59e0b' }}>lib/estimateData.ts</code>
+          <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>
+            Add entries in <code style={{ color: 'var(--amber)' }}>lib/estimateData.ts</code>
           </span>
         </div>
       ) : (
@@ -380,8 +380,8 @@ function PanelOps({ panel }: { panel: CarPanel }) {
           <div
             key={op.id}
             style={{
-              background: '#172032',
-              border: '1px solid #243e5c',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-card)',
               borderRadius: 10,
               padding: '14px 18px',
             }}
@@ -393,7 +393,7 @@ function PanelOps({ panel }: { panel: CarPanel }) {
               marginBottom: op.notes.length ? 12 : 0,
               fontSize: 13,
               fontWeight: 700,
-              color: '#f59e0b',
+              color: 'var(--amber)',
               letterSpacing: '0.2px',
             }}>
               <span style={{ opacity: 0.8 }}>⚙</span>
@@ -406,18 +406,18 @@ function PanelOps({ panel }: { panel: CarPanel }) {
                 style={{
                   marginTop: ni > 0 ? 10 : 0,
                   paddingTop: ni > 0 ? 10 : 0,
-                  borderTop: ni > 0 ? '1px solid #1a2d40' : 'none',
+                  borderTop: ni > 0 ? '1px solid var(--border-note)' : 'none',
                 }}
               >
                 <p style={{
                   margin: 0,
                   padding: '10px 14px',
-                  background: '#0f1c2e',
-                  border: '1px solid #1e3450',
+                  background: 'var(--bg-note)',
+                  border: '1px solid var(--border-note)',
                   borderRadius: 6,
                   fontSize: 12.5,
                   lineHeight: 1.65,
-                  color: '#b0c4d8',
+                  color: 'var(--text-note)',
                   fontFamily: "ui-monospace, 'Cascadia Code', 'Fira Code', Menlo, monospace",
                   whiteSpace: 'pre-wrap',
                   wordBreak: 'break-word',
@@ -447,15 +447,15 @@ function EmptyState() {
       gap: 14,
       padding: 40,
     }}>
-      <svg width="72" height="72" viewBox="0 0 72 72" fill="none" style={{ opacity: 0.12 }}>
-        <ellipse cx="36" cy="36" rx="24" ry="30" stroke="#60a5fa" strokeWidth="2.5" />
-        <rect x="18" y="26" width="36" height="20" rx="2" stroke="#60a5fa" strokeWidth="1.5" />
-        <line x1="18" y1="36" x2="54" y2="36" stroke="#60a5fa" strokeWidth="1.5" />
+      <svg width="72" height="72" viewBox="0 0 72 72" fill="none" style={{ opacity: 0.2 }}>
+        <ellipse cx="36" cy="36" rx="24" ry="30" stroke="var(--border-main)" strokeWidth="2.5" />
+        <rect x="18" y="26" width="36" height="20" rx="2" stroke="var(--border-main)" strokeWidth="1.5" />
+        <line x1="18" y1="36" x2="54" y2="36" stroke="var(--border-main)" strokeWidth="1.5" />
       </svg>
-      <div style={{ fontSize: 15, fontWeight: 600, color: '#1e3a5f', textAlign: 'center' }}>
+      <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-muted)', textAlign: 'center' }}>
         Select a panel to see operations
       </div>
-      <div style={{ fontSize: 13, color: '#0f2236', textAlign: 'center', maxWidth: 280, lineHeight: 1.6 }}>
+      <div style={{ fontSize: 13, color: 'var(--text-dim)', textAlign: 'center', maxWidth: 280, lineHeight: 1.6 }}>
         Click any area on the car diagram, or use the search bar to find specific operations and copy notes into CCC ONE.
       </div>
     </div>
@@ -469,10 +469,22 @@ export default function Home() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const searchRef = useRef<HTMLDivElement>(null);
 
   const hits = doSearch(query);
   const selectedPanel = PANELS.find(p => p.id === selectedId) ?? null;
+
+  useEffect(() => {
+    const saved = localStorage.getItem('hep-theme') as 'dark' | 'light' | null;
+    if (saved) setTheme(saved);
+  }, []);
+
+  const toggleTheme = () => {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    localStorage.setItem('hep-theme', next);
+  };
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -510,20 +522,65 @@ export default function Home() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <style>{`
           * { box-sizing: border-box; }
-          body { margin: 0; background: #131e2d; }
+          body { margin: 0; }
+
+          /* ── Dark theme (default) ── */
+          :root {
+            --bg-main:#131e2d; --bg-sidebar:#0f1a2a; --bg-card:#172032;
+            --bg-note:#0f1c2e; --bg-input:#172032; --bg-dropdown:#172032;
+            --border-main:#1e3a5f; --border-card:#243e5c; --border-note:#1e3450;
+            --border-input:#2d4a6a; --border-sep:#0f1e30;
+            --text-primary:#e2e8f0; --text-secondary:#64748b;
+            --text-muted:#4d6a84; --text-dim:#3d5470; --text-note:#b0c4d8;
+            --amber:#f59e0b; --amber-text:#fcd34d;
+            --panel-default:#172032; --panel-hover:#1e3048; --panel-selected:#7c3d00;
+            --panel-sel-text:#fcd34d; --panel-lbl:#3d5a78; --panel-stroke:#1a2535;
+            --badge-bg:#1e3a5f; --car-body:#101c2c; --car-stroke:#2d4a6a;
+            --glass:#06101c; --window-g:#07111e; --tire:#060d18; --tire-inner:#0d1a2e;
+            --mirror:#162233; --pillar:#2a3f58; --detail:#1a2d42; --rail-hl:#243a54;
+            --bed-floor:#0b1826; --bed-line:#1a2d45; --gap-txt:#1e3a5f;
+            --copy-bg:#0f172a; --copy-border:#1e293b; --copy-color:#64748b;
+            --copy-ok-bg:#052e16; --copy-ok-border:#16a34a; --copy-ok-color:#4ade80;
+            --scroll-track:#1a2535; --scroll-thumb:#2d4258; --ph-color:#3d5470;
+            --hit-hover:#1e3248; --snippet-color:#334155;
+            --other-lbl:#1a2d42; --click-hint:#1e3a5f;
+          }
+
+          /* ── Light theme ── */
+          [data-theme="light"] {
+            --bg-main:#eef2f7; --bg-sidebar:#dce4ef; --bg-card:#e2ecf5;
+            --bg-note:#f4f8fc; --bg-input:#e2ecf5; --bg-dropdown:#e8f0f8;
+            --border-main:#9ab4cc; --border-card:#a8c0d4; --border-note:#b0c8dc;
+            --border-input:#88a8c4; --border-sep:#c8d8e8;
+            --text-primary:#1a2535; --text-secondary:#4a6280;
+            --text-muted:#5a7898; --text-dim:#7090aa; --text-note:#2d4258;
+            --amber:#d97706; --amber-text:#92400e;
+            --panel-default:#c8d8e8; --panel-hover:#b4c8da; --panel-selected:#f59e0b;
+            --panel-sel-text:#7c2d12; --panel-lbl:#4a6a84; --panel-stroke:#9ab4c8;
+            --badge-bg:#5a7898; --car-body:#9ab8cc; --car-stroke:#5a7898;
+            --glass:#527a96; --window-g:#6a8faa; --tire:#1e3048; --tire-inner:#2d4a62;
+            --mirror:#3a5a76; --pillar:#4a7090; --detail:#6a8aaa; --rail-hl:#5a7898;
+            --bed-floor:#88a8c0; --bed-line:#7090aa; --gap-txt:#88a8c4;
+            --copy-bg:#e2ecf5; --copy-border:#c0d4e4; --copy-color:#4a6280;
+            --copy-ok-bg:#d1fae5; --copy-ok-border:#34d399; --copy-ok-color:#065f46;
+            --scroll-track:#d0dce8; --scroll-thumb:#9ab4c8; --ph-color:#7090aa;
+            --hit-hover:#ccd8e6; --snippet-color:#4a6280;
+            --other-lbl:#7090aa; --click-hint:#8aaac0;
+          }
+
           ::-webkit-scrollbar { width: 6px; }
-          ::-webkit-scrollbar-track { background: #1a2535; }
-          ::-webkit-scrollbar-thumb { background: #2d4258; border-radius: 3px; }
-          input::placeholder { color: #3d5470; }
-          input:focus { outline: none; border-color: #f59e0b !important; box-shadow: 0 0 0 2px rgba(245,158,11,0.2); }
+          ::-webkit-scrollbar-track { background: var(--scroll-track); }
+          ::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 3px; }
+          input::placeholder { color: var(--ph-color); }
+          input:focus { outline: none; border-color: var(--amber) !important; box-shadow: 0 0 0 2px rgba(245,158,11,0.2); }
         `}</style>
       </Head>
 
-      <div style={{
+      <div data-theme={theme} style={{
         minHeight: '100vh',
         maxHeight: '100vh',
-        background: '#131e2d',
-        color: '#e2e8f0',
+        background: 'var(--bg-main)',
+        color: 'var(--text-primary)',
         fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif",
         display: 'flex',
         flexDirection: 'column',
@@ -532,7 +589,7 @@ export default function Home() {
 
         {/* ── Header ── */}
         <header style={{
-          borderBottom: '2px solid #f59e0b',
+          borderBottom: '2px solid var(--amber)',
           padding: '10px 20px',
           display: 'flex',
           alignItems: 'center',
@@ -542,10 +599,9 @@ export default function Home() {
           zIndex: 10,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-            {/* Yellow/black college badge */}
             <div style={{
               width: 42, height: 42,
-              background: '#f59e0b',
+              background: 'var(--amber)',
               borderRadius: 6,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 22,
@@ -554,14 +610,10 @@ export default function Home() {
             }}>⛏️</div>
             <div>
               <div style={{
-                fontWeight: 900,
-                fontSize: 17,
-                color: '#f59e0b',
-                letterSpacing: '1.5px',
-                textTransform: 'uppercase',
+                fontWeight: 900, fontSize: 17, color: 'var(--amber)',
+                letterSpacing: '1.5px', textTransform: 'uppercase',
                 fontFamily: "Georgia, 'Times New Roman', serif",
-                lineHeight: 1.1,
-                textShadow: '0 1px 6px rgba(245,158,11,0.3)',
+                lineHeight: 1.1, textShadow: '0 1px 6px rgba(245,158,11,0.3)',
               }}>
                 Hail Estimator Pro
               </div>
@@ -574,7 +626,7 @@ export default function Home() {
           {/* Search */}
           <div ref={searchRef} style={{ flex: 1, maxWidth: 420, position: 'relative' }}>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <span style={{ position: 'absolute', left: 11, fontSize: 14, color: '#2d4258', pointerEvents: 'none', lineHeight: 1 }}>🔍</span>
+              <span style={{ position: 'absolute', left: 11, fontSize: 14, color: 'var(--text-dim)', pointerEvents: 'none', lineHeight: 1 }}>🔍</span>
               <input
                 value={query}
                 onChange={e => { setQuery(e.target.value); setShowDropdown(true); }}
@@ -583,11 +635,11 @@ export default function Home() {
                 placeholder="Search panels, operations, notes..."
                 style={{
                   width: '100%',
-                  background: '#172032',
-                  border: '1px solid #2d4a6a',
+                  background: 'var(--bg-input)',
+                  border: '1px solid var(--border-input)',
                   borderRadius: 8,
                   padding: '8px 34px 8px 33px',
-                  color: '#e2e8f0',
+                  color: 'var(--text-primary)',
                   fontSize: 13.5,
                   transition: 'border-color 0.15s, box-shadow 0.15s',
                 }}
@@ -595,7 +647,7 @@ export default function Home() {
               {query && (
                 <button
                   onClick={() => { setQuery(''); setShowDropdown(false); }}
-                  style={{ position: 'absolute', right: 10, background: 'none', border: 'none', color: '#2d4258', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: 2 }}
+                  style={{ position: 'absolute', right: 10, background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: 2 }}
                 >×</button>
               )}
             </div>
@@ -603,8 +655,8 @@ export default function Home() {
             {showDropdown && hits.length > 0 && (
               <div style={{
                 position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
-                background: '#172032', border: '1px solid #2d4a6a',
-                borderRadius: 8, boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
+                background: 'var(--bg-dropdown)', border: '1px solid var(--border-input)',
+                borderRadius: 8, boxShadow: '0 12px 40px rgba(0,0,0,0.35)',
                 zIndex: 200, overflow: 'hidden',
               }}>
                 {hits.map((hit, i) => (
@@ -614,19 +666,19 @@ export default function Home() {
                     style={{
                       display: 'block', width: '100%', textAlign: 'left',
                       padding: '10px 14px', background: 'none', border: 'none',
-                      borderBottom: i < hits.length - 1 ? '1px solid #0f1e30' : 'none',
-                      cursor: 'pointer', color: '#e2e8f0', transition: 'background 0.1s', fontFamily: 'inherit',
+                      borderBottom: i < hits.length - 1 ? '1px solid var(--border-sep)' : 'none',
+                      cursor: 'pointer', color: 'var(--text-primary)', transition: 'background 0.1s', fontFamily: 'inherit',
                     }}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#1e3248')}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--hit-hover)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'none')}
                   >
-                    <div style={{ fontSize: 12, color: '#3d5470', marginBottom: hit.snippet ? 2 : 0 }}>
+                    <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: hit.snippet ? 2 : 0 }}>
                       {typeIcon(hit.type)}&nbsp;
-                      <span style={{ color: '#64748b' }}>{hit.panelLabel}</span>
-                      {hit.opName && <span style={{ color: '#3d5470' }}> → {hit.opName}</span>}
+                      <span style={{ color: 'var(--text-secondary)' }}>{hit.panelLabel}</span>
+                      {hit.opName && <span style={{ color: 'var(--text-dim)' }}> → {hit.opName}</span>}
                     </div>
                     {hit.snippet && (
-                      <div style={{ fontSize: 12, color: '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontSize: 12, color: 'var(--snippet-color)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {hit.snippet}
                       </div>
                     )}
@@ -635,6 +687,27 @@ export default function Home() {
               </div>
             )}
           </div>
+
+          {/* Theme toggle */}
+          <button
+            onClick={toggleTheme}
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            style={{
+              marginLeft: 'auto',
+              flexShrink: 0,
+              width: 34, height: 34,
+              borderRadius: 8,
+              border: '1px solid var(--border-input)',
+              background: 'var(--bg-input)',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer',
+              fontSize: 16,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'all 0.15s',
+            }}
+          >
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
         </header>
 
         {/* ── Body ── */}
@@ -644,8 +717,8 @@ export default function Home() {
           <aside style={{
             width: 264,
             flexShrink: 0,
-            borderRight: '1px solid #1e3a5f',
-            background: '#0f1a2a',
+            borderRight: '1px solid var(--border-main)',
+            background: 'var(--bg-sidebar)',
             display: 'flex',
             flexDirection: 'column',
             overflowY: 'auto',
@@ -663,9 +736,9 @@ export default function Home() {
                       borderRadius: 7,
                       fontSize: 11.5,
                       cursor: 'pointer',
-                      background: vehicleType === vt ? '#f59e0b' : '#172032',
-                      color: vehicleType === vt ? '#000' : '#4d6a84',
-                      border: `1px solid ${vehicleType === vt ? '#f59e0b' : '#2d4a6a'}`,
+                      background: vehicleType === vt ? 'var(--amber)' : 'var(--bg-card)',
+                      color: vehicleType === vt ? '#000' : 'var(--text-muted)',
+                      border: `1px solid ${vehicleType === vt ? 'var(--amber)' : 'var(--border-input)'}`,
                       fontWeight: vehicleType === vt ? 700 : 400,
                       fontFamily: 'inherit',
                       transition: 'all 0.15s',
@@ -678,7 +751,7 @@ export default function Home() {
               </div>
 
               <div style={{
-                fontSize: 10, color: '#1e3a5f', textTransform: 'uppercase',
+                fontSize: 10, color: 'var(--click-hint)', textTransform: 'uppercase',
                 letterSpacing: '1.2px', textAlign: 'center', marginBottom: 10,
               }}>Click a panel</div>
               <CarDiagram selected={selectedId} onSelect={handleSelect} vehicleType={vehicleType} />
@@ -686,7 +759,7 @@ export default function Home() {
 
             {/* Chips for off-diagram panels */}
             <div style={{ padding: '16px 14px 20px' }}>
-              <div style={{ fontSize: 10, color: '#1a2d42', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8, paddingLeft: 2 }}>
+              <div style={{ fontSize: 10, color: 'var(--other-lbl)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8, paddingLeft: 2 }}>
                 Other panels
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -702,9 +775,9 @@ export default function Home() {
                         borderRadius: 20,
                         fontSize: 11.5,
                         cursor: 'pointer',
-                        background: sel ? '#7c3d00' : '#172032',
-                        color: sel ? '#fcd34d' : '#4d6a84',
-                        border: `1px solid ${sel ? '#f59e0b' : '#2d4a6a'}`,
+                        background: sel ? 'var(--panel-selected)' : 'var(--bg-card)',
+                        color: sel ? 'var(--panel-sel-text)' : 'var(--text-muted)',
+                        border: `1px solid ${sel ? 'var(--amber)' : 'var(--border-input)'}`,
                         transition: 'all 0.12s',
                         fontFamily: 'inherit',
                         display: 'flex',
@@ -715,8 +788,8 @@ export default function Home() {
                       {p.label}
                       {count > 0 && (
                         <span style={{
-                          background: sel ? '#f59e0b' : '#1e3448',
-                          color: sel ? '#000' : '#4d6a84',
+                          background: sel ? 'var(--amber)' : 'var(--badge-bg)',
+                          color: sel ? '#000' : 'white',
                           borderRadius: 10, fontSize: 9,
                           padding: '0 4px', lineHeight: '14px', fontWeight: 700,
                         }}>
@@ -731,7 +804,7 @@ export default function Home() {
           </aside>
 
           {/* Right: operations + notes */}
-          <main style={{ flex: 1, overflowY: 'auto', padding: '24px 28px', background: '#131e2d' }}>
+          <main style={{ flex: 1, overflowY: 'auto', padding: '24px 28px', background: 'var(--bg-main)' }}>
             {!selectedPanel ? (
               <EmptyState />
             ) : (
@@ -739,16 +812,16 @@ export default function Home() {
                 <div style={{
                   display: 'flex', alignItems: 'baseline', gap: 12,
                   marginBottom: 20, paddingBottom: 16,
-                  borderBottom: '2px solid #1e3a5f',
+                  borderBottom: '2px solid var(--border-main)',
                 }}>
                   <h2 style={{
-                    margin: 0, fontSize: 20, fontWeight: 900, color: '#f59e0b',
+                    margin: 0, fontSize: 20, fontWeight: 900, color: 'var(--amber)',
                     textTransform: 'uppercase', letterSpacing: '1px',
                     fontFamily: "Georgia, 'Times New Roman', serif",
                   }}>
                     {selectedPanel.label}
                   </h2>
-                  <span style={{ fontSize: 12, color: '#3d5a78' }}>
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                     {selectedPanel.operations.length} operation{selectedPanel.operations.length !== 1 ? 's' : ''}
                   </span>
                 </div>
