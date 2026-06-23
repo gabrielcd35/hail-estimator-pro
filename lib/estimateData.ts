@@ -847,7 +847,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'rb-ri-1',
-            text: 'R&I Rear Bumper required on every estimate (also listed as "Bumper Cover") — add under the Rear Bumper group in CCC ONE.',
+            text: 'The bumper cover must be removed to remove the headlamps because modern vehicle designs secure the headlamps with fasteners that are hidden beneath or behind the bumper cover.',
           },
         ],
       },
