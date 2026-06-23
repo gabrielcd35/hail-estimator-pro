@@ -232,28 +232,7 @@ export const PANELS: CarPanel[] = [
     label: 'RT Fender',
     onDiagram: true,
     onTruckDiagram: true,
-    operations: [
-      {
-        id: 'rtf-headlamp',
-        name: 'Fender PDR/Repair → R&I RT Headlamp',
-        notes: [
-          {
-            id: 'rtf-hl-1',
-            text: 'R&I RT Front Lamp required for fender access — headlamp assembly must be removed to reach the top inner edge of the RT fender for PDR tools or repair work.',
-          },
-        ],
-      },
-      {
-        id: 'rtf-blend',
-        name: 'Adjacent Hood or Door R&R → Blend RT Fender',
-        notes: [
-          {
-            id: 'rtf-bl-1',
-            text: 'Blend RT Fender required whenever the hood or RT front door is R&R — adjacent panels must be blended to ensure a seamless color match. Add Blend RT Fender under the Fenders group in CCC ONE.',
-          },
-        ],
-      },
-    ],
+    operations: [],
   },
 
   // ── Windshield ────────────────────────────────────────────────────────────
@@ -449,32 +428,7 @@ export const PANELS: CarPanel[] = [
     label: 'RT Front Door',
     onDiagram: true,
     onTruckDiagram: true,
-    operations: [
-      {
-        id: 'rfd-belt-mirror',
-        name: 'R&I Belt Molding → Mirror Overlap',
-        notes: [
-          {
-            id: 'rfd-belt-1',
-            text: 'Mirror overlap belt molding on the front door — R&I needed in order to remove the mirror and moldings.',
-          },
-        ],
-      },
-      {
-        id: 'rfd-door-trim',
-        name: 'R&I Interior Door Trim',
-        notes: [
-          {
-            id: 'rfd-trim-1',
-            text: 'Door trim R&I required to remove the mirror — trim panel must come off to access mirror mounting bolts from the inside.',
-          },
-          {
-            id: 'rfd-trim-2',
-            text: 'Door trim R&I required — door has 6 or more dents; interior trim removal is necessary for proper access and repair.',
-          },
-        ],
-      },
-    ],
+    operations: [],
   },
 
   // ── RT Rear Door ──────────────────────────────────────────────────────────
@@ -483,28 +437,7 @@ export const PANELS: CarPanel[] = [
     label: 'RT Rear Door',
     onDiagram: true,
     onTruckDiagram: true,
-    operations: [
-      {
-        id: 'rrd-belt',
-        name: 'R&I Belt Molding',
-        notes: [
-          {
-            id: 'rrd-belt-1',
-            text: 'Belt molding R&I required on rear door — needed to access and remove door moldings for proper repair.',
-          },
-        ],
-      },
-      {
-        id: 'rrd-door-trim',
-        name: 'R&I Interior Door Trim',
-        notes: [
-          {
-            id: 'rrd-trim-1',
-            text: 'Door trim R&I required — door has 6 or more dents; interior trim removal is necessary for proper access and repair.',
-          },
-        ],
-      },
-    ],
+    operations: [],
   },
 
   // ── Back Glass ────────────────────────────────────────────────────────────
@@ -568,28 +501,7 @@ export const PANELS: CarPanel[] = [
     id: 'rt-quarter',
     label: 'RT Quarter Panel',
     onDiagram: true,
-    operations: [
-      {
-        id: 'rtq-markup',
-        name: 'Quarter Panel PDR/R&R → 25% Markup',
-        notes: [
-          {
-            id: 'rtq-markup-1',
-            text: 'Sail panel has no tool access — glue pull required. Add 25% markup to the Quarter Panel PDR line item.',
-          },
-        ],
-      },
-      {
-        id: 'rtq-taillamp',
-        name: 'R&I RT Tail Lamp',
-        notes: [
-          {
-            id: 'rtq-tl-1',
-            text: 'R&I RT Tail Lamp required on every estimate under the Rear Lamps group — needed for RT quarter panel access.',
-          },
-        ],
-      },
-    ],
+    operations: [],
   },
 
   // ── LT Cab Corner (Truck only) ────────────────────────────────────────────
@@ -807,38 +719,7 @@ export const PANELS: CarPanel[] = [
     label: 'RT Roof Rail',
     onDiagram: true,
     onTruckDiagram: true,
-    operations: [
-      {
-        id: 'rtr-replace',
-        name: 'Roof Replacement → R&I Head Airbag',
-        notes: [
-          {
-            id: 'rtr-rep-1',
-            text: 'Head airbags must be removed when replacing a roof because they are mounted along the roof rails and pillars, directly in the work area. Leaving them in place will expose them to heat, sparks, or damage from cutting, grinding, and welding.',
-          },
-        ],
-      },
-      {
-        id: 'rtr-repair',
-        name: 'Conventional Repair → R&I Head Airbag',
-        notes: [
-          {
-            id: 'rtr-rep-2',
-            text: 'Head airbags must be removed when conventionally repairing roof rails because they are mounted directly along the rails, making them vulnerable to heat, grinding, and impact damage. Leaving them in place will expose them to sparks, debris, and potential distortion, which can compromise their function and lead to deployment failure or unnecessary replacement.',
-          },
-        ],
-      },
-      {
-        id: 'rtr-pdr',
-        name: 'PDR → R&I Head Airbag',
-        notes: [
-          {
-            id: 'rtr-pdr-1',
-            text: 'Head airbags must be removed when performing PDR because they are mounted behind the headliner, directly in the area where tools are inserted to access dents. Leaving them in place risks accidental deployment due to pressure or movement, which will damage the airbags and create a costly repair.',
-          },
-        ],
-      },
-    ],
+    operations: [],
   },
 
   // ── Rear Bumper ───────────────────────────────────────────────────────────

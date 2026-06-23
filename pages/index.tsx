@@ -885,25 +885,29 @@ export default function Home() {
                     })()}
                   </span>
                 </div>
-                {selectedPanels.map((panel, idx) => (
-                  <div key={panel.id} style={{ marginBottom: idx < selectedPanels.length - 1 ? 28 : 0 }}>
-                    {selectedPanels.length > 1 && (
-                      <div style={{
-                        fontSize: 10.5,
-                        fontWeight: 700,
-                        color: 'var(--text-muted)',
-                        textTransform: 'uppercase',
-                        letterSpacing: '1.2px',
-                        marginBottom: 12,
-                        paddingTop: idx > 0 ? 20 : 0,
-                        borderTop: idx > 0 ? '1px solid var(--border-main)' : 'none',
-                      }}>
-                        {panel.label}
-                      </div>
-                    )}
-                    <PanelOps key={panel.id} panel={panel} />
-                  </div>
-                ))}
+                {(() => {
+                  const panelsWithOps = selectedPanels.filter(p => p.operations.length > 0);
+                  const toRender = panelsWithOps.length > 0 ? panelsWithOps : selectedPanels.slice(0, 1);
+                  return toRender.map((panel, idx) => (
+                    <div key={panel.id} style={{ marginBottom: idx < toRender.length - 1 ? 28 : 0 }}>
+                      {toRender.length > 1 && (
+                        <div style={{
+                          fontSize: 10.5,
+                          fontWeight: 700,
+                          color: 'var(--text-muted)',
+                          textTransform: 'uppercase',
+                          letterSpacing: '1.2px',
+                          marginBottom: 12,
+                          paddingTop: idx > 0 ? 20 : 0,
+                          borderTop: idx > 0 ? '1px solid var(--border-main)' : 'none',
+                        }}>
+                          {panel.label}
+                        </div>
+                      )}
+                      <PanelOps key={panel.id} panel={panel} />
+                    </div>
+                  ));
+                })()}
               </>
             )}
           </main>
