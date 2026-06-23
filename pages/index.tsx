@@ -383,17 +383,14 @@ function CopyButton({ text }: { text: string }) {
 // ─── Operations panel ─────────────────────────────────────────────────────────
 
 function PanelOps({ panel }: { panel: CarPanel }) {
-  const [openOps, setOpenOps] = useState<Set<string>>(
-    () => new Set(panel.operations.map(op => op.id))
+  const [activeOpId, setActiveOpId] = useState<string | null>(
+    panel.operations.length === 1 ? panel.operations[0].id : null
   );
 
-  const toggle = (opId: string) => {
-    setOpenOps(prev => {
-      const next = new Set(prev);
-      if (next.has(opId)) next.delete(opId); else next.add(opId);
-      return next;
-    });
-  };
+  const select = (opId: string) =>
+    setActiveOpId(prev => (prev === opId ? null : opId));
+
+  const activeOp = panel.operations.find(op => op.id === activeOpId) ?? null;
 
   if (panel.operations.length === 0) {
     return (
@@ -415,78 +412,74 @@ function PanelOps({ panel }: { panel: CarPanel }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      {panel.operations.map(op => {
-        const isOpen = openOps.has(op.id);
-        return (
-          <div key={op.id} style={{
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border-card)',
-            borderRadius: 10,
-            overflow: 'hidden',
-          }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {/* Operation selector buttons */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {panel.operations.map(op => {
+          const active = activeOpId === op.id;
+          return (
             <button
-              onClick={() => toggle(op.id)}
+              key={op.id}
+              onClick={() => select(op.id)}
               style={{
-                width: '100%',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 8,
-                padding: '13px 18px',
-                background: 'none',
-                border: 'none',
+                gap: 10,
+                padding: '11px 16px',
+                background: active ? 'var(--panel-selected)' : 'var(--bg-card)',
+                border: `1px solid ${active ? 'var(--amber)' : 'var(--border-card)'}`,
+                borderRadius: 8,
                 cursor: 'pointer',
-                color: 'var(--amber)',
+                color: active ? 'var(--amber)' : 'var(--text-secondary)',
                 fontFamily: 'inherit',
                 fontSize: 13,
-                fontWeight: 700,
-                letterSpacing: '0.2px',
+                fontWeight: active ? 700 : 500,
                 textAlign: 'left',
-                borderBottom: isOpen && op.notes.length > 0 ? '1px solid var(--border-card)' : 'none',
+                transition: 'all 0.12s ease',
               }}
             >
-              <span style={{ opacity: 0.75, fontSize: 14 }}>⚙</span>
-              <span style={{ flex: 1 }}>{op.name}</span>
               <span style={{
-                fontSize: 11,
-                color: 'var(--text-dim)',
-                transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                transition: 'transform 0.18s ease',
-                display: 'inline-block',
-              }}>▾</span>
+                width: 14, height: 14, borderRadius: '50%', flexShrink: 0,
+                border: `2px solid ${active ? 'var(--amber)' : 'var(--border-input)'}`,
+                background: active ? 'var(--amber)' : 'none',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                {active && <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#000', display: 'block' }} />}
+              </span>
+              <span style={{ flex: 1 }}>{op.name}</span>
             </button>
+          );
+        })}
+      </div>
 
-            {isOpen && op.notes.length > 0 && (
-              <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {op.notes.map((note, ni) => (
-                  <div key={note.id} style={{
-                    marginTop: ni > 0 ? 2 : 0,
-                    paddingTop: ni > 0 ? 10 : 0,
-                    borderTop: ni > 0 ? '1px solid var(--border-note)' : 'none',
-                  }}>
-                    <p style={{
-                      margin: 0,
-                      padding: '10px 14px',
-                      background: 'var(--bg-note)',
-                      border: '1px solid var(--border-note)',
-                      borderRadius: 6,
-                      fontSize: 12.5,
-                      lineHeight: 1.65,
-                      color: 'var(--text-note)',
-                      fontFamily: "ui-monospace, 'Cascadia Code', 'Fira Code', Menlo, monospace",
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word',
-                    }}>
-                      {note.text}
-                    </p>
-                    <CopyButton text={note.text} />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      })}
+      {/* Note for selected operation */}
+      {activeOp && activeOp.notes.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {activeOp.notes.map((note, ni) => (
+            <div key={note.id} style={{
+              paddingTop: ni > 0 ? 10 : 0,
+              borderTop: ni > 0 ? '1px solid var(--border-note)' : 'none',
+            }}>
+              <p style={{
+                margin: 0,
+                padding: '12px 16px',
+                background: 'var(--bg-note)',
+                border: '1px solid var(--border-note)',
+                borderRadius: 8,
+                fontSize: 12.5,
+                lineHeight: 1.7,
+                color: 'var(--text-note)',
+                fontFamily: "ui-monospace, 'Cascadia Code', 'Fira Code', Menlo, monospace",
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+              }}>
+                {note.text}
+              </p>
+              <CopyButton text={note.text} />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
