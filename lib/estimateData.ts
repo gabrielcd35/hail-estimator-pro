@@ -105,16 +105,22 @@ export const PANELS: CarPanel[] = [
         ],
       },
       {
-        id: 'nn-scans',
-        name: 'Pre-Repair & Post-Repair Scan',
+        id: 'nn-pre-scan',
+        name: 'Pre-Scan',
         notes: [
           {
             id: 'nn-scan-1',
-            text: 'Pre-Repair Scan: "Repair" operation, 0.5 hrs Mechanical Labor — add under "Vehicle Diagnostics" group. Documents existing DTCs before work begins.',
+            text: 'A pre-scan is required before PDR repairs to document any existing diagnostic trouble codes (DTCs) and verify the condition of all electronic and safety systems. Accessing dents often requires removal of components like the headliner, which can trigger faults in airbag, lighting, or sensor systems.',
           },
+        ],
+      },
+      {
+        id: 'nn-post-scan',
+        name: 'Post-Scan',
+        notes: [
           {
             id: 'nn-scan-2',
-            text: 'Post-Repair Scan: "Repair" operation, 0.5 hrs Mechanical Labor — add under "Vehicle Diagnostics" group. Clears DTCs after work. Especially critical when airbags are removed. NOTE: "M" must be UPPERCASE in CCC ONE to be classified as Mechanical Labor.',
+            text: 'A post-scan is required after PDR repairs to detect and clear any diagnostic trouble codes (DTCs) triggered during disassembly or reassembly, especially when components like the headliner and head airbags are removed. These systems are sensitive and will log faults if disconnected or disturbed.',
           },
         ],
       },
