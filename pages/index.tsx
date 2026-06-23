@@ -81,7 +81,9 @@ interface DiagramPanel {
 // Door area y=186–322 split at y=254 (B-pillar gap): front doors above, rear below
 const DIAGRAM_PANELS: DiagramPanel[] = [
   { id: 'front-bumper',  lbl: 'Front Bumper', x: 0,   y: 0,   w: 200, h: 54,  lx: 100, ly: 32,  fs: 7   },
-  { id: 'hood',          lbl: 'Hood',         x: 0,   y: 54,  w: 200, h: 96,  lx: 100, ly: 104, fs: 11  },
+  { id: 'lt-fender',     lbl: 'LT Fender',    x: 0,   y: 54,  w: 58,  h: 96,  lx: 37,  ly: 104, fs: 6.5 },
+  { id: 'hood',          lbl: 'Hood',          x: 58,  y: 54,  w: 84,  h: 96,  lx: 100, ly: 104, fs: 11  },
+  { id: 'rt-fender',     lbl: 'RT Fender',     x: 142, y: 54,  w: 58,  h: 96,  lx: 163, ly: 104, fs: 6.5 },
   { id: 'lt-front-door', lbl: 'LT Front',     x: 0,   y: 186, w: 58,  h: 68,  lx: 37,  ly: 221, fs: 6        },
   { id: 'lt-rear-door',  lbl: 'LT Rear',      x: 0,   y: 254, w: 58,  h: 68,  lx: 37,  ly: 289, fs: 6        },
   { id: 'lt-roof-rail',  lbl: 'LT Rail',      x: 58,  y: 186, w: 8,   h: 136, lx: 62,  ly: 254, fs: 5, rot: true },
@@ -99,7 +101,9 @@ const DIAGRAM_PANELS: DiagramPanel[] = [
 // Windshield visual band y=142–168; door area y=168–258 split at y=213 (front/rear)
 const DIAGRAM_PANELS_TRUCK_CAB: DiagramPanel[] = [
   { id: 'front-bumper',  lbl: 'Front Bumper',  x: 0,   y: 0,   w: 200, h: 45,  lx: 100, ly: 27,  fs: 7   },
-  { id: 'hood',          lbl: 'Hood',           x: 0,   y: 45,  w: 200, h: 97,  lx: 100, ly: 95,  fs: 11  },
+  { id: 'lt-fender',     lbl: 'LT Fender',     x: 0,   y: 45,  w: 62,  h: 97,  lx: 37,  ly: 95,  fs: 6.5 },
+  { id: 'hood',          lbl: 'Hood',           x: 62,  y: 45,  w: 74,  h: 97,  lx: 99,  ly: 95,  fs: 11  },
+  { id: 'rt-fender',     lbl: 'RT Fender',      x: 136, y: 45,  w: 64,  h: 97,  lx: 168, ly: 95,  fs: 6.5 },
   { id: 'lt-front-door', lbl: 'LT Front',       x: 0,   y: 168, w: 62,  h: 45,  lx: 37,  ly: 193, fs: 5.5           },
   { id: 'lt-rear-door',  lbl: 'LT Rear',        x: 0,   y: 213, w: 62,  h: 45,  lx: 37,  ly: 238, fs: 5.5           },
   { id: 'lt-roof-rail',  lbl: 'LT Rail',        x: 62,  y: 168, w: 8,   h: 90,  lx: 66,  ly: 213, fs: 5, rot: true  },
@@ -119,19 +123,34 @@ const DIAGRAM_PANELS_TRUCK_BED: DiagramPanel[] = [
   { id: 'tailgate', lbl: 'Tailgate', x: 0,   y: 450, w: 200, h: 24,  lx: 100, ly: 463, fs: 7   },
 ];
 
+// ─── Panel groups (clicking one selects both) ─────────────────────────────────
+
+const PANEL_GROUPS: Record<string, string[]> = {
+  'lt-roof-rail':  ['lt-roof-rail',  'rt-roof-rail'],
+  'rt-roof-rail':  ['lt-roof-rail',  'rt-roof-rail'],
+  'lt-fender':     ['lt-fender',     'rt-fender'],
+  'rt-fender':     ['lt-fender',     'rt-fender'],
+  'lt-front-door': ['lt-front-door', 'rt-front-door'],
+  'rt-front-door': ['lt-front-door', 'rt-front-door'],
+  'lt-rear-door':  ['lt-rear-door',  'rt-rear-door'],
+  'rt-rear-door':  ['lt-rear-door',  'rt-rear-door'],
+  'lt-quarter':    ['lt-quarter',    'rt-quarter'],
+  'rt-quarter':    ['lt-quarter',    'rt-quarter'],
+};
+
 // ─── Car/Truck SVG diagram ────────────────────────────────────────────────────
 
 type VehicleType = 'sedan' | 'truck';
 
-function CarDiagram({ selected, onSelect, vehicleType }: {
-  selected: string | null;
+function CarDiagram({ selectedIds, onSelect, vehicleType }: {
+  selectedIds: string[];
   onSelect: (id: string) => void;
   vehicleType: VehicleType;
 }) {
   const [hovered, setHovered] = useState<string | null>(null);
 
   const fill = (id: string) => {
-    if (selected === id) return 'var(--panel-selected)';
+    if (selectedIds.includes(id)) return 'var(--panel-selected)';
     if (hovered === id) return 'var(--panel-hover)';
     return 'var(--panel-default)';
   };
@@ -153,7 +172,7 @@ function CarDiagram({ selected, onSelect, vehicleType }: {
 
   const PanelLabel = ({ p }: { p: DiagramPanel }) => {
     const count = opCount(p.id);
-    const sel = selected === p.id;
+    const sel = selectedIds.includes(p.id);
     // For rotated (rail) panels, put badge near top-centre of strip
     const bx = p.rot ? p.lx                                          : p.lx + Math.ceil(p.lbl.length * p.fs * 0.29) + 5;
     const by = p.rot ? p.y + 8                                       : p.ly - p.fs;
@@ -210,6 +229,9 @@ function CarDiagram({ selected, onSelect, vehicleType }: {
             {/* Rail inner edge highlight */}
           <line x1={70} y1={168} x2={70} y2={258} stroke="var(--rail-hl)" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
           <line x1={128} y1={168} x2={128} y2={258} stroke="var(--rail-hl)" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
+          {/* Fender divider lines */}
+          <line x1={62} y1={45} x2={62} y2={142} stroke="var(--detail)" strokeWidth={0.8} opacity={0.7} style={{ pointerEvents: 'none' }} />
+          <line x1={136} y1={45} x2={136} y2={142} stroke="var(--detail)" strokeWidth={0.8} opacity={0.7} style={{ pointerEvents: 'none' }} />
         </g>
 
         {/* Cab detail lines */}
@@ -294,6 +316,9 @@ function CarDiagram({ selected, onSelect, vehicleType }: {
         {/* Rail inner edge highlight */}
         <line x1={66} y1={186} x2={66} y2={322} stroke="var(--rail-hl)" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
         <line x1={134} y1={186} x2={134} y2={322} stroke="var(--rail-hl)" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
+        {/* Fender divider lines */}
+        <line x1={58} y1={54} x2={58} y2={150} stroke="var(--detail)" strokeWidth={0.8} opacity={0.7} style={{ pointerEvents: 'none' }} />
+        <line x1={142} y1={54} x2={142} y2={150} stroke="var(--detail)" strokeWidth={0.8} opacity={0.7} style={{ pointerEvents: 'none' }} />
       </g>
 
       {/* Structural detail lines (rendered on top of body) */}
@@ -358,78 +383,110 @@ function CopyButton({ text }: { text: string }) {
 // ─── Operations panel ─────────────────────────────────────────────────────────
 
 function PanelOps({ panel }: { panel: CarPanel }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {panel.operations.length === 0 ? (
-        <div style={{
-          padding: '20px',
-          background: 'var(--bg-card)',
-          border: '1px dashed var(--border-input)',
-          borderRadius: 10,
-          color: 'var(--text-muted)',
-          fontSize: 13,
-          textAlign: 'center',
-        }}>
-          No operations yet for this panel.<br />
-          <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-            Add entries in <code style={{ color: 'var(--amber)' }}>lib/estimateData.ts</code>
-          </span>
-        </div>
-      ) : (
-        panel.operations.map(op => (
-          <div
-            key={op.id}
-            style={{
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border-card)',
-              borderRadius: 10,
-              padding: '14px 18px',
-            }}
-          >
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              marginBottom: op.notes.length ? 12 : 0,
-              fontSize: 13,
-              fontWeight: 700,
-              color: 'var(--amber)',
-              letterSpacing: '0.2px',
-            }}>
-              <span style={{ opacity: 0.8 }}>⚙</span>
-              {op.name}
-            </div>
+  const [openOps, setOpenOps] = useState<Set<string>>(
+    () => new Set(panel.operations.map(op => op.id))
+  );
 
-            {op.notes.map((note, ni) => (
-              <div
-                key={note.id}
-                style={{
-                  marginTop: ni > 0 ? 10 : 0,
-                  paddingTop: ni > 0 ? 10 : 0,
-                  borderTop: ni > 0 ? '1px solid var(--border-note)' : 'none',
-                }}
-              >
-                <p style={{
-                  margin: 0,
-                  padding: '10px 14px',
-                  background: 'var(--bg-note)',
-                  border: '1px solid var(--border-note)',
-                  borderRadius: 6,
-                  fontSize: 12.5,
-                  lineHeight: 1.65,
-                  color: 'var(--text-note)',
-                  fontFamily: "ui-monospace, 'Cascadia Code', 'Fira Code', Menlo, monospace",
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
-                }}>
-                  {note.text}
-                </p>
-                <CopyButton text={note.text} />
+  const toggle = (opId: string) => {
+    setOpenOps(prev => {
+      const next = new Set(prev);
+      if (next.has(opId)) next.delete(opId); else next.add(opId);
+      return next;
+    });
+  };
+
+  if (panel.operations.length === 0) {
+    return (
+      <div style={{
+        padding: '20px',
+        background: 'var(--bg-card)',
+        border: '1px dashed var(--border-input)',
+        borderRadius: 10,
+        color: 'var(--text-muted)',
+        fontSize: 13,
+        textAlign: 'center',
+      }}>
+        No operations yet for this panel.<br />
+        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>
+          Add entries in <code style={{ color: 'var(--amber)' }}>lib/estimateData.ts</code>
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {panel.operations.map(op => {
+        const isOpen = openOps.has(op.id);
+        return (
+          <div key={op.id} style={{
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-card)',
+            borderRadius: 10,
+            overflow: 'hidden',
+          }}>
+            <button
+              onClick={() => toggle(op.id)}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '13px 18px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--amber)',
+                fontFamily: 'inherit',
+                fontSize: 13,
+                fontWeight: 700,
+                letterSpacing: '0.2px',
+                textAlign: 'left',
+                borderBottom: isOpen && op.notes.length > 0 ? '1px solid var(--border-card)' : 'none',
+              }}
+            >
+              <span style={{ opacity: 0.75, fontSize: 14 }}>⚙</span>
+              <span style={{ flex: 1 }}>{op.name}</span>
+              <span style={{
+                fontSize: 11,
+                color: 'var(--text-dim)',
+                transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.18s ease',
+                display: 'inline-block',
+              }}>▾</span>
+            </button>
+
+            {isOpen && op.notes.length > 0 && (
+              <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {op.notes.map((note, ni) => (
+                  <div key={note.id} style={{
+                    marginTop: ni > 0 ? 2 : 0,
+                    paddingTop: ni > 0 ? 10 : 0,
+                    borderTop: ni > 0 ? '1px solid var(--border-note)' : 'none',
+                  }}>
+                    <p style={{
+                      margin: 0,
+                      padding: '10px 14px',
+                      background: 'var(--bg-note)',
+                      border: '1px solid var(--border-note)',
+                      borderRadius: 6,
+                      fontSize: 12.5,
+                      lineHeight: 1.65,
+                      color: 'var(--text-note)',
+                      fontFamily: "ui-monospace, 'Cascadia Code', 'Fira Code', Menlo, monospace",
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                    }}>
+                      {note.text}
+                    </p>
+                    <CopyButton text={note.text} />
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
-        ))
-      )}
+        );
+      })}
     </div>
   );
 }
@@ -466,14 +523,14 @@ function EmptyState() {
 
 export default function Home() {
   const [vehicleType, setVehicleType] = useState<VehicleType>('sedan');
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [query, setQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const searchRef = useRef<HTMLDivElement>(null);
 
   const hits = doSearch(query);
-  const selectedPanel = PANELS.find(p => p.id === selectedId) ?? null;
+  const selectedPanels = PANELS.filter(p => selectedIds.includes(p.id));
 
   useEffect(() => {
     const saved = localStorage.getItem('hep-theme') as 'dark' | 'light' | null;
@@ -496,18 +553,25 @@ export default function Home() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const handleSelect = (id: string) => setSelectedId(prev => (prev === id ? null : id));
+  const handleSelect = (id: string) => {
+    const group = PANEL_GROUPS[id] || [id];
+    setSelectedIds(prev => {
+      const allSelected = group.every(gid => prev.includes(gid));
+      return allSelected ? [] : group;
+    });
+  };
 
   const switchVehicle = (vt: VehicleType) => {
     setVehicleType(vt);
-    setSelectedId(null);
+    setSelectedIds([]);
   };
 
   const isOnCurrentDiagram = (p: { onDiagram?: boolean; onTruckDiagram?: boolean }) =>
     vehicleType === 'sedan' ? !!p.onDiagram : !!p.onTruckDiagram;
 
   const selectFromSearch = (hit: SearchHit) => {
-    setSelectedId(hit.panelId);
+    const group = PANEL_GROUPS[hit.panelId] || [hit.panelId];
+    setSelectedIds(group);
     setQuery('');
     setShowDropdown(false);
   };
@@ -754,7 +818,7 @@ export default function Home() {
                 fontSize: 10, color: 'var(--click-hint)', textTransform: 'uppercase',
                 letterSpacing: '1.2px', textAlign: 'center', marginBottom: 10,
               }}>Click a panel</div>
-              <CarDiagram selected={selectedId} onSelect={handleSelect} vehicleType={vehicleType} />
+              <CarDiagram selectedIds={selectedIds} onSelect={handleSelect} vehicleType={vehicleType} />
             </div>
 
             {/* Chips for off-diagram panels */}
@@ -764,7 +828,7 @@ export default function Home() {
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {PANELS.filter(p => !isOnCurrentDiagram(p)).map(p => {
-                  const sel = selectedId === p.id;
+                  const sel = selectedIds.includes(p.id);
                   const count = p.operations.length;
                   return (
                     <button
@@ -805,7 +869,7 @@ export default function Home() {
 
           {/* Right: operations + notes */}
           <main style={{ flex: 1, overflowY: 'auto', padding: '24px 28px', background: 'var(--bg-main)' }}>
-            {!selectedPanel ? (
+            {selectedPanels.length === 0 ? (
               <EmptyState />
             ) : (
               <>
@@ -819,13 +883,34 @@ export default function Home() {
                     textTransform: 'uppercase', letterSpacing: '1px',
                     fontFamily: "Georgia, 'Times New Roman', serif",
                   }}>
-                    {selectedPanel.label}
+                    {selectedPanels.map(p => p.label).join(' & ')}
                   </h2>
                   <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                    {selectedPanel.operations.length} operation{selectedPanel.operations.length !== 1 ? 's' : ''}
+                    {(() => {
+                      const total = selectedPanels.reduce((s, p) => s + p.operations.length, 0);
+                      return `${total} operation${total !== 1 ? 's' : ''}`;
+                    })()}
                   </span>
                 </div>
-                <PanelOps panel={selectedPanel} />
+                {selectedPanels.map((panel, idx) => (
+                  <div key={panel.id} style={{ marginBottom: idx < selectedPanels.length - 1 ? 28 : 0 }}>
+                    {selectedPanels.length > 1 && (
+                      <div style={{
+                        fontSize: 10.5,
+                        fontWeight: 700,
+                        color: 'var(--text-muted)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '1.2px',
+                        marginBottom: 12,
+                        paddingTop: idx > 0 ? 20 : 0,
+                        borderTop: idx > 0 ? '1px solid var(--border-main)' : 'none',
+                      }}>
+                        {panel.label}
+                      </div>
+                    )}
+                    <PanelOps key={panel.id} panel={panel} />
+                  </div>
+                ))}
               </>
             )}
           </main>

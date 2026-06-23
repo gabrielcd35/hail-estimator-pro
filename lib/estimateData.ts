@@ -190,6 +190,66 @@ export const PANELS: CarPanel[] = [
     ],
   },
 
+  // ── LT Fender ────────────────────────────────────────────────────────────
+  {
+    id: 'lt-fender',
+    label: 'LT Fender',
+    onDiagram: true,
+    onTruckDiagram: true,
+    operations: [
+      {
+        id: 'ltf-headlamp',
+        name: 'Fender PDR/Repair → R&I LT Headlamp',
+        notes: [
+          {
+            id: 'ltf-hl-1',
+            text: 'R&I LT Front Lamp required for fender access — headlamp assembly must be removed to reach the top inner edge of the LT fender for PDR tools or repair work.',
+          },
+        ],
+      },
+      {
+        id: 'ltf-blend',
+        name: 'Adjacent Hood or Door R&R → Blend LT Fender',
+        notes: [
+          {
+            id: 'ltf-bl-1',
+            text: 'Blend LT Fender required whenever the hood or LT front door is R&R — adjacent panels must be blended to ensure a seamless color match. Add Blend LT Fender under the Fenders group in CCC ONE.',
+          },
+        ],
+      },
+    ],
+  },
+
+  // ── RT Fender ────────────────────────────────────────────────────────────
+  {
+    id: 'rt-fender',
+    label: 'RT Fender',
+    onDiagram: true,
+    onTruckDiagram: true,
+    operations: [
+      {
+        id: 'rtf-headlamp',
+        name: 'Fender PDR/Repair → R&I RT Headlamp',
+        notes: [
+          {
+            id: 'rtf-hl-1',
+            text: 'R&I RT Front Lamp required for fender access — headlamp assembly must be removed to reach the top inner edge of the RT fender for PDR tools or repair work.',
+          },
+        ],
+      },
+      {
+        id: 'rtf-blend',
+        name: 'Adjacent Hood or Door R&R → Blend RT Fender',
+        notes: [
+          {
+            id: 'rtf-bl-1',
+            text: 'Blend RT Fender required whenever the hood or RT front door is R&R — adjacent panels must be blended to ensure a seamless color match. Add Blend RT Fender under the Fenders group in CCC ONE.',
+          },
+        ],
+      },
+    ],
+  },
+
   // ── Windshield ────────────────────────────────────────────────────────────
   {
     id: 'windshield',
@@ -703,12 +763,32 @@ export const PANELS: CarPanel[] = [
     onTruckDiagram: true,
     operations: [
       {
-        id: 'ltr-airbag',
-        name: 'Roof Rail Repair/R&R → R&I LT Head Airbag',
+        id: 'ltr-replace',
+        name: 'Roof Replacement → R&I Head Airbag',
         notes: [
           {
-            id: 'ltr-ab-1',
-            text: 'R&I LT Head Airbag required when repairing or replacing the LT roof rail — head airbags are mounted inside the roof rail channel. Heat, sparks, or vibration during repair creates accidental deployment risk. Add under Restraint Systems group in CCC ONE.',
+            id: 'ltr-rep-1',
+            text: 'Head airbags must be removed when replacing a roof because they are mounted along the roof rails and pillars, directly in the work area. Leaving them in place will expose them to heat, sparks, or damage from cutting, grinding, and welding.',
+          },
+        ],
+      },
+      {
+        id: 'ltr-repair',
+        name: 'Conventional Repair → R&I Head Airbag',
+        notes: [
+          {
+            id: 'ltr-rep-2',
+            text: 'Head airbags must be removed when conventionally repairing roof rails because they are mounted directly along the rails, making them vulnerable to heat, grinding, and impact damage. Leaving them in place will expose them to sparks, debris, and potential distortion, which can compromise their function and lead to deployment failure or unnecessary replacement.',
+          },
+        ],
+      },
+      {
+        id: 'ltr-pdr',
+        name: 'PDR → R&I Head Airbag',
+        notes: [
+          {
+            id: 'ltr-pdr-1',
+            text: 'Head airbags must be removed when performing PDR because they are mounted behind the headliner, directly in the area where tools are inserted to access dents. Leaving them in place risks accidental deployment due to pressure or movement, which will damage the airbags and create a costly repair.',
           },
         ],
       },
@@ -723,12 +803,32 @@ export const PANELS: CarPanel[] = [
     onTruckDiagram: true,
     operations: [
       {
-        id: 'rtr-airbag',
-        name: 'Roof Rail Repair/R&R → R&I RT Head Airbag',
+        id: 'rtr-replace',
+        name: 'Roof Replacement → R&I Head Airbag',
         notes: [
           {
-            id: 'rtr-ab-1',
-            text: 'R&I RT Head Airbag required when repairing or replacing the RT roof rail — head airbags are mounted inside the roof rail channel. Heat, sparks, or vibration during repair creates accidental deployment risk. Add under Restraint Systems group in CCC ONE.',
+            id: 'rtr-rep-1',
+            text: 'Head airbags must be removed when replacing a roof because they are mounted along the roof rails and pillars, directly in the work area. Leaving them in place will expose them to heat, sparks, or damage from cutting, grinding, and welding.',
+          },
+        ],
+      },
+      {
+        id: 'rtr-repair',
+        name: 'Conventional Repair → R&I Head Airbag',
+        notes: [
+          {
+            id: 'rtr-rep-2',
+            text: 'Head airbags must be removed when conventionally repairing roof rails because they are mounted directly along the rails, making them vulnerable to heat, grinding, and impact damage. Leaving them in place will expose them to sparks, debris, and potential distortion, which can compromise their function and lead to deployment failure or unnecessary replacement.',
+          },
+        ],
+      },
+      {
+        id: 'rtr-pdr',
+        name: 'PDR → R&I Head Airbag',
+        notes: [
+          {
+            id: 'rtr-pdr-1',
+            text: 'Head airbags must be removed when performing PDR because they are mounted behind the headliner, directly in the area where tools are inserted to access dents. Leaving them in place risks accidental deployment due to pressure or movement, which will damage the airbags and create a costly repair.',
           },
         ],
       },
