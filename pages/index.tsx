@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Head from 'next/head';
 import { PANELS } from '../lib/estimateData';
-import type { CarPanel } from '../lib/estimateData';
+import type { CarPanel, RepairType } from '../lib/estimateData';
 
 // ─── Search ───────────────────────────────────────────────────────────────────
 
@@ -382,17 +382,35 @@ function CopyButton({ text }: { text: string }) {
 
 // ─── Operations panel ─────────────────────────────────────────────────────────
 
+const REPAIR_TABS: { type: RepairType; label: string }[] = [
+  { type: 'pdr',    label: 'PDR' },
+  { type: 'repair', label: 'Repair' },
+  { type: 'rr',     label: 'R&R' },
+  { type: 'ri',     label: 'R&I' },
+];
+
 function PanelOps({ panel }: { panel: CarPanel }) {
-  const [activeOpId, setActiveOpId] = useState<string | null>(
-    panel.operations.length === 1 ? panel.operations[0].id : null
+  const availableTabs = REPAIR_TABS.filter(tab =>
+    panel.operations.some(op => op.types.includes(tab.type))
   );
 
-  const select = (opId: string) =>
-    setActiveOpId(prev => (prev === opId ? null : opId));
+  const [activeType, setActiveType] = useState<RepairType | null>(
+    availableTabs.length > 0 ? availableTabs[0].type : null
+  );
+  const [activeOpId, setActiveOpId] = useState<string | null>(null);
 
-  const activeOp = panel.operations.find(op => op.id === activeOpId) ?? null;
+  const selectTab = (t: RepairType) => {
+    setActiveType(t);
+    setActiveOpId(null);
+  };
 
-  if (panel.operations.length === 0) {
+  const filteredOps = activeType
+    ? panel.operations.filter(op => op.types.includes(activeType))
+    : [];
+
+  const activeOp = filteredOps.find(op => op.id === activeOpId) ?? null;
+
+  if (panel.operations.length === 0 || availableTabs.length === 0) {
     return (
       <div style={{
         padding: '20px',
@@ -403,24 +421,49 @@ function PanelOps({ panel }: { panel: CarPanel }) {
         fontSize: 13,
         textAlign: 'center',
       }}>
-        No operations yet for this panel.<br />
-        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-          Add entries in <code style={{ color: 'var(--amber)' }}>lib/estimateData.ts</code>
-        </span>
+        No operations yet for this panel.
       </div>
     );
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {/* Operation selector buttons */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {/* Type tabs */}
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        {availableTabs.map(tab => {
+          const active = activeType === tab.type;
+          return (
+            <button
+              key={tab.type}
+              onClick={() => selectTab(tab.type)}
+              style={{
+                padding: '6px 16px',
+                borderRadius: 7,
+                background: active ? 'var(--amber)' : 'var(--bg-card)',
+                color: active ? '#000' : 'var(--text-muted)',
+                border: `1px solid ${active ? 'var(--amber)' : 'var(--border-input)'}`,
+                fontWeight: active ? 700 : 500,
+                fontSize: 12.5,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                letterSpacing: '0.3px',
+                transition: 'all 0.12s ease',
+              }}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Operations for selected tab */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {panel.operations.map(op => {
+        {filteredOps.map(op => {
           const active = activeOpId === op.id;
           return (
             <button
               key={op.id}
-              onClick={() => select(op.id)}
+              onClick={() => setActiveOpId(prev => (prev === op.id ? null : op.id))}
               style={{
                 display: 'flex',
                 alignItems: 'center',

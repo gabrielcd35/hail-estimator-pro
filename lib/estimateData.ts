@@ -8,6 +8,8 @@
 //   IDs must be unique across the whole file.
 // ─────────────────────────────────────────────────────────────────────────────
 
+export type RepairType = 'pdr' | 'repair' | 'rr' | 'ri';
+
 export interface EstimateNote {
   id: string;
   text: string;
@@ -16,6 +18,7 @@ export interface EstimateNote {
 export interface EstimateOperation {
   id: string;
   name: string;
+  types: RepairType[];
   notes: EstimateNote[];
 }
 
@@ -37,6 +40,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'nn-front-bumper',
         name: 'R&I Front Bumper',
+        types: ['pdr', 'repair', 'rr', 'ri'],
         notes: [
           {
             id: 'nn-fb-1',
@@ -47,6 +51,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'nn-headlamps',
         name: 'R&I Headlamps (LT + RT)',
+        types: ['pdr', 'repair', 'rr', 'ri'],
         notes: [
           {
             id: 'nn-hl-1',
@@ -57,6 +62,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'nn-battery',
         name: 'R&I Battery',
+        types: ['pdr', 'repair', 'rr', 'ri'],
         notes: [
           {
             id: 'nn-bat-1',
@@ -67,6 +73,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'nn-antenna',
         name: 'R&I Antenna',
+        types: ['pdr', 'repair', 'rr', 'ri'],
         notes: [
           {
             id: 'nn-ant-1',
@@ -77,6 +84,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'nn-airbags',
         name: 'R&I Head Airbags (LT + RT)',
+        types: ['pdr', 'repair', 'rr', 'ri'],
         notes: [
           {
             id: 'nn-ab-1',
@@ -87,6 +95,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'nn-taillamps',
         name: 'R&I Tail Lamps (LT + RT)',
+        types: ['pdr', 'repair', 'rr', 'ri'],
         notes: [
           {
             id: 'nn-tl-1',
@@ -97,6 +106,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'nn-rear-bumper',
         name: 'R&I Rear Bumper',
+        types: ['pdr', 'repair', 'rr', 'ri'],
         notes: [
           {
             id: 'nn-rb-1',
@@ -107,6 +117,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'nn-pre-scan',
         name: 'Pre-Scan',
+        types: ['pdr'],
         notes: [
           {
             id: 'nn-scan-1',
@@ -117,6 +128,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'nn-post-scan',
         name: 'Post-Scan',
+        types: ['pdr'],
         notes: [
           {
             id: 'nn-scan-2',
@@ -127,6 +139,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'nn-misc',
         name: 'Miscellaneous Line Items',
+        types: ['pdr', 'repair', 'rr', 'ri'],
         notes: [
           { id: 'nn-misc-1', text: 'R&R Cover car/bag — add as misc line item.' },
           { id: 'nn-misc-2', text: 'R&R Hazardous Waste Removal — $10, add as misc line item.' },
@@ -146,6 +159,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'fb-ri',
         name: 'R&I Front Bumper',
+        types: ['ri'],
         notes: [
           {
             id: 'fb-ri-1',
@@ -156,6 +170,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'fb-headlamps',
         name: 'R&I Headlamps (LT + RT)',
+        types: ['pdr', 'repair', 'ri', 'rr'],
         notes: [
           {
             id: 'fb-hl-1',
@@ -176,6 +191,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'hood-rr-labels',
         name: 'Hood R&R → Information Labels',
+        types: ['rr'],
         notes: [
           {
             id: 'hood-rr-labels-1',
@@ -186,6 +202,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'hood-rr-blend',
         name: 'Hood R&R → Blend LT + RT Fenders',
+        types: ['rr'],
         notes: [
           {
             id: 'hood-rr-blend-1',
@@ -205,7 +222,8 @@ export const PANELS: CarPanel[] = [
     operations: [
       {
         id: 'ltf-headlamp',
-        name: 'Fender PDR/Repair → R&I LT Headlamp',
+        name: 'R&I LT Headlamp',
+        types: ['pdr', 'repair'],
         notes: [
           {
             id: 'ltf-hl-1',
@@ -215,7 +233,8 @@ export const PANELS: CarPanel[] = [
       },
       {
         id: 'ltf-blend',
-        name: 'Adjacent Hood or Door R&R → Blend LT Fender',
+        name: 'Blend LT Fender',
+        types: ['rr'],
         notes: [
           {
             id: 'ltf-bl-1',
@@ -244,6 +263,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'ws-urethane',
         name: 'Windshield R&I or R&R → Urethane Kit',
+        types: ['ri', 'rr'],
         notes: [
           {
             id: 'ws-ur-1',
@@ -254,6 +274,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'ws-cowl',
         name: 'Windshield R&I or R&R → R&I Cowl Grille',
+        types: ['ri', 'rr'],
         notes: [
           {
             id: 'ws-cowl-1',
@@ -274,6 +295,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'lfd-belt-mirror',
         name: 'R&I Belt Molding → Mirror Overlap',
+        types: ['repair', 'ri', 'rr'],
         notes: [
           {
             id: 'lfd-belt-1',
@@ -284,6 +306,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'lfd-door-trim',
         name: 'R&I Interior Door Trim',
+        types: ['pdr', 'repair', 'ri', 'rr'],
         notes: [
           {
             id: 'lfd-trim-1',
@@ -308,6 +331,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'lrd-belt',
         name: 'R&I Belt Molding',
+        types: ['repair', 'ri', 'rr'],
         notes: [
           {
             id: 'lrd-belt-1',
@@ -318,6 +342,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'lrd-door-trim',
         name: 'R&I Interior Door Trim',
+        types: ['pdr', 'repair', 'ri', 'rr'],
         notes: [
           {
             id: 'lrd-trim-1',
@@ -338,6 +363,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'roof-pdr-markup',
         name: 'Roof PDR → 25% Markup (SUV/Truck/Van)',
+        types: ['pdr'],
         notes: [
           {
             id: 'roof-pdr-1',
@@ -348,6 +374,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'roof-rr-windshield',
         name: 'Roof R&R → R&I Windshield',
+        types: ['rr'],
         notes: [
           {
             id: 'roof-rr-ws-1',
@@ -358,6 +385,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'roof-rr-backglass',
         name: 'Roof R&R → R&I Back Glass',
+        types: ['rr'],
         notes: [
           {
             id: 'roof-rr-bg-1',
@@ -368,6 +396,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'roof-rr-backseats',
         name: 'Roof R&R → R&I Back Seats',
+        types: ['rr'],
         notes: [
           {
             id: 'roof-rr-bs-1',
@@ -378,6 +407,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'roof-rr-airbags',
         name: 'Roof R&R → R&I Head Airbags (LT + RT)',
+        types: ['rr'],
         notes: [
           {
             id: 'roof-rr-ab-1',
@@ -388,6 +418,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'roof-rr-weld',
         name: 'Roof R&R → Weld Thru Zinc',
+        types: ['rr'],
         notes: [
           {
             id: 'roof-rr-weld-1',
@@ -398,6 +429,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'roof-rr-seam',
         name: 'Roof R&R → Seam Sealer Kit',
+        types: ['rr'],
         notes: [
           {
             id: 'roof-rr-seam-1',
@@ -408,6 +440,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'roof-rr-headers',
         name: 'Roof R&R → Repair Windshield & Rear Header',
+        types: ['rr'],
         notes: [
           {
             id: 'roof-rr-hdr-1',
@@ -449,6 +482,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'bg-backseats',
         name: 'Back Glass R&I or R&R → R&I Back Seats',
+        types: ['ri', 'rr'],
         notes: [
           {
             id: 'bg-bs-1',
@@ -467,7 +501,8 @@ export const PANELS: CarPanel[] = [
     operations: [
       {
         id: 'ltq-markup',
-        name: 'Quarter Panel PDR/R&R → 25% Markup',
+        name: 'Quarter Panel → 25% Markup',
+        types: ['pdr', 'rr'],
         notes: [
           {
             id: 'ltq-markup-1',
@@ -478,6 +513,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'ltq-taillamp',
         name: 'R&I LT Tail Lamp',
+        types: ['pdr', 'repair', 'ri', 'rr'],
         notes: [
           {
             id: 'ltq-tl-1',
@@ -513,7 +549,8 @@ export const PANELS: CarPanel[] = [
     operations: [
       {
         id: 'ltcc-bed-setback',
-        name: 'Cab Corner Repair/Blend → Set Back Pickup Bed',
+        name: 'Cab Corner → Set Back Pickup Bed',
+        types: ['repair', 'rr'],
         notes: [
           {
             id: 'ltcc-bed-1',
@@ -524,6 +561,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'ltcc-fuel',
         name: 'Cab Corner → R&I Fuel Filler Pipe',
+        types: ['repair', 'rr'],
         notes: [
           {
             id: 'ltcc-fuel-1',
@@ -534,6 +572,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'ltcc-rear-bumper',
         name: 'Cab Corner → R&I Rear Bumper',
+        types: ['repair', 'rr'],
         notes: [
           {
             id: 'ltcc-rb-1',
@@ -544,6 +583,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'ltcc-spare',
         name: 'Cab Corner → R&I Spare Tire Carrier',
+        types: ['repair', 'rr'],
         notes: [
           {
             id: 'ltcc-spare-1',
@@ -563,7 +603,8 @@ export const PANELS: CarPanel[] = [
     operations: [
       {
         id: 'rtcc-bed-setback',
-        name: 'Cab Corner Repair/Blend → Set Back Pickup Bed',
+        name: 'Cab Corner → Set Back Pickup Bed',
+        types: ['repair', 'rr'],
         notes: [
           {
             id: 'rtcc-bed-1',
@@ -574,6 +615,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'rtcc-fuel',
         name: 'Cab Corner → R&I Fuel Filler Pipe',
+        types: ['repair', 'rr'],
         notes: [
           {
             id: 'rtcc-fuel-1',
@@ -584,6 +626,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'rtcc-rear-bumper',
         name: 'Cab Corner → R&I Rear Bumper',
+        types: ['repair', 'rr'],
         notes: [
           {
             id: 'rtcc-rb-1',
@@ -594,6 +637,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'rtcc-spare',
         name: 'Cab Corner → R&I Spare Tire Carrier',
+        types: ['repair', 'rr'],
         notes: [
           {
             id: 'rtcc-spare-1',
@@ -614,6 +658,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'ltb-markup',
         name: 'Bed Panel PDR → 25% Extended Panel Markup',
+        types: ['pdr'],
         notes: [
           {
             id: 'ltb-markup-1',
@@ -624,6 +669,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'ltb-taillamp',
         name: 'R&I LT Tail Lamp',
+        types: ['pdr', 'repair', 'ri', 'rr'],
         notes: [
           {
             id: 'ltb-tl-1',
@@ -644,6 +690,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'rtb-markup',
         name: 'Bed Panel PDR → 25% Extended Panel Markup',
+        types: ['pdr'],
         notes: [
           {
             id: 'rtb-markup-1',
@@ -654,6 +701,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'rtb-taillamp',
         name: 'R&I RT Tail Lamp',
+        types: ['pdr', 'repair', 'ri', 'rr'],
         notes: [
           {
             id: 'rtb-tl-1',
@@ -683,6 +731,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'ltr-replace',
         name: 'Roof Replacement → R&I Head Airbag',
+        types: ['rr'],
         notes: [
           {
             id: 'ltr-rep-1',
@@ -693,6 +742,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'ltr-repair',
         name: 'Conventional Repair → R&I Head Airbag',
+        types: ['repair'],
         notes: [
           {
             id: 'ltr-rep-2',
@@ -703,6 +753,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'ltr-pdr',
         name: 'PDR → R&I Head Airbag',
+        types: ['pdr'],
         notes: [
           {
             id: 'ltr-pdr-1',
@@ -731,6 +782,7 @@ export const PANELS: CarPanel[] = [
       {
         id: 'rb-ri',
         name: 'R&I Rear Bumper',
+        types: ['ri'],
         notes: [
           {
             id: 'rb-ri-1',
