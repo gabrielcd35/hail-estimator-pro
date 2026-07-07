@@ -810,6 +810,39 @@ export default function Home() {
           </button>
         </header>
 
+        {/* ── Vehicle type sub-bar ── */}
+        <div style={{
+          borderBottom: '1px solid var(--border-main)',
+          background: '#0d1623',
+          padding: '8px 20px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          flexShrink: 0,
+        }}>
+          {(['sedan', 'truck'] as const).map(vt => (
+            <button
+              key={vt}
+              onClick={() => switchVehicle(vt)}
+              style={{
+                padding: '5px 18px',
+                borderRadius: 7,
+                fontSize: 12,
+                cursor: 'pointer',
+                background: vehicleType === vt ? 'var(--amber)' : 'var(--bg-card)',
+                color: vehicleType === vt ? '#000' : 'var(--text-muted)',
+                border: `1px solid ${vehicleType === vt ? 'var(--amber)' : 'var(--border-input)'}`,
+                fontWeight: vehicleType === vt ? 700 : 400,
+                fontFamily: 'inherit',
+                transition: 'all 0.15s',
+                letterSpacing: '0.3px',
+              }}
+            >
+              {vt === 'sedan' ? '🚗 Sedan / SUV' : '🛻 Pickup Truck'}
+            </button>
+          ))}
+        </div>
+
         {/* ── Body ── */}
         <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
@@ -824,32 +857,6 @@ export default function Home() {
             overflowY: 'auto',
           }}>
             <div style={{ padding: '16px 14px 0' }}>
-              {/* Vehicle type toggle */}
-              <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
-                {(['sedan', 'truck'] as const).map(vt => (
-                  <button
-                    key={vt}
-                    onClick={() => switchVehicle(vt)}
-                    style={{
-                      flex: 1,
-                      padding: '6px 0',
-                      borderRadius: 7,
-                      fontSize: 11.5,
-                      cursor: 'pointer',
-                      background: vehicleType === vt ? 'var(--amber)' : 'var(--bg-card)',
-                      color: vehicleType === vt ? '#000' : 'var(--text-muted)',
-                      border: `1px solid ${vehicleType === vt ? 'var(--amber)' : 'var(--border-input)'}`,
-                      fontWeight: vehicleType === vt ? 700 : 400,
-                      fontFamily: 'inherit',
-                      transition: 'all 0.15s',
-                      letterSpacing: '0.3px',
-                    }}
-                  >
-                    {vt === 'sedan' ? '🚗 Sedan / SUV' : '🛻 Pickup Truck'}
-                  </button>
-                ))}
-              </div>
-
               <div style={{
                 fontSize: 10, color: 'var(--click-hint)', textTransform: 'uppercase',
                 letterSpacing: '1.2px', textAlign: 'center', marginBottom: 10,
