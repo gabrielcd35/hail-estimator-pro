@@ -44,7 +44,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'nn-fb-1',
-            text: 'R&I Front Bumper required on every estimate. Add under "Front Bumper" group in CCC ONE (also listed as "Bumper & Components" or "Bumper Cover"). Bumper cover must be R&I to remove headlamps — fasteners are hidden behind it.',
+            text: 'Drop front bumper cover. Removal is required to safely access and disconnect the headlamp assemblies, as the mounting fasteners and wiring harness connectors are located behind the bumper cover on most vehicles.',
           },
         ],
       },
@@ -55,7 +55,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'nn-hl-1',
-            text: 'R&I RT Front Lamp and R&I LT Front Lamp required on every estimate (also: "Head Lamp Components" / "Head Lamp"). Must be R&I for PDR access to fenders — dents near the top front edge require direct lamp-area access.',
+            text: 'R&I headlamps (LT + RT). Headlamp assemblies must be removed as they are the primary access point for PDR tooling on both front fenders.',
           },
         ],
       },
