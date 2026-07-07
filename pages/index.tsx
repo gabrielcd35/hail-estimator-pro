@@ -461,68 +461,70 @@ function PanelOps({ panel }: { panel: CarPanel }) {
         {filteredOps.map(op => {
           const active = activeOpId === op.id;
           return (
-            <button
-              key={op.id}
-              onClick={() => setActiveOpId(prev => (prev === op.id ? null : op.id))}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                padding: '11px 16px',
-                background: active ? 'var(--panel-selected)' : 'var(--bg-card)',
-                border: `1px solid ${active ? 'var(--amber)' : 'var(--border-card)'}`,
-                borderRadius: 8,
-                cursor: 'pointer',
-                color: active ? 'var(--amber)' : 'var(--text-secondary)',
-                fontFamily: 'inherit',
-                fontSize: 13,
-                fontWeight: active ? 700 : 500,
-                textAlign: 'left',
-                transition: 'all 0.12s ease',
-              }}
-            >
-              <span style={{
-                width: 14, height: 14, borderRadius: '50%', flexShrink: 0,
-                border: `2px solid ${active ? 'var(--amber)' : 'var(--border-input)'}`,
-                background: active ? 'var(--amber)' : 'none',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                {active && <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#000', display: 'block' }} />}
-              </span>
-              <span style={{ flex: 1 }}>{op.name}</span>
-            </button>
+            <div key={op.id}>
+              <button
+                onClick={() => setActiveOpId(prev => (prev === op.id ? null : op.id))}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '11px 16px',
+                  width: '100%',
+                  background: active ? 'var(--panel-selected)' : 'var(--bg-card)',
+                  border: `1px solid ${active ? 'var(--amber)' : 'var(--border-card)'}`,
+                  borderRadius: active && op.notes.length > 0 ? '8px 8px 0 0' : 8,
+                  cursor: 'pointer',
+                  color: active ? 'var(--amber)' : 'var(--text-secondary)',
+                  fontFamily: 'inherit',
+                  fontSize: 13,
+                  fontWeight: active ? 700 : 500,
+                  textAlign: 'left',
+                  transition: 'all 0.12s ease',
+                }}
+              >
+                <span style={{
+                  width: 14, height: 14, borderRadius: '50%', flexShrink: 0,
+                  border: `2px solid ${active ? 'var(--amber)' : 'var(--border-input)'}`,
+                  background: active ? 'var(--amber)' : 'none',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  {active && <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#000', display: 'block' }} />}
+                </span>
+                <span style={{ flex: 1 }}>{op.name}</span>
+              </button>
+              {active && op.notes.length > 0 && (
+                <div style={{
+                  border: '1px solid var(--amber)',
+                  borderTop: 'none',
+                  borderRadius: '0 0 8px 8px',
+                  overflow: 'hidden',
+                }}>
+                  {op.notes.map((note, ni) => (
+                    <div key={note.id} style={{
+                      padding: '12px 16px',
+                      borderTop: ni > 0 ? '1px solid var(--border-note)' : 'none',
+                      background: 'var(--bg-note)',
+                    }}>
+                      <p style={{
+                        margin: 0,
+                        fontSize: 12.5,
+                        lineHeight: 1.7,
+                        color: 'var(--text-note)',
+                        fontFamily: "ui-monospace, 'Cascadia Code', 'Fira Code', Menlo, monospace",
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                      }}>
+                        {note.text}
+                      </p>
+                      <CopyButton text={note.text} />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           );
         })}
       </div>
-
-      {/* Note for selected operation */}
-      {activeOp && activeOp.notes.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {activeOp.notes.map((note, ni) => (
-            <div key={note.id} style={{
-              paddingTop: ni > 0 ? 10 : 0,
-              borderTop: ni > 0 ? '1px solid var(--border-note)' : 'none',
-            }}>
-              <p style={{
-                margin: 0,
-                padding: '12px 16px',
-                background: 'var(--bg-note)',
-                border: '1px solid var(--border-note)',
-                borderRadius: 8,
-                fontSize: 12.5,
-                lineHeight: 1.7,
-                color: 'var(--text-note)',
-                fontFamily: "ui-monospace, 'Cascadia Code', 'Fira Code', Menlo, monospace",
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-              }}>
-                {note.text}
-              </p>
-              <CopyButton text={note.text} />
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
