@@ -502,6 +502,339 @@ function EmptyState() {
   );
 }
 
+// ─── Vehicle Value Modal ──────────────────────────────────────────────────────
+
+const US_STATES = [
+  'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA',
+  'KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ',
+  'NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT',
+  'VA','WA','WV','WI','WY','DC',
+];
+
+const VALUE_THRESHOLDS = [
+  { pct: 0.55, label: 'Safe to write',      color: '#22c55e', bg: 'rgba(34,197,94,.12)',  brd: 'rgba(34,197,94,.28)' },
+  { pct: 0.60, label: 'Approach with care', color: '#f59e0b', bg: 'rgba(245,158,11,.12)', brd: 'rgba(245,158,11,.28)' },
+  { pct: 0.70, label: 'Likely to total',    color: '#ef4444', bg: 'rgba(239,68,68,.12)',  brd: 'rgba(239,68,68,.28)' },
+];
+
+function fmtUSD(n: number) {
+  return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+}
+function parseDollar(s: string) { return parseFloat(s.replace(/[^0-9.]/g, '')) || 0; }
+
+function estZone(pct: number) {
+  if (pct <= 0) return null;
+  if (pct < 0.60) return VALUE_THRESHOLDS[0];
+  if (pct < 0.70) return VALUE_THRESHOLDS[1];
+  return VALUE_THRESHOLDS[2];
+}
+
+interface VinInfo { year: string; make: string; model: string; bodyClass: string; isPickup: boolean; }
+
+async function decodeVin(vin: string): Promise<VinInfo | null> {
+  try {
+    const res = await fetch(`https://vpic.nhtsa.dot.gov/api/vehicles/decodevin/${vin.trim()}?format=json`);
+    const data = await res.json();
+    const get = (v: string) => data.Results?.find((r: { Variable: string; Value: string }) => r.Variable === v)?.Value || '';
+    const bodyClass = get('Body Class');
+    const isPickup = bodyClass.toLowerCase().includes('pickup');
+    return { year: get('Model Year'), make: get('Make'), model: get('Model'), bodyClass, isPickup };
+  } catch { return null; }
+}
+
+function ValueModal({ onClose, onVehicleDetected }: {
+  onClose: () => void;
+  onVehicleDetected: (vt: VehicleType) => void;
+}) {
+  const [mode, setMode] = useState<'vin' | 'plate'>('vin');
+  const [vin, setVin] = useState('');
+  const [plate, setPlate] = useState('');
+  const [state, setState] = useState('TX');
+  const [vinInfo, setVinInfo] = useState<VinInfo | null>(null);
+  const [vinLoading, setVinLoading] = useState(false);
+  const [vinError, setVinError] = useState('');
+  const [retailRaw, setRetailRaw] = useState('');
+  const [estRaw, setEstRaw] = useState('');
+
+  const retail = parseDollar(retailRaw);
+  const est    = parseDollar(estRaw);
+  const pct    = retail > 0 && est > 0 ? est / retail : 0;
+  const zone   = estZone(pct);
+
+  const handleDecode = async () => {
+    if (vin.trim().length < 17) { setVinError('VIN must be 17 characters'); return; }
+    setVinLoading(true); setVinError(''); setVinInfo(null);
+    const info = await decodeVin(vin);
+    setVinLoading(false);
+    if (!info || !info.make) { setVinError('Could not decode VIN — check and try again'); return; }
+    setVinInfo(info);
+    onVehicleDetected(info.isPickup ? 'truck' : 'sedan');
+  };
+
+  const openCarfax = () => {
+    const base = 'https://www.carfax.com/value/';
+    if (mode === 'vin' && vin.trim()) window.open(`${base}#vin=${encodeURIComponent(vin.trim().toUpperCase())}`, '_blank');
+    else if (mode === 'plate' && plate.trim()) window.open(`${base}#plate=${encodeURIComponent(plate.trim().toUpperCase())}&state=${state}`, '_blank');
+    else window.open(base, '_blank');
+  };
+
+  const inputSt: React.CSSProperties = {
+    width: '100%', padding: '10px 14px', fontSize: 14,
+    fontFamily: "'Public Sans', sans-serif",
+    background: 'var(--input-bg)', border: '1px solid var(--brd-2)',
+    borderRadius: 8, color: 'var(--text)', outline: 'none',
+    transition: 'border-color .15s',
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 300,
+        background: 'rgba(0,0,0,.55)',
+        backdropFilter: 'blur(6px)',
+        WebkitBackdropFilter: 'blur(6px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 24,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto',
+          background: 'var(--panel-bg)', borderRadius: 16,
+          border: '1px solid var(--brd-2)',
+          boxShadow: '0 24px 80px rgba(0,0,0,.6)',
+          display: 'flex', flexDirection: 'column', gap: 0,
+        }}
+      >
+        {/* Modal header */}
+        <div style={{
+          padding: '18px 24px', borderBottom: '1px solid var(--brd)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <div>
+            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 17, color: 'var(--gold)' }}>
+              Vehicle Value
+            </div>
+            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: 'var(--text3)', letterSpacing: 1.5, marginTop: 2 }}>
+              THRESHOLD CALCULATOR
+            </div>
+          </div>
+          <button onClick={onClose} style={{
+            width: 32, height: 32, borderRadius: 8, border: '1px solid var(--brd)',
+            background: 'var(--input-bg)', color: 'var(--text2)', cursor: 'pointer',
+            fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>×</button>
+        </div>
+
+        <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+          {/* ── VIN / Plate section ── */}
+          <div>
+            <div style={{ fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", color: 'var(--text3)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 10 }}>
+              Lookup
+            </div>
+
+            {/* Mode toggle */}
+            <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+              {(['vin', 'plate'] as const).map(m => (
+                <button key={m} onClick={() => { setMode(m); setVinInfo(null); setVinError(''); }} style={{
+                  padding: '6px 16px', borderRadius: 7, fontSize: 12, fontWeight: 600,
+                  fontFamily: "'Public Sans', sans-serif", cursor: 'pointer', transition: 'all .15s',
+                  background: mode === m ? 'var(--gold2)' : 'var(--card)',
+                  color: mode === m ? 'var(--on-gold)' : 'var(--text2)',
+                  border: mode === m ? '1px solid var(--gold2)' : '1px solid var(--brd)',
+                }}>
+                  {m === 'vin' ? 'VIN' : 'License Plate'}
+                </button>
+              ))}
+            </div>
+
+            {mode === 'vin' ? (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  style={{ ...inputSt, flex: 1, fontFamily: "'IBM Plex Mono', monospace", letterSpacing: 1 }}
+                  placeholder="17-character VIN"
+                  value={vin}
+                  onChange={e => { setVin(e.target.value.toUpperCase()); setVinInfo(null); setVinError(''); }}
+                  maxLength={17}
+                />
+                <button
+                  onClick={handleDecode}
+                  disabled={vinLoading}
+                  style={{
+                    padding: '0 16px', borderRadius: 8, border: '1px solid var(--brd-2)',
+                    background: 'var(--card)', color: 'var(--text2)', cursor: 'pointer',
+                    fontFamily: "'Public Sans', sans-serif", fontWeight: 600, fontSize: 13,
+                    whiteSpace: 'nowrap', transition: 'all .15s', flexShrink: 0,
+                  }}
+                >
+                  {vinLoading ? '…' : 'Decode'}
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  style={{ ...inputSt, flex: 1 }}
+                  placeholder="License plate"
+                  value={plate}
+                  onChange={e => setPlate(e.target.value.toUpperCase())}
+                />
+                <select
+                  value={state}
+                  onChange={e => setState(e.target.value)}
+                  style={{
+                    ...inputSt, width: 'auto', paddingRight: 30, cursor: 'pointer',
+                    appearance: 'none',
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center',
+                  }}
+                >
+                  {US_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+            )}
+
+            {vinError && (
+              <div style={{ marginTop: 8, fontSize: 12, color: '#ef4444', fontFamily: "'IBM Plex Mono', monospace" }}>
+                {vinError}
+              </div>
+            )}
+
+            {/* Decoded vehicle info */}
+            {vinInfo && (
+              <div style={{
+                marginTop: 10, padding: '10px 14px', borderRadius: 9,
+                background: 'var(--gold-soft)', border: '1px solid var(--gold-brd)',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              }}>
+                <div>
+                  <div style={{ fontFamily: "'Public Sans', sans-serif", fontWeight: 700, fontSize: 14, color: 'var(--gold)' }}>
+                    {vinInfo.year} {vinInfo.make} {vinInfo.model}
+                  </div>
+                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: 'var(--text3)', marginTop: 2, letterSpacing: .5 }}>
+                    {vinInfo.bodyClass} · set to {vinInfo.isPickup ? 'Pickup Truck' : 'Sedan / SUV'}
+                  </div>
+                </div>
+                <div style={{ fontSize: 20 }}>{vinInfo.isPickup ? '🛻' : '🚗'}</div>
+              </div>
+            )}
+
+            <button
+              onClick={openCarfax}
+              style={{
+                marginTop: 12, width: '100%', padding: '10px 0', borderRadius: 9,
+                background: 'var(--gold2)', color: 'var(--on-gold)',
+                border: 'none', cursor: 'pointer',
+                fontFamily: "'Public Sans', sans-serif", fontWeight: 700, fontSize: 13,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                transition: 'opacity .15s',
+              }}
+            >
+              Open on Carfax
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+              </svg>
+            </button>
+          </div>
+
+          {/* Divider */}
+          <div style={{ height: 1, background: 'var(--brd)' }} />
+
+          {/* ── Retail value + thresholds ── */}
+          <div>
+            <div style={{ fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", color: 'var(--text3)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 10 }}>
+              Retail Value
+            </div>
+            <div style={{ position: 'relative', marginBottom: 14 }}>
+              <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text3)', fontSize: 15, pointerEvents: 'none' }}>$</span>
+              <input
+                style={{ ...inputSt, paddingLeft: 26 }}
+                placeholder="0"
+                value={retailRaw}
+                onChange={e => setRetailRaw(e.target.value)}
+                inputMode="numeric"
+              />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {VALUE_THRESHOLDS.map(t => {
+                const amt = retail > 0 ? retail * t.pct : null;
+                return (
+                  <div key={t.pct} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '11px 14px', borderRadius: 9,
+                    background: t.bg, border: `1px solid ${t.brd}`,
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ width: 9, height: 9, borderRadius: '50%', background: t.color, flexShrink: 0 }} />
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 13, color: t.color }}>{Math.round(t.pct * 100)}%</div>
+                        <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: "'IBM Plex Mono', monospace", marginTop: 1 }}>{t.label}</div>
+                      </div>
+                    </div>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontWeight: 600, fontSize: 15, color: amt ? t.color : 'var(--text3)' }}>
+                      {amt ? fmtUSD(amt) : '—'}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div style={{ height: 1, background: 'var(--brd)' }} />
+
+          {/* ── Estimate value ── */}
+          <div>
+            <div style={{ fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", color: 'var(--text3)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 10 }}>
+              Estimate Total
+            </div>
+            <div style={{ position: 'relative', marginBottom: pct > 0 ? 12 : 0 }}>
+              <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text3)', fontSize: 15, pointerEvents: 'none' }}>$</span>
+              <input
+                style={{ ...inputSt, paddingLeft: 26 }}
+                placeholder="0"
+                value={estRaw}
+                onChange={e => setEstRaw(e.target.value)}
+                inputMode="numeric"
+              />
+            </div>
+
+            {pct > 0 && (
+              <div style={{
+                padding: '13px 16px', borderRadius: 10,
+                background: zone ? zone.bg : 'rgba(34,197,94,.08)',
+                border: `1px solid ${zone ? zone.brd : 'rgba(34,197,94,.2)'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              }}>
+                <div>
+                  <div style={{ fontSize: 13, color: 'var(--text2)', fontFamily: "'Public Sans', sans-serif" }}>
+                    Estimate is{' '}
+                    <strong style={{ color: zone ? zone.color : '#22c55e' }}>
+                      {(pct * 100).toFixed(1)}%
+                    </strong>{' '}
+                    of retail value
+                  </div>
+                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontWeight: 600, fontSize: 12, color: zone ? zone.color : '#22c55e', marginTop: 3 }}>
+                    {zone ? zone.label : 'Under 55% — well within safe range'}
+                  </div>
+                </div>
+                <div style={{ fontSize: 26, fontFamily: "'IBM Plex Mono', monospace", fontWeight: 700, color: zone ? zone.color : '#22c55e' }}>
+                  {(pct * 100).toFixed(1)}%
+                </div>
+              </div>
+            )}
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function Home() {
@@ -512,6 +845,7 @@ export default function Home() {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [narrow, setNarrow] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showValueModal, setShowValueModal] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
   const hits = doSearch(query);
@@ -564,6 +898,7 @@ export default function Home() {
         const el = document.getElementById('hep-search-input');
         if (el) (el as HTMLInputElement).focus();
       }
+      if (e.key === 'Escape') setShowValueModal(false);
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
@@ -859,19 +1194,19 @@ export default function Home() {
             )}
           </div>
 
-          {/* Vehicle Value link */}
-          <a
-            href="/value"
+          {/* Vehicle Value button */}
+          <button
+            onClick={() => setShowValueModal(true)}
             style={{
               marginLeft: 'auto', flexShrink: 0,
               fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: 'var(--text2)',
-              textDecoration: 'none', letterSpacing: 0.5,
+              background: 'none', letterSpacing: 0.5,
               padding: '6px 12px', border: '1px solid var(--brd)', borderRadius: 8,
-              transition: 'all .15s', whiteSpace: 'nowrap',
+              cursor: 'pointer', transition: 'all .15s', whiteSpace: 'nowrap',
             }}
           >
             Vehicle Value
-          </a>
+          </button>
 
           {/* Theme toggle */}
           <button
@@ -1079,6 +1414,14 @@ export default function Home() {
           <span>Hail Estimator PRO · Estimate Assistant</span>
           <span>v1.0 · Dent Mechanic Group</span>
         </footer>
+
+        {/* ── Vehicle Value Modal ── */}
+        {showValueModal && (
+          <ValueModal
+            onClose={() => setShowValueModal(false)}
+            onVehicleDetected={vt => { switchVehicle(vt); }}
+          />
+        )}
       </div>
     </>
   );
