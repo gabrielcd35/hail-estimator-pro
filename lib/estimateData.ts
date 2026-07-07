@@ -66,7 +66,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'nn-bat-1',
-            text: 'R&I Battery required on every estimate — list under Electrical group in CCC ONE (may also be listed as a Mechanical operation).',
+            text: 'Battery must be disconnected before any SRS component handling, as the backup capacitor retains deployment-level charge for up to 2 minutes. This is required by all OEM service procedures and I-CAR standards whenever airbag assemblies or headliner components are disturbed.',
           },
         ],
       },
