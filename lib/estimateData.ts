@@ -107,7 +107,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'nn-tl-1',
-            text: 'R&I RT Tail Lamp and R&I LT Tail Lamp required on every estimate — add under Rear Lamps group in CCC ONE. Required for quarter panel access. EXCEPTION for Pickup Trucks: add R&I High Mount Lamp instead (access to roof).',
+            text: 'Tail lamp assemblies must be removed to allow PDR tool access to the quarter panels.',
           },
         ],
       },
