@@ -77,7 +77,15 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'nn-ant-1',
-            text: 'R&I Antenna required on every estimate — list under Electrical group in CCC ONE (may also be listed as a Mechanical operation).',
+            text: 'Antenna must be removed to allow full PDR access to the roof panel. The antenna base and mounting hardware obstruct tool access to the surrounding roof area.',
+          },
+          {
+            id: 'nn-ant-2',
+            text: 'Antenna must be removed to allow full paint coverage of the roof panel without overspray contamination on the antenna base or surrounding area.',
+          },
+          {
+            id: 'nn-ant-3',
+            text: 'Antenna must be transferred from the damaged roof to the replacement panel.',
           },
         ],
       },
