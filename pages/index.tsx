@@ -812,7 +812,7 @@ export default function Home() {
           </button>
         </header>
 
-        {/* ── Vehicle type sub-bar ── */}
+        {/* ── Other panels + vehicle toggle sub-bar ── */}
         <div style={{
           borderBottom: '1px solid var(--border-main)',
           background: '#0d1623',
@@ -821,34 +821,78 @@ export default function Home() {
           alignItems: 'center',
           gap: 8,
           flexShrink: 0,
+          overflowX: 'auto',
         }}>
+          {/* Vehicle toggle */}
           {(['sedan', 'truck'] as const).map(vt => (
             <button
               key={vt}
               onClick={() => switchVehicle(vt)}
               style={{
-                padding: '5px 18px',
+                padding: '5px 14px',
                 borderRadius: 7,
                 fontSize: 12,
                 cursor: 'pointer',
+                flexShrink: 0,
                 background: vehicleType === vt ? 'var(--amber)' : 'var(--bg-card)',
                 color: vehicleType === vt ? '#000' : 'var(--text-muted)',
                 border: `1px solid ${vehicleType === vt ? 'var(--amber)' : 'var(--border-input)'}`,
                 fontWeight: vehicleType === vt ? 700 : 400,
                 fontFamily: 'inherit',
                 transition: 'all 0.15s',
-                letterSpacing: '0.3px',
               }}
             >
               {vt === 'sedan' ? '🚗 Sedan / SUV' : '🛻 Pickup Truck'}
             </button>
           ))}
+
+          {/* Divider */}
+          <div style={{ width: 1, height: 20, background: 'var(--border-main)', flexShrink: 0, margin: '0 4px' }} />
+
+          {/* Other panels chips */}
+          {PANELS.filter(p => !isOnCurrentDiagram(p)).map(p => {
+            const sel = selectedIds.includes(p.id);
+            const count = p.operations.length;
+            return (
+              <button
+                key={p.id}
+                onClick={() => handleSelect(p.id)}
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: 20,
+                  fontSize: 11.5,
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  background: sel ? 'var(--panel-selected)' : 'var(--bg-card)',
+                  color: sel ? 'var(--panel-sel-text)' : 'var(--text-muted)',
+                  border: `1px solid ${sel ? 'var(--amber)' : 'var(--border-input)'}`,
+                  transition: 'all 0.12s',
+                  fontFamily: 'inherit',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
+              >
+                {p.label}
+                {count > 0 && (
+                  <span style={{
+                    background: sel ? 'var(--amber)' : 'var(--badge-bg)',
+                    color: sel ? '#000' : 'white',
+                    borderRadius: 10, fontSize: 9,
+                    padding: '0 4px', lineHeight: '14px', fontWeight: 700,
+                  }}>
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {/* ── Body ── */}
         <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
-          {/* Left: car diagram + chips */}
+          {/* Left: car diagram */}
           <aside style={{
             width: 264,
             flexShrink: 0,
@@ -858,57 +902,12 @@ export default function Home() {
             flexDirection: 'column',
             overflowY: 'auto',
           }}>
-            <div style={{ padding: '16px 14px 0' }}>
+            <div style={{ padding: '16px 14px' }}>
               <div style={{
                 fontSize: 10, color: 'var(--click-hint)', textTransform: 'uppercase',
                 letterSpacing: '1.2px', textAlign: 'center', marginBottom: 10,
               }}>Click a panel</div>
               <CarDiagram selectedIds={selectedIds} onSelect={handleSelect} vehicleType={vehicleType} />
-            </div>
-
-            {/* Chips for off-diagram panels */}
-            <div style={{ padding: '16px 14px 20px' }}>
-              <div style={{ fontSize: 10, color: 'var(--other-lbl)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8, paddingLeft: 2 }}>
-                Other panels
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {PANELS.filter(p => !isOnCurrentDiagram(p)).map(p => {
-                  const sel = selectedIds.includes(p.id);
-                  const count = p.operations.length;
-                  return (
-                    <button
-                      key={p.id}
-                      onClick={() => handleSelect(p.id)}
-                      style={{
-                        padding: '4px 10px',
-                        borderRadius: 20,
-                        fontSize: 11.5,
-                        cursor: 'pointer',
-                        background: sel ? 'var(--panel-selected)' : 'var(--bg-card)',
-                        color: sel ? 'var(--panel-sel-text)' : 'var(--text-muted)',
-                        border: `1px solid ${sel ? 'var(--amber)' : 'var(--border-input)'}`,
-                        transition: 'all 0.12s',
-                        fontFamily: 'inherit',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 4,
-                      }}
-                    >
-                      {p.label}
-                      {count > 0 && (
-                        <span style={{
-                          background: sel ? 'var(--amber)' : 'var(--badge-bg)',
-                          color: sel ? '#000' : 'white',
-                          borderRadius: 10, fontSize: 9,
-                          padding: '0 4px', lineHeight: '14px', fontWeight: 700,
-                        }}>
-                          {count}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
             </div>
           </aside>
 
