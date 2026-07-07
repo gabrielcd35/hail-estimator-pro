@@ -859,12 +859,26 @@ export default function Home() {
             )}
           </div>
 
+          {/* Vehicle Value link */}
+          <a
+            href="/value"
+            style={{
+              marginLeft: 'auto', flexShrink: 0,
+              fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: 'var(--text2)',
+              textDecoration: 'none', letterSpacing: 0.5,
+              padding: '6px 12px', border: '1px solid var(--brd)', borderRadius: 8,
+              transition: 'all .15s', whiteSpace: 'nowrap',
+            }}
+          >
+            Vehicle Value
+          </a>
+
           {/* Theme toggle */}
           <button
             onClick={toggleTheme}
             title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
             style={{
-              marginLeft: 'auto', flexShrink: 0,
+              flexShrink: 0,
               width: 36, height: 36, borderRadius: 9,
               border: '1px solid var(--brd)', background: 'var(--input-bg)',
               color: 'var(--text2)', cursor: 'pointer',
