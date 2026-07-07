@@ -96,7 +96,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'nn-ab-1',
-            text: 'R&I RT Head Airbag and R&I LT Head Airbag required on every estimate — add under Restraint Systems group in CCC ONE.',
+            text: 'Head airbags must be removed when performing PDR because they are mounted behind the headliner, directly in the area where tools are inserted to access dents. Leaving them in place risks accidental deployment due to pressure or movement, which will damage the airbags and create a costly repair.',
           },
         ],
       },
