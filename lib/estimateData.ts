@@ -402,6 +402,17 @@ export const PANELS: CarPanel[] = [
     onTruckDiagram: true,
     operations: [
       {
+        id: 'roof-pdr-headliner',
+        name: 'PDR → R&I Headliner',
+        types: ['pdr'],
+        notes: [
+          {
+            id: 'roof-pdr-hl-1',
+            text: 'Headliner must be removed to allow PDR tool access to the underside of the roof panel for dent repair.',
+          },
+        ],
+      },
+      {
         id: 'roof-pdr-markup',
         name: 'Roof PDR → 25% Markup (SUV/Truck/Van)',
         types: ['pdr'],
