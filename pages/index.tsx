@@ -1906,7 +1906,7 @@ export default function Home() {
           fontSize: 10, color: 'var(--text3)', letterSpacing: '.5px',
         }}>
           <span>Hail Estimator PRO · Estimate Assistant</span>
-          <span>v1.0</span>
+          <span>developed by Gabriel Diniz (gabrielcd35@gmail.com)</span>
         </footer>
 
         {/* ── Vehicle Value Modal ── */}
