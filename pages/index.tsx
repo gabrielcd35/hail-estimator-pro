@@ -333,13 +333,12 @@ const REPAIR_TABS: { type: RepairType; label: string }[] = [
 ];
 
 function PanelOps({ panel }: { panel: CarPanel }) {
+  // PDR, Repair and R&R are always shown; R&I only when it has operations
   const availableTabs = REPAIR_TABS.filter(tab =>
-    panel.operations.some(op => op.types.includes(tab.type))
+    tab.type !== 'ri' || panel.operations.some(op => op.types.includes('ri'))
   );
 
-  const [activeType, setActiveType] = useState<RepairType | null>(
-    availableTabs.length > 0 ? availableTabs[0].type : null
-  );
+  const [activeType, setActiveType] = useState<RepairType>('pdr');
   const [activeOpId, setActiveOpId] = useState<string | null>(null);
 
   const selectTab = (t: RepairType) => {
@@ -347,25 +346,7 @@ function PanelOps({ panel }: { panel: CarPanel }) {
     setActiveOpId(null);
   };
 
-  const filteredOps = activeType
-    ? panel.operations.filter(op => op.types.includes(activeType))
-    : [];
-
-  if (panel.operations.length === 0 || availableTabs.length === 0) {
-    return (
-      <div style={{
-        padding: '20px',
-        background: 'var(--card)',
-        border: '1px dashed var(--brd)',
-        borderRadius: 10,
-        color: 'var(--text3)',
-        fontSize: 13,
-        textAlign: 'center',
-      }}>
-        No operations yet for this panel.
-      </div>
-    );
-  }
+  const filteredOps = panel.operations.filter(op => op.types.includes(activeType));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -400,6 +381,19 @@ function PanelOps({ panel }: { panel: CarPanel }) {
       </div>
 
       {/* Operations — notes expand inline */}
+      {filteredOps.length === 0 && (
+        <div style={{
+          padding: '20px',
+          background: 'var(--card)',
+          border: '1px dashed var(--brd)',
+          borderRadius: 10,
+          color: 'var(--text3)',
+          fontSize: 13,
+          textAlign: 'center',
+        }}>
+          No operations yet for this repair type.
+        </div>
+      )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
         {filteredOps.map(op => {
           const active = activeOpId === op.id;
@@ -856,6 +850,29 @@ const DENT_SIZE_LABEL: Record<string, string> = {
   D: 'Dime', N: 'Nickel', Q: 'Quarter', H: 'Half Dollar',
 };
 
+// Display order for scan results (RT before LT, top of car to rear)
+const SCAN_ORDER = [
+  'HOOD',
+  'RT FENDER', 'LT FENDER',
+  'R RAIL', 'L RAIL',
+  'ROOF',
+  'RF DOOR', 'LF DOOR',
+  'RR DOOR', 'LR DOOR',
+  'RT QUARTER', 'LT QUARTER',
+  'RT BED', 'LT BED',
+  'RT CAB', 'LT CAB',
+  'WINDSHIELD', 'DECK LID', 'TAILGATE', 'FRONT BUMPER', 'REAR BUMPER',
+];
+
+function scanOrderIdx(label: string) {
+  const i = SCAN_ORDER.indexOf(label);
+  return i === -1 ? 999 : i;
+}
+
+export interface ScanCounts {
+  [panelId: string]: { dentCount: number | null; dentSize: string | null; oversize: number | null };
+}
+
 interface ScopePanel {
   sheetLabel: string;
   dentCount: number | null;
@@ -875,7 +892,7 @@ interface ScopeResult {
 
 function ScopeModal({ onClose, onApply }: {
   onClose: () => void;
-  onApply: (panelIds: string[], vt: VehicleType) => void;
+  onApply: (panelIds: string[], vt: VehicleType, counts: ScanCounts) => void;
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -913,13 +930,19 @@ function ScopeModal({ onClose, onApply }: {
   const isTruck = !!scope && scope.panels.some(p =>
     ['LT CAB', 'RT CAB', 'LT BED', 'RT BED', 'TAILGATE'].includes(p.sheetLabel));
 
-  const mappedIds = scope
-    ? scope.panels.map(p => SHEET_LABEL_TO_PANEL[p.sheetLabel]).filter(Boolean)
+  const sortedPanels = scope
+    ? [...scope.panels].sort((a, b) => scanOrderIdx(a.sheetLabel) - scanOrderIdx(b.sheetLabel))
     : [];
 
-  const totalDents = scope
-    ? scope.panels.reduce((s, p) => s + (p.dentCount || 0), 0)
-    : 0;
+  const mappedIds = sortedPanels.map(p => SHEET_LABEL_TO_PANEL[p.sheetLabel]).filter(Boolean);
+
+  const scanCounts: ScanCounts = {};
+  for (const p of sortedPanels) {
+    const id = SHEET_LABEL_TO_PANEL[p.sheetLabel];
+    if (id) scanCounts[id] = { dentCount: p.dentCount, dentSize: p.dentSize, oversize: p.oversize };
+  }
+
+  const totalDents = sortedPanels.reduce((s, p) => s + (p.dentCount || 0), 0);
 
   return (
     <div
@@ -1043,7 +1066,7 @@ function ScopeModal({ onClose, onApply }: {
                 }}>
                   <span>Panel</span><span>Dents</span><span>Size</span><span>O/S</span>
                 </div>
-                {scope.panels.map((p, i) => (
+                {sortedPanels.map((p, i) => (
                   <div key={i} style={{
                     display: 'grid', gridTemplateColumns: '1fr 70px 90px 70px',
                     padding: '9px 14px', fontSize: 13,
@@ -1070,7 +1093,7 @@ function ScopeModal({ onClose, onApply }: {
               {/* Actions */}
               <div style={{ display: 'flex', gap: 10 }}>
                 <button
-                  onClick={() => { onApply(mappedIds, isTruck ? 'truck' : 'sedan'); onClose(); }}
+                  onClick={() => { onApply(mappedIds, isTruck ? 'truck' : 'sedan', scanCounts); onClose(); }}
                   style={{
                     flex: 1, padding: '11px 0', borderRadius: 9,
                     background: 'var(--gold2)', color: 'var(--on-gold)', border: 'none',
@@ -1118,10 +1141,20 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showValueModal, setShowValueModal] = useState(false);
   const [showScopeModal, setShowScopeModal] = useState(false);
+  const [scanCounts, setScanCounts] = useState<ScanCounts>({});
   const searchRef = useRef<HTMLDivElement>(null);
 
   const hits = doSearch(query);
-  const selectedPanels = PANELS.filter(p => selectedIds.includes(p.id));
+  const selectedPanels = selectedIds
+    .map(id => PANELS.find(p => p.id === id))
+    .filter((p): p is CarPanel => !!p);
+
+  const labelWithDents = (p: CarPanel) => {
+    const c = scanCounts[p.id];
+    if (!c || !c.dentCount) return p.label;
+    const os = c.oversize ? ` + ${c.oversize} O/S` : '';
+    return `${p.label} · ${c.dentCount}${c.dentSize ? `-${c.dentSize}` : ''}${os}`;
+  };
   const allNotesText = selectedPanels
     .flatMap(p => p.operations.flatMap(op => op.notes.map(n => n.text)))
     .join('\n\n');
@@ -1188,6 +1221,7 @@ export default function Home() {
   const switchVehicle = (vt: VehicleType) => {
     setVehicleType(vt);
     setSelectedIds([]);
+    setScanCounts({});
   };
 
   const selectFromSearch = (hit: SearchHit) => {
@@ -1643,7 +1677,7 @@ export default function Home() {
                       fontSize: 22, fontWeight: 700,
                       color: 'var(--gold)', letterSpacing: '-.3px',
                     }}>
-                      {selectedPanels.map(p => p.label).join('  &  ')}
+                      {selectedPanels.map(p => labelWithDents(p)).join('  &  ')}
                     </h2>
                     <span style={{
                       fontFamily: "'IBM Plex Mono', monospace",
@@ -1675,7 +1709,7 @@ export default function Home() {
                           paddingTop: idx > 0 ? 20 : 0,
                           borderTop: idx > 0 ? '1px solid var(--brd)' : 'none',
                         }}>
-                          {panel.label}
+                          {labelWithDents(panel)}
                         </div>
                       )}
                       <PanelOps key={panel.id} panel={panel} />
@@ -1713,9 +1747,10 @@ export default function Home() {
         {showScopeModal && (
           <ScopeModal
             onClose={() => setShowScopeModal(false)}
-            onApply={(panelIds, vt) => {
+            onApply={(panelIds, vt, counts) => {
               setVehicleType(vt);
               setSelectedIds(panelIds);
+              setScanCounts(counts);
             }}
           />
         )}
