@@ -559,7 +559,41 @@ export const PANELS: CarPanel[] = [
     id: 'lift-gate',
     label: 'Lift Gate',
     onDiagram: true,
-    operations: [],
+    operations: [
+      {
+        id: 'lg-pdr-liftgate',
+        name: 'PDR → R&I Lift Gate',
+        types: ['pdr'],
+        notes: [
+          {
+            id: 'lg-pdr-lg-1',
+            text: 'Lift gate must be removed to allow proper PDR tool access and leverage across the panel.',
+          },
+        ],
+      },
+      {
+        id: 'lg-pdr-lower-trim',
+        name: 'PDR → R&I Interior Lower Trim',
+        types: ['pdr'],
+        notes: [
+          {
+            id: 'lg-pdr-lt-1',
+            text: 'Interior lower trim must be removed to expose the inner structure and allow PDR tool access to the lower section of the lift gate.',
+          },
+        ],
+      },
+      {
+        id: 'lg-pdr-upper-trim',
+        name: 'PDR → R&I Upper Interior Trim',
+        types: ['pdr'],
+        notes: [
+          {
+            id: 'lg-pdr-ut-1',
+            text: 'Upper interior trim must be removed to expose the inner structure and allow PDR tool access to the upper section of the lift gate.',
+          },
+        ],
+      },
+    ],
   },
 
   // ── RT Quarter Panel ─────────────────────────────────────────────────────
