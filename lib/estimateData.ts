@@ -214,7 +214,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'hood-rr-blend-1',
-            text: 'When Hood is R&R: both fenders must be blended — add Blend under the Fenders group in CCC ONE.',
+            text: 'Blend needed due replacement of Hood.',
           },
         ],
       },
@@ -246,7 +246,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'ltf-bl-1',
-            text: 'Blend Fender required whenever the hood or adjacent front door is R&R — adjacent panels must be blended to ensure a seamless color match. Add the blend under the Fenders group in CCC ONE.',
+            text: 'Blend needed due replacement of Hood.',
           },
         ],
       },
