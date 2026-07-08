@@ -905,7 +905,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'rb-ri-1',
-            text: 'The bumper cover must be removed to remove the headlamps because modern vehicle designs secure the headlamps with fasteners that are hidden beneath or behind the bumper cover.',
+            text: 'The bumper cover must be removed to remove the tail lamps because modern vehicle designs secure the tail lamps with fasteners that are hidden beneath or behind the bumper cover.',
           },
         ],
       },

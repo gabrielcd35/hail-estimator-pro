@@ -1218,6 +1218,202 @@ function ScopeModal({ onClose, onApply }: {
   );
 }
 
+// ─── Hail History Modal ───────────────────────────────────────────────────────
+
+interface HailReport {
+  time: string; sizeIn: number; location: string;
+  county: string; state: string; distanceMi: number;
+}
+
+function HailModal({ onClose }: { onClose: () => void }) {
+  const [zip, setZip] = useState('');
+  const [date, setDate] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [result, setResult] = useState<{ zipName: string; radiusMi?: number; reports: HailReport[]; note?: string } | null>(null);
+
+  const search = async () => {
+    setError(''); setResult(null); setLoading(true);
+    try {
+      const res = await fetch('/api/hail', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ zip: zip.trim(), date }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Search failed');
+      setResult(data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Search failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const inputSt: React.CSSProperties = {
+    width: '100%', padding: '10px 14px', fontSize: 14,
+    fontFamily: "'Public Sans', sans-serif",
+    background: 'var(--input-bg)', border: '1px solid var(--brd-2)',
+    borderRadius: 8, color: 'var(--text)', outline: 'none',
+  };
+
+  const largest = result && result.reports.length > 0
+    ? result.reports.reduce((a, b) => (b.sizeIn > a.sizeIn ? b : a))
+    : null;
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 300,
+        background: 'rgba(0,0,0,.55)',
+        backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto',
+          background: 'var(--panel-bg)', borderRadius: 16,
+          border: '1px solid var(--brd-2)', boxShadow: '0 24px 80px rgba(0,0,0,.6)',
+        }}
+      >
+        {/* Modal header */}
+        <div style={{
+          padding: '18px 24px', borderBottom: '1px solid var(--brd)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <div>
+            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 17, color: 'var(--gold)' }}>
+              Hail History
+            </div>
+            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: 'var(--text3)', letterSpacing: 1.5, marginTop: 2 }}>
+              NOAA STORM REPORTS · DATE OF LOSS VERIFICATION
+            </div>
+          </div>
+          <button onClick={onClose} style={{
+            width: 32, height: 32, borderRadius: 8, border: '1px solid var(--brd)',
+            background: 'var(--input-bg)', color: 'var(--text2)', cursor: 'pointer',
+            fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>×</button>
+        </div>
+
+        <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+          {/* Inputs */}
+          <div style={{ display: 'flex', gap: 10 }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", color: 'var(--text3)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6 }}>
+                ZIP Code
+              </label>
+              <input
+                style={inputSt} placeholder="75201" value={zip}
+                onChange={e => setZip(e.target.value.replace(/\D/g, '').slice(0, 5))}
+                inputMode="numeric"
+                onKeyDown={e => e.key === 'Enter' && search()}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", color: 'var(--text3)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6 }}>
+                Date of Loss
+              </label>
+              <input
+                style={{ ...inputSt, colorScheme: 'dark' }} type="date" value={date}
+                onChange={e => setDate(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <button
+            onClick={search}
+            disabled={loading || zip.length !== 5 || !date}
+            style={{
+              width: '100%', padding: '11px 0', borderRadius: 9,
+              background: 'var(--gold2)', color: 'var(--on-gold)', border: 'none',
+              cursor: loading ? 'wait' : 'pointer',
+              opacity: zip.length === 5 && date ? 1 : 0.5,
+              fontFamily: "'Public Sans', sans-serif", fontWeight: 700, fontSize: 13.5,
+            }}
+          >
+            {loading ? 'Searching NOAA reports…' : 'Verify Hail Activity'}
+          </button>
+
+          {error && (
+            <div style={{
+              padding: '12px 16px', borderRadius: 9, fontSize: 13,
+              background: 'rgba(239,68,68,.12)', border: '1px solid rgba(239,68,68,.28)',
+              color: '#ef4444', fontFamily: "'Public Sans', sans-serif",
+            }}>
+              {error}
+            </div>
+          )}
+
+          {/* Results */}
+          {result && (
+            result.reports.length > 0 ? (
+              <>
+                <div style={{
+                  padding: '13px 16px', borderRadius: 10,
+                  background: 'rgba(34,197,94,.12)', border: '1px solid rgba(34,197,94,.28)',
+                }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: '#22c55e', fontFamily: "'Public Sans', sans-serif" }}>
+                    ✓ Hail confirmed near {result.zipName}
+                  </div>
+                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: 'var(--text2)', marginTop: 4 }}>
+                    {result.reports.length} report{result.reports.length !== 1 ? 's' : ''} within {result.radiusMi} mi
+                    {largest ? ` · largest ${largest.sizeIn.toFixed(2)}" (${largest.location}, ${largest.distanceMi} mi away)` : ''}
+                  </div>
+                </div>
+
+                <div style={{ border: '1px solid var(--brd)', borderRadius: 10, overflow: 'hidden' }}>
+                  <div style={{
+                    display: 'grid', gridTemplateColumns: '70px 1fr 70px 70px',
+                    padding: '8px 14px', background: 'var(--card)',
+                    fontFamily: "'IBM Plex Mono', monospace", fontSize: 9.5,
+                    color: 'var(--text3)', letterSpacing: 1, textTransform: 'uppercase',
+                    borderBottom: '1px solid var(--brd)',
+                  }}>
+                    <span>Size</span><span>Location</span><span>Dist</span><span>UTC</span>
+                  </div>
+                  {result.reports.map((r, i) => (
+                    <div key={i} style={{
+                      display: 'grid', gridTemplateColumns: '70px 1fr 70px 70px',
+                      padding: '9px 14px', fontSize: 12.5, alignItems: 'center',
+                      fontFamily: "'Public Sans', sans-serif", color: 'var(--text)',
+                      borderBottom: i < result.reports.length - 1 ? '1px solid var(--brd)' : 'none',
+                    }}>
+                      <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontWeight: 600, color: r.sizeIn >= 1 ? 'var(--gold)' : 'var(--text2)' }}>
+                        {r.sizeIn.toFixed(2)}&quot;
+                      </span>
+                      <span>{r.location} <span style={{ color: 'var(--text3)', fontSize: 11 }}>· {r.county} Co, {r.state}</span></span>
+                      <span style={{ fontFamily: "'IBM Plex Mono', monospace", color: 'var(--text2)' }}>{r.distanceMi} mi</span>
+                      <span style={{ fontFamily: "'IBM Plex Mono', monospace", color: 'var(--text3)' }}>{r.time}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div style={{
+                padding: '13px 16px', borderRadius: 10, fontSize: 13,
+                background: 'rgba(245,158,11,.12)', border: '1px solid rgba(245,158,11,.28)',
+                color: '#f59e0b', fontFamily: "'Public Sans', sans-serif",
+              }}>
+                No hail reports found near {result.zipName} on this date.
+                {result.note ? ` ${result.note}` : ' Reports cover officially observed hail — smaller local events may not appear.'}
+              </div>
+            )
+          )}
+
+          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: 'var(--text3)', lineHeight: 1.6 }}>
+            Source: NOAA Storm Prediction Center daily storm reports. Times are UTC.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Estimate checklist builder ───────────────────────────────────────────────
 
 function buildChecklist(
@@ -1284,6 +1480,7 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showValueModal, setShowValueModal] = useState(false);
   const [showScopeModal, setShowScopeModal] = useState(false);
+  const [showHailModal, setShowHailModal] = useState(false);
   const [scanCounts, setScanCounts] = useState<ScanCounts>({});
   const [lastScan, setLastScan] = useState<ScopeResult | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
@@ -1344,7 +1541,7 @@ export default function Home() {
         const el = document.getElementById('hep-search-input');
         if (el) (el as HTMLInputElement).focus();
       }
-      if (e.key === 'Escape') { setShowValueModal(false); setShowScopeModal(false); }
+      if (e.key === 'Escape') { setShowValueModal(false); setShowScopeModal(false); setShowHailModal(false); }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
@@ -1656,6 +1853,20 @@ export default function Home() {
             Scan Scope Sheet
           </button>
 
+          {/* Hail History button */}
+          <button
+            onClick={() => setShowHailModal(true)}
+            style={{
+              flexShrink: 0,
+              fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: 'var(--text2)',
+              background: 'none', letterSpacing: 0.5,
+              padding: '6px 12px', border: '1px solid var(--brd)', borderRadius: 8,
+              cursor: 'pointer', transition: 'all .15s', whiteSpace: 'nowrap',
+            }}
+          >
+            Hail History
+          </button>
+
           {/* Vehicle Value button */}
           <button
             onClick={() => setShowValueModal(true)}
@@ -1918,6 +2129,9 @@ export default function Home() {
         )}
 
         {/* ── Scope Sheet Modal ── */}
+        {/* ── Hail History Modal ── */}
+        {showHailModal && <HailModal onClose={() => setShowHailModal(false)} />}
+
         {showScopeModal && (
           <ScopeModal
             onClose={() => setShowScopeModal(false)}
