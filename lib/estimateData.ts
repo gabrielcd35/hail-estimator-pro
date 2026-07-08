@@ -634,6 +634,17 @@ export const PANELS: CarPanel[] = [
     onTruckDiagram: true,
     operations: [
       {
+        id: 'ltcc-pdr-markup',
+        name: 'PDR → 25% Markup (Double Panel)',
+        types: ['pdr'],
+        notes: [
+          {
+            id: 'ltcc-pdr-mk-1',
+            text: 'Add 25% markup for double panel — cab corners are a double-panel structure with limited tool access.',
+          },
+        ],
+      },
+      {
         id: 'ltcc-bed-setback',
         name: 'Cab Corner → Set Back Pickup Bed',
         types: ['repair', 'rr'],
@@ -687,6 +698,17 @@ export const PANELS: CarPanel[] = [
     onDiagram: false,
     onTruckDiagram: true,
     operations: [
+      {
+        id: 'rtcc-pdr-markup',
+        name: 'PDR → 25% Markup (Double Panel)',
+        types: ['pdr'],
+        notes: [
+          {
+            id: 'rtcc-pdr-mk-1',
+            text: 'Add 25% markup for double panel — cab corners are a double-panel structure with limited tool access.',
+          },
+        ],
+      },
       {
         id: 'rtcc-bed-setback',
         name: 'Cab Corner → Set Back Pickup Bed',
@@ -814,6 +836,17 @@ export const PANELS: CarPanel[] = [
     onDiagram: true,
     onTruckDiagram: true,
     operations: [
+      {
+        id: 'ltr-pdr-markup',
+        name: 'PDR → 25% Markup (Double Panel)',
+        types: ['pdr'],
+        notes: [
+          {
+            id: 'ltr-pdr-mk-1',
+            text: 'Add 25% markup for double panel — roof rails are a double-panel structure with limited tool access.',
+          },
+        ],
+      },
       {
         id: 'ltr-replace',
         name: 'Roof Replacement → R&I Head Airbag',
