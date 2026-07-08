@@ -55,7 +55,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'nn-hl-1',
-            text: 'R&I headlamps (LT + RT). Headlamp assemblies must be removed as they are the primary access point for PDR tooling on both front fenders.',
+            text: 'Headlamp assemblies must be removed as they are the primary access point for PDR tooling on the front fenders.',
           },
         ],
       },
@@ -182,7 +182,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'fb-hl-1',
-            text: 'R&I RT Front Lamp and R&I LT Front Lamp — must be R&I for PDR access to fenders. Dents near the top front edge require direct lamp-area access.',
+            text: 'Front lamps must be R&I for PDR access to the fenders. Dents near the top front edge require direct lamp-area access.',
           },
         ],
       },
@@ -214,7 +214,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'hood-rr-blend-1',
-            text: 'When Hood is R&R: both fenders must be blended — add Blend for RT Fender and Blend for LT Fender under the Fenders group in CCC ONE.',
+            text: 'When Hood is R&R: both fenders must be blended — add Blend under the Fenders group in CCC ONE.',
           },
         ],
       },
@@ -235,7 +235,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'ltf-hl-1',
-            text: 'R&I LT Front Lamp required for fender access — headlamp assembly must be removed to reach the top inner edge of the LT fender for PDR tools or repair work.',
+            text: 'R&I Front Lamp required for fender access — the headlamp assembly must be removed to reach the top inner edge of the fender for PDR tools or repair work.',
           },
         ],
       },
@@ -246,7 +246,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'ltf-bl-1',
-            text: 'Blend LT Fender required whenever the hood or LT front door is R&R — adjacent panels must be blended to ensure a seamless color match. Add Blend LT Fender under the Fenders group in CCC ONE.',
+            text: 'Blend Fender required whenever the hood or adjacent front door is R&R — adjacent panels must be blended to ensure a seamless color match. Add the blend under the Fenders group in CCC ONE.',
           },
         ],
       },
@@ -419,7 +419,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'roof-rr-ab-1',
-            text: 'Head airbags are mounted along the roof rails — heat and sparks during roof replacement create accidental deployment risk. Must R&I RT Head Airbag and LT Head Airbag under Restraint Systems group.',
+            text: 'Head airbags are mounted along the roof rails — heat and sparks during roof replacement create accidental deployment risk. Head airbags must be R&I under the Restraint Systems group.',
           },
         ],
       },
@@ -525,7 +525,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'ltq-tl-1',
-            text: 'R&I LT Tail Lamp required on every estimate under the Rear Lamps group — needed for LT quarter panel access.',
+            text: 'R&I Tail Lamp required on every estimate under the Rear Lamps group — needed for quarter panel access.',
           },
         ],
       },
@@ -670,7 +670,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'ltb-markup-1',
-            text: 'For Pickup Trucks: add 25% markup on the Pick Up Box group — LT and RT bed panels marked as Extended Panel Markup.',
+            text: 'For Pickup Trucks: add 25% markup on the Pick Up Box group — bed panels marked as Extended Panel Markup.',
           },
         ],
       },
@@ -681,7 +681,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'ltb-tl-1',
-            text: 'R&I LT Tail Lamp required on every estimate under the Rear Lamps group — needed for bed panel access.',
+            text: 'R&I Tail Lamp required on every estimate under the Rear Lamps group — needed for bed panel access.',
           },
         ],
       },
@@ -702,7 +702,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'rtb-markup-1',
-            text: 'For Pickup Trucks: add 25% markup on the Pick Up Box group — LT and RT bed panels marked as Extended Panel Markup.',
+            text: 'For Pickup Trucks: add 25% markup on the Pick Up Box group — bed panels marked as Extended Panel Markup.',
           },
         ],
       },
@@ -713,7 +713,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'rtb-tl-1',
-            text: 'R&I RT Tail Lamp required on every estimate under the Rear Lamps group — needed for bed panel access.',
+            text: 'R&I Tail Lamp required on every estimate under the Rear Lamps group — needed for bed panel access.',
           },
         ],
       },
