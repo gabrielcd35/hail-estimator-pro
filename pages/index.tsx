@@ -1225,7 +1225,7 @@ interface HailReport {
   county: string; state: string; distanceMi: number;
 }
 
-interface HailDay { date: string; count: number; maxSize: number; minDist: number; }
+interface HailDay { date: string; count: number; maxSize: number; minDist: number; maxCity: string; }
 
 function HailModal({ onClose }: { onClose: () => void }) {
   const [mode, setMode] = useState<'date' | 'year'>('date');
@@ -1452,7 +1452,7 @@ function HailModal({ onClose }: { onClose: () => void }) {
                     {yearResult.days.length} hail day{yearResult.days.length !== 1 ? 's' : ''} near {yearResult.zipName} in {yearResult.year}
                   </div>
                   <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: 'var(--text2)', marginTop: 4 }}>
-                    Radar-detected hail within {yearResult.radiusMi} mi
+                    NWS ground-observed hail reports within {yearResult.radiusMi} mi
                   </div>
                 </div>
 
@@ -1464,7 +1464,7 @@ function HailModal({ onClose }: { onClose: () => void }) {
                     color: 'var(--text3)', letterSpacing: 1, textTransform: 'uppercase',
                     borderBottom: '1px solid var(--brd)',
                   }}>
-                    <span>Date</span><span>Max Size</span><span>Signals</span><span>Closest</span>
+                    <span>Date</span><span>Max Size</span><span>Reports</span><span>Closest</span>
                   </div>
                   {yearResult.days.map((d, i) => (
                     <div key={d.date} style={{
@@ -1473,8 +1473,11 @@ function HailModal({ onClose }: { onClose: () => void }) {
                       fontFamily: "'Public Sans', sans-serif", color: 'var(--text)',
                       borderBottom: i < yearResult.days.length - 1 ? '1px solid var(--brd)' : 'none',
                     }}>
-                      <span style={{ fontWeight: 600 }}>
-                        {new Date(d.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      <span>
+                        <span style={{ fontWeight: 600 }}>
+                          {new Date(d.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </span>
+                        {d.maxCity && <span style={{ color: 'var(--text3)', fontSize: 11 }}> · {d.maxCity}</span>}
                       </span>
                       <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontWeight: 600, color: d.maxSize >= 1 ? 'var(--gold)' : 'var(--text2)' }}>
                         {d.maxSize > 0 ? `${d.maxSize.toFixed(2)}"` : '—'}
@@ -1491,7 +1494,7 @@ function HailModal({ onClose }: { onClose: () => void }) {
                 background: 'rgba(245,158,11,.12)', border: '1px solid rgba(245,158,11,.28)',
                 color: '#f59e0b', fontFamily: "'Public Sans', sans-serif",
               }}>
-                No radar-detected hail found near {yearResult.zipName} in {yearResult.year}.
+                No hail reports found near {yearResult.zipName} in {yearResult.year}.
               </div>
             )
           )}
@@ -1499,7 +1502,7 @@ function HailModal({ onClose }: { onClose: () => void }) {
           <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: 'var(--text3)', lineHeight: 1.6 }}>
             {mode === 'date'
               ? 'Source: NOAA Storm Prediction Center daily storm reports. Times are UTC.'
-              : 'Source: NOAA Severe Weather Data Inventory — radar-detected hail signatures. Size is radar-estimated.'}
+              : 'Source: NWS Local Storm Reports archive (Iowa Environmental Mesonet). Ground-observed hail.'}
           </div>
         </div>
       </div>

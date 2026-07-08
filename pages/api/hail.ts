@@ -15,48 +15,56 @@ async function geocodeZip(zip: string) {
   return {
     lat: parseFloat(place.latitude),
     lon: parseFloat(place.longitude),
+    state: place['state abbreviation'] as string,
     name: `${place['place name']}, ${place['state abbreviation']}`,
   };
 }
 
-// Year mode: NOAA SWDI radar-detected hail signatures (nx3hail), queried per month
+// Year mode: NWS Local Storm Reports archive (Iowa Environmental Mesonet),
+// fetched per quarter for the ZIP's state, filtered to hail within radius.
 async function yearSearch(res: NextApiResponse, zip: string, year: number) {
   const geo = await geocodeZip(zip);
   if (!geo) return res.status(400).json({ error: 'ZIP code not found' });
 
-  // ~50mi bounding box around the ZIP
-  const dLat = 0.75;
-  const dLon = 0.9;
-  const bbox = `${(geo.lon - dLon).toFixed(3)},${(geo.lat - dLat).toFixed(3)},${(geo.lon + dLon).toFixed(3)},${(geo.lat + dLat).toFixed(3)}`;
+  const quarters = [
+    [`${year}-01-01`, `${year}-04-01`],
+    [`${year}-04-01`, `${year}-07-01`],
+    [`${year}-07-01`, `${year}-10-01`],
+    [`${year}-10-01`, `${year + 1}-01-01`],
+  ];
 
-  const months = Array.from({ length: 12 }, (_, i) => i + 1);
-  const monthResults = await Promise.all(months.map(async m => {
-    const mm = String(m).padStart(2, '0');
-    const lastDay = new Date(year, m, 0).getDate();
-    const url = `https://www.ncdc.noaa.gov/swdiws/json/nx3hail/${year}${mm}01:${year}${mm}${lastDay}?bbox=${bbox}&limit=5000`;
+  interface LsrFeature {
+    properties: {
+      type: string; magf: number | null; city: string; county: string;
+      valid: string; lon: number; lat: number;
+    };
+  }
+
+  const results = await Promise.all(quarters.map(async ([sts, ets]) => {
+    const url = `https://mesonet.agron.iastate.edu/geojson/lsr.geojson?sts=${sts}T00:00Z&ets=${ets}T00:00Z&states=${geo.state}`;
     try {
       const r = await fetch(url);
-      if (!r.ok) return [];
+      if (!r.ok) return [] as LsrFeature[];
       const data = await r.json();
-      return Array.isArray(data.result) ? data.result : [];
-    } catch { return []; }
+      return (Array.isArray(data.features) ? data.features : []) as LsrFeature[];
+    } catch { return [] as LsrFeature[]; }
   }));
 
-  interface DayAgg { date: string; count: number; maxSize: number; minDist: number; }
+  interface DayAgg { date: string; count: number; maxSize: number; minDist: number; maxCity: string; }
   const days = new Map<string, DayAgg>();
 
-  for (const row of monthResults.flat()) {
-    const lat = parseFloat(row.LAT);
-    const lon = parseFloat(row.LON);
-    if (isNaN(lat) || isNaN(lon)) continue;
-    const dist = haversineMiles(geo.lat, geo.lon, lat, lon);
+  for (const f of results.flat()) {
+    const p = f.properties;
+    if (p.type !== 'H') continue;
+    if (typeof p.lat !== 'number' || typeof p.lon !== 'number') continue;
+    const dist = haversineMiles(geo.lat, geo.lon, p.lat, p.lon);
     if (dist > YEAR_RADIUS_MI) continue;
-    const date = String(row.ZTIME || '').slice(0, 10);
+    const date = String(p.valid || '').slice(0, 10);
     if (!date) continue;
-    const size = Math.max(0, parseFloat(row.MAXSIZE) || 0);
-    const agg = days.get(date) || { date, count: 0, maxSize: 0, minDist: 9999 };
+    const size = Math.max(0, p.magf || 0);
+    const agg = days.get(date) || { date, count: 0, maxSize: 0, minDist: 9999, maxCity: '' };
     agg.count += 1;
-    agg.maxSize = Math.max(agg.maxSize, size);
+    if (size >= agg.maxSize) { agg.maxSize = size; agg.maxCity = p.city || ''; }
     agg.minDist = Math.min(agg.minDist, Math.round(dist));
     days.set(date, agg);
   }
