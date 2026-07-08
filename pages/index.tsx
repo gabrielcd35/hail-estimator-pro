@@ -1252,13 +1252,18 @@ function buildChecklist(
   for (const id of panelIds) {
     const panel = PANELS.find(p => p.id === id);
     if (!panel || panel.id === 'non-negotiables') continue;
+    // RT panels have no ops of their own — borrow the LT mirror's operations
+    let ops = panel.operations;
+    if (ops.length === 0 && id.startsWith('rt-')) {
+      ops = PANELS.find(q => q.id === id.replace(/^rt-/, 'lt-'))?.operations ?? [];
+    }
     const c = counts[id];
     const dents = c?.dentCount
       ? ` — ${c.dentCount}${c.dentSize ? `-${c.dentSize}` : ''}${c.oversize ? ` + ${c.oversize} O/S` : ''}`
       : '';
     lines.push(`${panel.label.toUpperCase()}${dents}`);
     lines.push(`[ ] PDR ${panel.label}`);
-    for (const op of panel.operations.filter(o => o.types.includes('pdr'))) {
+    for (const op of ops.filter(o => o.types.includes('pdr'))) {
       lines.push(`[ ] ${op.name}`);
     }
     lines.push('');
@@ -1841,8 +1846,16 @@ export default function Home() {
                 </div>
 
                 {(() => {
-                  const panelsWithOps = selectedPanels.filter(p => p.operations.length > 0);
-                  const toRender = panelsWithOps.length > 0 ? panelsWithOps : selectedPanels.slice(0, 1);
+                  // RT panels have no ops of their own — borrow the LT mirror's operations
+                  const resolved = selectedPanels.map(p => {
+                    if (p.operations.length > 0 || !p.id.startsWith('rt-')) return p;
+                    const mirror = PANELS.find(q => q.id === p.id.replace(/^rt-/, 'lt-'));
+                    return mirror && mirror.operations.length > 0
+                      ? { ...p, operations: mirror.operations }
+                      : p;
+                  });
+                  const panelsWithOps = resolved.filter(p => p.operations.length > 0);
+                  const toRender = panelsWithOps.length > 0 ? panelsWithOps : resolved.slice(0, 1);
                   return toRender.map((panel, idx) => (
                     <div key={panel.id} style={{ marginBottom: idx < toRender.length - 1 ? 28 : 0 }}>
                       {toRender.length > 1 && (
