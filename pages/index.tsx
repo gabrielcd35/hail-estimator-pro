@@ -329,14 +329,10 @@ const REPAIR_TABS: { type: RepairType; label: string }[] = [
   { type: 'pdr',    label: 'PDR' },
   { type: 'repair', label: 'Repair' },
   { type: 'rr',     label: 'R&R' },
-  { type: 'ri',     label: 'R&I' },
 ];
 
 function PanelOps({ panel }: { panel: CarPanel }) {
-  // PDR, Repair and R&R are always shown; R&I only when it has operations
-  const availableTabs = REPAIR_TABS.filter(tab =>
-    tab.type !== 'ri' || panel.operations.some(op => op.types.includes('ri'))
-  );
+  const availableTabs = REPAIR_TABS;
 
   const [activeType, setActiveType] = useState<RepairType>('pdr');
   const [activeOpId, setActiveOpId] = useState<string | null>(null);
