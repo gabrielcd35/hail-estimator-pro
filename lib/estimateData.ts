@@ -323,6 +323,17 @@ export const PANELS: CarPanel[] = [
     onTruckDiagram: true,
     operations: [
       {
+        id: 'lfd-belt',
+        name: 'R&I Belt Molding',
+        types: ['pdr', 'repair', 'rr'],
+        notes: [
+          {
+            id: 'lfd-beltm-1',
+            text: 'Belt molding R&I required on front door — needed to access and remove door moldings for proper repair.',
+          },
+        ],
+      },
+      {
         id: 'lfd-belt-mirror',
         name: 'R&I Belt Molding → Mirror Overlap',
         types: ['pdr', 'repair', 'rr'],
