@@ -1303,9 +1303,6 @@ export default function Home() {
     .flatMap(p => p.operations.flatMap(op => op.notes.map(n => n.text)))
     .join('\n\n');
 
-  const isOnCurrentDiagram = (p: { onDiagram?: boolean; onTruckDiagram?: boolean }) =>
-    vehicleType === 'sedan' ? !!p.onDiagram : !!p.onTruckDiagram;
-
   const vehLabel = vehicleType === 'sedan' ? 'Sedan / SUV' : 'Pickup Truck';
 
   useEffect(() => {
@@ -1730,7 +1727,7 @@ export default function Home() {
 
           <div style={{ width: 1, height: 20, background: 'var(--brd)', flexShrink: 0, margin: '0 4px' }} />
 
-          {PANELS.filter(p => !isOnCurrentDiagram(p)).map(p => {
+          {PANELS.filter(p => !p.onDiagram && !p.onTruckDiagram).map(p => {
             const sel = selectedIds.includes(p.id);
             const count = p.operations.length;
             return (
