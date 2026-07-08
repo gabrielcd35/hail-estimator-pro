@@ -5,14 +5,14 @@ export const config = {
   maxDuration: 60,
 };
 
-const SCOPE_PROMPT = `You are reading a handwritten PDR (Paintless Dent Repair) Vehicle Assessment Sheet (scope sheet), typically a PDR Linx form. Extract ALL information into JSON.
+const SCOPE_PROMPT = `You are reading a PDR (Paintless Dent Repair) scope sheet / vehicle assessment sheet. It may be a handwritten PDR Linx form, a Progressive scope sheet, another carrier's form, or a typed/digital document. Extract ALL information into JSON.
 
-Handwriting notation guide:
-- Dent counts are written as "COUNT - SIZE" per panel, e.g. "92-Q" = 92 dents, Quarter size. Sizes: D=dime, N=nickel, Q=quarter, H=half dollar.
-- "OVERSIZE:" followed by a number = count of oversize dents on that panel.
-- "O/S" also means oversize.
+Notation guide (varies by form):
+- Dent counts may be written as "COUNT - SIZE" per panel, e.g. "92-Q" = 92 dents, Quarter size. Sizes: D=dime, N=nickel, Q=quarter, H=half dollar. Other forms may use separate count and size columns, or size words (dime/nickel/quarter/half).
+- "OVERSIZE:" or "O/S" followed by a number = count of oversize dents on that panel.
 - Circled/marked R&I or R&R items are operations required for that panel.
 - UPD = up-charge for double panel/deep dents.
+- Panel names vary by form (e.g. "Left Fender" = LT FENDER, "Roof Panel" = ROOF, "Deck Lid"/"Trunk" = DECK LID, "L Frt Door" = LF DOOR). Normalize them to the sheetLabel list below.
 
 Return ONLY valid JSON (no markdown fences) with this exact shape:
 {
