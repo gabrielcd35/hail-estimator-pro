@@ -927,11 +927,26 @@ function ScopeModal({ onClose, onApply }: {
     }
   };
 
-  const isTruck = !!scope && scope.panels.some(p =>
-    ['LT CAB', 'RT CAB', 'LT BED', 'RT BED', 'TAILGATE'].includes(p.sheetLabel));
+  const TRUCK_MODELS = ['FRONTIER','TACOMA','TUNDRA','F-150','F150','F-250','F250','F-350','F350','SILVERADO','SIERRA','RAM','1500','2500','3500','COLORADO','CANYON','RANGER','TITAN','RIDGELINE','GLADIATOR','MAVERICK','SANTA CRUZ'];
+
+  const isTruck = !!scope && (
+    scope.panels.some(p => ['LT CAB', 'RT CAB', 'LT BED', 'RT BED', 'TAILGATE'].includes(p.sheetLabel)) ||
+    TRUCK_MODELS.some(m => (scope.vehicle.model || '').toUpperCase().includes(m))
+  );
+
+  // On trucks, quarter panels don't exist — the sheet's "quarter panel" is the pickup bed side
+  const resolveLabel = (label: string) => {
+    if (!isTruck) return label;
+    if (label === 'LT QUARTER') return 'LT BED';
+    if (label === 'RT QUARTER') return 'RT BED';
+    if (label === 'DECK LID') return 'TAILGATE';
+    return label;
+  };
 
   const sortedPanels = scope
-    ? [...scope.panels].sort((a, b) => scanOrderIdx(a.sheetLabel) - scanOrderIdx(b.sheetLabel))
+    ? scope.panels
+        .map(p => ({ ...p, sheetLabel: resolveLabel(p.sheetLabel) }))
+        .sort((a, b) => scanOrderIdx(a.sheetLabel) - scanOrderIdx(b.sheetLabel))
     : [];
 
   const mappedIds = sortedPanels.map(p => SHEET_LABEL_TO_PANEL[p.sheetLabel]).filter(Boolean);
