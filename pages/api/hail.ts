@@ -6,6 +6,67 @@ import { NextApiRequest, NextApiResponse } from 'next';
 
 const SEARCH_RADIUS_MI = 75;
 
+async function geocodeZip(zip: string) {
+  const zipRes = await fetch(`https://api.zippopotam.us/us/${zip}`);
+  if (!zipRes.ok) return null;
+  const zipData = await zipRes.json();
+  const place = zipData.places?.[0];
+  if (!place) return null;
+  return {
+    lat: parseFloat(place.latitude),
+    lon: parseFloat(place.longitude),
+    name: `${place['place name']}, ${place['state abbreviation']}`,
+  };
+}
+
+// Year mode: NOAA SWDI radar-detected hail signatures (nx3hail), queried per month
+async function yearSearch(res: NextApiResponse, zip: string, year: number) {
+  const geo = await geocodeZip(zip);
+  if (!geo) return res.status(400).json({ error: 'ZIP code not found' });
+
+  // ~50mi bounding box around the ZIP
+  const dLat = 0.75;
+  const dLon = 0.9;
+  const bbox = `${(geo.lon - dLon).toFixed(3)},${(geo.lat - dLat).toFixed(3)},${(geo.lon + dLon).toFixed(3)},${(geo.lat + dLat).toFixed(3)}`;
+
+  const months = Array.from({ length: 12 }, (_, i) => i + 1);
+  const monthResults = await Promise.all(months.map(async m => {
+    const mm = String(m).padStart(2, '0');
+    const lastDay = new Date(year, m, 0).getDate();
+    const url = `https://www.ncdc.noaa.gov/swdiws/json/nx3hail/${year}${mm}01:${year}${mm}${lastDay}?bbox=${bbox}&limit=5000`;
+    try {
+      const r = await fetch(url);
+      if (!r.ok) return [];
+      const data = await r.json();
+      return Array.isArray(data.result) ? data.result : [];
+    } catch { return []; }
+  }));
+
+  interface DayAgg { date: string; count: number; maxSize: number; minDist: number; }
+  const days = new Map<string, DayAgg>();
+
+  for (const row of monthResults.flat()) {
+    const lat = parseFloat(row.LAT);
+    const lon = parseFloat(row.LON);
+    if (isNaN(lat) || isNaN(lon)) continue;
+    const dist = haversineMiles(geo.lat, geo.lon, lat, lon);
+    if (dist > YEAR_RADIUS_MI) continue;
+    const date = String(row.ZTIME || '').slice(0, 10);
+    if (!date) continue;
+    const size = Math.max(0, parseFloat(row.MAXSIZE) || 0);
+    const agg = days.get(date) || { date, count: 0, maxSize: 0, minDist: 9999 };
+    agg.count += 1;
+    agg.maxSize = Math.max(agg.maxSize, size);
+    agg.minDist = Math.min(agg.minDist, Math.round(dist));
+    days.set(date, agg);
+  }
+
+  const sorted = [...days.values()].sort((a, b) => b.date.localeCompare(a.date));
+  return res.status(200).json({
+    zipName: geo.name, year, radiusMi: YEAR_RADIUS_MI, days: sorted,
+  });
+}
+
 function haversineMiles(lat1: number, lon1: number, lat2: number, lon2: number) {
   const R = 3958.8;
   const toRad = (d: number) => (d * Math.PI) / 180;
@@ -17,11 +78,20 @@ function haversineMiles(lat1: number, lon1: number, lat2: number, lon2: number) 
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+const YEAR_RADIUS_MI = 50;
+
+export const config = { maxDuration: 60 };
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   try {
-    const { zip, date } = req.body as { zip?: string; date?: string };
+    const { zip, date, year } = req.body as { zip?: string; date?: string; year?: string };
     if (!zip || !/^\d{5}$/.test(zip)) return res.status(400).json({ error: 'Enter a valid 5-digit ZIP code' });
+    if (year) {
+      const yr = parseInt(year, 10);
+      if (isNaN(yr) || yr < 1995 || yr > 2100) return res.status(400).json({ error: 'Enter a valid year' });
+      return yearSearch(res, zip, yr);
+    }
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'Enter a valid date' });
 
     // 1. Geocode ZIP
