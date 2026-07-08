@@ -197,6 +197,28 @@ export const PANELS: CarPanel[] = [
     onTruckDiagram: true,
     operations: [
       {
+        id: 'hood-pdr-insulator',
+        name: 'PDR → R&I Insulator',
+        types: ['pdr'],
+        notes: [
+          {
+            id: 'hood-pdr-ins-1',
+            text: 'Hood insulator must be removed to allow PDR tool access to the underside of the hood panel.',
+          },
+        ],
+      },
+      {
+        id: 'hood-pdr-clips',
+        name: 'PDR → R/R Hood Clips',
+        types: ['pdr'],
+        notes: [
+          {
+            id: 'hood-pdr-clips-1',
+            text: 'Hood insulator retaining clips are single-use fasteners — they break during insulator removal and must be replaced.',
+          },
+        ],
+      },
+      {
         id: 'hood-rr-labels',
         name: 'Hood R&R → Information Labels',
         types: ['rr'],
