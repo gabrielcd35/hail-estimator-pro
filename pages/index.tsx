@@ -886,15 +886,40 @@ interface ScopeResult {
   panels: ScopePanel[];
 }
 
+interface ScanHistoryEntry {
+  id: number;
+  savedAt: string;
+  scope: ScopeResult;
+}
+
+const SCAN_HISTORY_KEY = 'hep-scan-history';
+
+function loadScanHistory(): ScanHistoryEntry[] {
+  try {
+    return JSON.parse(localStorage.getItem(SCAN_HISTORY_KEY) || '[]');
+  } catch { return []; }
+}
+
+function saveScanToHistory(scope: ScopeResult): ScanHistoryEntry[] {
+  const history = loadScanHistory();
+  const entry: ScanHistoryEntry = { id: Date.now(), savedAt: new Date().toISOString(), scope };
+  const next = [entry, ...history].slice(0, 30);
+  try { localStorage.setItem(SCAN_HISTORY_KEY, JSON.stringify(next)); } catch { /* storage full */ }
+  return next;
+}
+
 function ScopeModal({ onClose, onApply }: {
   onClose: () => void;
-  onApply: (panelIds: string[], vt: VehicleType, counts: ScanCounts) => void;
+  onApply: (panelIds: string[], vt: VehicleType, counts: ScanCounts, scope: ScopeResult) => void;
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [scope, setScope] = useState<ScopeResult | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [history, setHistory] = useState<ScanHistoryEntry[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { setHistory(loadScanHistory()); }, []);
 
   const handleFile = async (file: File) => {
     setError(''); setScope(null); setLoading(true);
@@ -916,11 +941,18 @@ function ScopeModal({ onClose, onApply }: {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to read scope sheet');
       setScope(data.scope);
+      setHistory(saveScanToHistory(data.scope));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to read scope sheet');
     } finally {
       setLoading(false);
     }
+  };
+
+  const deleteHistoryEntry = (id: number) => {
+    const next = history.filter(h => h.id !== id);
+    setHistory(next);
+    try { localStorage.setItem(SCAN_HISTORY_KEY, JSON.stringify(next)); } catch { /* ignore */ }
   };
 
   const TRUCK_MODELS = ['FRONTIER','TACOMA','TUNDRA','F-150','F150','F-250','F250','F-350','F350','SILVERADO','SIERRA','RAM','1500','2500','3500','COLORADO','CANYON','RANGER','TITAN','RIDGELINE','GLADIATOR','MAVERICK','SANTA CRUZ'];
@@ -1036,6 +1068,52 @@ function ScopeModal({ onClose, onApply }: {
             onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }}
           />
 
+          {/* Recent scans */}
+          {!scope && !loading && history.length > 0 && (
+            <div>
+              <div style={{ fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", color: 'var(--text3)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 }}>
+                Recent scans
+              </div>
+              <div style={{ border: '1px solid var(--brd)', borderRadius: 10, overflow: 'hidden' }}>
+                {history.map((h, i) => {
+                  const v = h.scope.vehicle;
+                  const title = [v.year, v.make, v.model].filter(Boolean).join(' ') || 'Vehicle';
+                  const d = new Date(h.savedAt);
+                  const dateStr = `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
+                  return (
+                    <div key={h.id} style={{
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      padding: '10px 14px',
+                      borderBottom: i < history.length - 1 ? '1px solid var(--brd)' : 'none',
+                    }}>
+                      <button
+                        onClick={() => setScope(h.scope)}
+                        style={{
+                          flex: 1, textAlign: 'left', background: 'none', border: 'none',
+                          cursor: 'pointer', padding: 0, fontFamily: "'Public Sans', sans-serif",
+                        }}
+                      >
+                        <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>{title}</div>
+                        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: 'var(--text3)', marginTop: 2 }}>
+                          {dateStr}{v.claim ? ` · CLAIM ${v.claim}` : ''} · {h.scope.panels.length} panels
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => deleteHistoryEntry(h.id)}
+                        title="Delete"
+                        style={{
+                          width: 26, height: 26, borderRadius: 6, border: '1px solid var(--brd)',
+                          background: 'none', color: 'var(--text3)', cursor: 'pointer',
+                          fontSize: 14, lineHeight: 1, flexShrink: 0,
+                        }}
+                      >×</button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {error && (
             <div style={{
               padding: '12px 16px', borderRadius: 9, fontSize: 13,
@@ -1104,7 +1182,7 @@ function ScopeModal({ onClose, onApply }: {
               {/* Actions */}
               <div style={{ display: 'flex', gap: 10 }}>
                 <button
-                  onClick={() => { onApply(mappedIds, isTruck ? 'truck' : 'sedan', scanCounts); onClose(); }}
+                  onClick={() => { onApply(mappedIds, isTruck ? 'truck' : 'sedan', scanCounts, scope); onClose(); }}
                   style={{
                     flex: 1, padding: '11px 0', borderRadius: 9,
                     background: 'var(--gold2)', color: 'var(--on-gold)', border: 'none',
@@ -1140,6 +1218,55 @@ function ScopeModal({ onClose, onApply }: {
   );
 }
 
+// ─── Estimate checklist builder ───────────────────────────────────────────────
+
+function buildChecklist(
+  scanScope: ScopeResult,
+  panelIds: string[],
+  counts: ScanCounts,
+  vt: VehicleType,
+): string {
+  const v = scanScope.vehicle;
+  const lines: string[] = [];
+
+  const title = [v.year, v.make, v.model].filter(Boolean).join(' ') || 'Vehicle';
+  lines.push(`ESTIMATE CHECKLIST — ${title}${v.color ? ` · ${v.color}` : ''}`);
+  const meta = [
+    v.vin ? `VIN ${v.vin}` : '',
+    v.claim ? `Claim ${v.claim}` : '',
+    v.carrier || '',
+    vt === 'truck' ? 'Pickup Truck' : 'Sedan / SUV',
+  ].filter(Boolean).join(' · ');
+  if (meta) lines.push(meta);
+  lines.push('');
+
+  // Every Estimate items
+  const nn = PANELS.find(p => p.id === 'non-negotiables');
+  if (nn) {
+    lines.push('EVERY ESTIMATE');
+    for (const op of nn.operations) lines.push(`[ ] ${op.name}`);
+    lines.push('');
+  }
+
+  // Per damaged panel (PDR mode — hail work)
+  for (const id of panelIds) {
+    const panel = PANELS.find(p => p.id === id);
+    if (!panel || panel.id === 'non-negotiables') continue;
+    const c = counts[id];
+    const dents = c?.dentCount
+      ? ` — ${c.dentCount}${c.dentSize ? `-${c.dentSize}` : ''}${c.oversize ? ` + ${c.oversize} O/S` : ''}`
+      : '';
+    lines.push(`${panel.label.toUpperCase()}${dents}`);
+    lines.push(`[ ] PDR ${panel.label}`);
+    for (const op of panel.operations.filter(o => o.types.includes('pdr'))) {
+      lines.push(`[ ] ${op.name}`);
+    }
+    lines.push('');
+  }
+
+  return lines.join('\n').trim();
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function Home() {
@@ -1153,6 +1280,7 @@ export default function Home() {
   const [showValueModal, setShowValueModal] = useState(false);
   const [showScopeModal, setShowScopeModal] = useState(false);
   const [scanCounts, setScanCounts] = useState<ScanCounts>({});
+  const [lastScan, setLastScan] = useState<ScopeResult | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
 
   const hits = doSearch(query);
@@ -1233,6 +1361,7 @@ export default function Home() {
     setVehicleType(vt);
     setSelectedIds([]);
     setScanCounts({});
+    setLastScan(null);
   };
 
   const selectFromSearch = (hit: SearchHit) => {
@@ -1702,6 +1831,12 @@ export default function Home() {
                     {allNotesText.length > 0 && (
                       <CopyButton text={allNotesText} label="Copy all notes" />
                     )}
+                    {lastScan && Object.keys(scanCounts).length > 0 && (
+                      <CopyButton
+                        text={buildChecklist(lastScan, selectedIds, scanCounts, vehicleType)}
+                        label="Copy estimate checklist"
+                      />
+                    )}
                   </div>
                 </div>
 
@@ -1758,10 +1893,11 @@ export default function Home() {
         {showScopeModal && (
           <ScopeModal
             onClose={() => setShowScopeModal(false)}
-            onApply={(panelIds, vt, counts) => {
+            onApply={(panelIds, vt, counts, scanScope) => {
               setVehicleType(vt);
               setSelectedIds(panelIds);
               setScanCounts(counts);
+              setLastScan(scanScope);
             }}
           />
         )}
