@@ -835,6 +835,277 @@ function ValueModal({ onClose, onVehicleDetected }: {
   );
 }
 
+// ─── Scope Sheet Scanner Modal ────────────────────────────────────────────────
+
+const SHEET_LABEL_TO_PANEL: Record<string, string> = {
+  'LT FENDER': 'lt-fender',    'RT FENDER': 'rt-fender',
+  'HOOD': 'hood',              'WINDSHIELD': 'windshield',
+  'LF DOOR': 'lt-front-door',  'RF DOOR': 'rt-front-door',
+  'LR DOOR': 'lt-rear-door',   'RR DOOR': 'rt-rear-door',
+  'L RAIL': 'lt-roof-rail',    'R RAIL': 'rt-roof-rail',
+  'ROOF': 'roof',
+  'LT CAB': 'lt-cab-corner',   'RT CAB': 'rt-cab-corner',
+  'LT QUARTER': 'lt-quarter',  'RT QUARTER': 'rt-quarter',
+  'DECK LID': 'lift-gate',
+  'LT BED': 'lt-bed',          'RT BED': 'rt-bed',
+  'TAILGATE': 'tailgate',
+  'FRONT BUMPER': 'front-bumper', 'REAR BUMPER': 'rear-bumper',
+};
+
+const DENT_SIZE_LABEL: Record<string, string> = {
+  D: 'Dime', N: 'Nickel', Q: 'Quarter', H: 'Half Dollar',
+};
+
+interface ScopePanel {
+  sheetLabel: string;
+  dentCount: number | null;
+  dentSize: string | null;
+  oversize: number | null;
+  notes: string;
+}
+
+interface ScopeResult {
+  vehicle: {
+    year: string; make: string; model: string; color: string; vin: string;
+    plate: string; plateState: string; claim: string; carrier: string;
+    member: string; phone: string;
+  };
+  panels: ScopePanel[];
+}
+
+function ScopeModal({ onClose, onApply }: {
+  onClose: () => void;
+  onApply: (panelIds: string[], vt: VehicleType) => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [scope, setScope] = useState<ScopeResult | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = async (file: File) => {
+    setError(''); setScope(null); setLoading(true);
+    try {
+      const reader = new FileReader();
+      const dataUrl: string = await new Promise((resolve, reject) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      setPreview(dataUrl);
+      const [meta, base64] = dataUrl.split(',');
+      const mediaType = meta.match(/data:(.*?);/)?.[1] || 'image/jpeg';
+      const res = await fetch('/api/scope', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageData: base64, mediaType }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to read scope sheet');
+      setScope(data.scope);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to read scope sheet');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const isTruck = !!scope && scope.panels.some(p =>
+    ['LT CAB', 'RT CAB', 'LT BED', 'RT BED', 'TAILGATE'].includes(p.sheetLabel));
+
+  const mappedIds = scope
+    ? scope.panels.map(p => SHEET_LABEL_TO_PANEL[p.sheetLabel]).filter(Boolean)
+    : [];
+
+  const totalDents = scope
+    ? scope.panels.reduce((s, p) => s + (p.dentCount || 0), 0)
+    : 0;
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 300,
+        background: 'rgba(0,0,0,.55)',
+        backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: 620, maxHeight: '90vh', overflowY: 'auto',
+          background: 'var(--panel-bg)', borderRadius: 16,
+          border: '1px solid var(--brd-2)', boxShadow: '0 24px 80px rgba(0,0,0,.6)',
+        }}
+      >
+        {/* Modal header */}
+        <div style={{
+          padding: '18px 24px', borderBottom: '1px solid var(--brd)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <div>
+            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 17, color: 'var(--gold)' }}>
+              Scope Sheet Scanner
+            </div>
+            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: 'var(--text3)', letterSpacing: 1.5, marginTop: 2 }}>
+              AI-POWERED · PHOTO TO PANELS
+            </div>
+          </div>
+          <button onClick={onClose} style={{
+            width: 32, height: 32, borderRadius: 8, border: '1px solid var(--brd)',
+            background: 'var(--input-bg)', color: 'var(--text2)', cursor: 'pointer',
+            fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>×</button>
+        </div>
+
+        <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+          {/* Upload area */}
+          {!scope && (
+            <button
+              onClick={() => fileRef.current?.click()}
+              disabled={loading}
+              style={{
+                border: '2px dashed var(--brd-2)', borderRadius: 12,
+                background: 'var(--card)', color: 'var(--text2)',
+                padding: '36px 20px', cursor: loading ? 'wait' : 'pointer',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+                fontFamily: "'Public Sans', sans-serif", transition: 'all .15s',
+              }}
+            >
+              {loading ? (
+                <>
+                  <div style={{ fontSize: 26 }}>⏳</div>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>Reading scope sheet…</div>
+                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: 'var(--text3)' }}>
+                    Extracting handwriting with AI — takes ~15 seconds
+                  </div>
+                </>
+              ) : (
+                <>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21 15 16 10 5 21"/>
+                  </svg>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>Upload scope sheet photo</div>
+                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: 'var(--text3)' }}>
+                    JPG, PNG or HEIC · reads handwritten PDR Linx sheets
+                  </div>
+                </>
+              )}
+            </button>
+          )}
+          <input
+            ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
+            onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }}
+          />
+
+          {error && (
+            <div style={{
+              padding: '12px 16px', borderRadius: 9, fontSize: 13,
+              background: 'rgba(239,68,68,.12)', border: '1px solid rgba(239,68,68,.28)',
+              color: '#ef4444', fontFamily: "'Public Sans', sans-serif",
+            }}>
+              {error}
+            </div>
+          )}
+
+          {/* Results */}
+          {scope && (
+            <>
+              {/* Vehicle info */}
+              <div style={{
+                padding: '12px 16px', borderRadius: 10,
+                background: 'var(--gold-soft)', border: '1px solid var(--gold-brd)',
+              }}>
+                <div style={{ fontFamily: "'Public Sans', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--gold)' }}>
+                  {[scope.vehicle.year, scope.vehicle.make, scope.vehicle.model].filter(Boolean).join(' ') || 'Vehicle'}
+                  {scope.vehicle.color ? ` · ${scope.vehicle.color}` : ''}
+                </div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10.5, color: 'var(--text2)', marginTop: 4, display: 'flex', flexWrap: 'wrap', gap: '4px 16px' }}>
+                  {scope.vehicle.vin && <span>VIN {scope.vehicle.vin}</span>}
+                  {scope.vehicle.claim && <span>CLAIM {scope.vehicle.claim}</span>}
+                  {scope.vehicle.carrier && <span>{scope.vehicle.carrier}</span>}
+                  {scope.vehicle.plate && <span>{scope.vehicle.plate} {scope.vehicle.plateState}</span>}
+                </div>
+              </div>
+
+              {/* Panels table */}
+              <div style={{ border: '1px solid var(--brd)', borderRadius: 10, overflow: 'hidden' }}>
+                <div style={{
+                  display: 'grid', gridTemplateColumns: '1fr 70px 90px 70px',
+                  padding: '8px 14px', background: 'var(--card)',
+                  fontFamily: "'IBM Plex Mono', monospace", fontSize: 9.5,
+                  color: 'var(--text3)', letterSpacing: 1, textTransform: 'uppercase',
+                  borderBottom: '1px solid var(--brd)',
+                }}>
+                  <span>Panel</span><span>Dents</span><span>Size</span><span>O/S</span>
+                </div>
+                {scope.panels.map((p, i) => (
+                  <div key={i} style={{
+                    display: 'grid', gridTemplateColumns: '1fr 70px 90px 70px',
+                    padding: '9px 14px', fontSize: 13,
+                    fontFamily: "'Public Sans', sans-serif", color: 'var(--text)',
+                    borderBottom: i < scope.panels.length - 1 ? '1px solid var(--brd)' : 'none',
+                    alignItems: 'center',
+                  }}>
+                    <span style={{ fontWeight: 600 }}>{p.sheetLabel}</span>
+                    <span style={{ fontFamily: "'IBM Plex Mono', monospace", color: 'var(--gold)' }}>{p.dentCount ?? '—'}</span>
+                    <span style={{ fontSize: 12, color: 'var(--text2)' }}>{p.dentSize ? DENT_SIZE_LABEL[p.dentSize] || p.dentSize : '—'}</span>
+                    <span style={{ fontFamily: "'IBM Plex Mono', monospace", color: p.oversize ? '#f59e0b' : 'var(--text3)' }}>{p.oversize ?? '—'}</span>
+                  </div>
+                ))}
+                <div style={{
+                  display: 'flex', justifyContent: 'space-between', padding: '9px 14px',
+                  background: 'var(--card)', borderTop: '1px solid var(--brd)',
+                  fontFamily: "'IBM Plex Mono', monospace", fontSize: 11.5, color: 'var(--text2)',
+                }}>
+                  <span>{scope.panels.length} panels · detected as {isTruck ? 'Pickup Truck' : 'Sedan / SUV'}</span>
+                  <span style={{ color: 'var(--gold)', fontWeight: 600 }}>{totalDents} total dents</span>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  onClick={() => { onApply(mappedIds, isTruck ? 'truck' : 'sedan'); onClose(); }}
+                  style={{
+                    flex: 1, padding: '11px 0', borderRadius: 9,
+                    background: 'var(--gold2)', color: 'var(--on-gold)', border: 'none',
+                    cursor: 'pointer', fontFamily: "'Public Sans', sans-serif",
+                    fontWeight: 700, fontSize: 13.5,
+                  }}
+                >
+                  Select these panels on diagram
+                </button>
+                <button
+                  onClick={() => { setScope(null); setPreview(null); setError(''); }}
+                  style={{
+                    padding: '11px 18px', borderRadius: 9,
+                    background: 'var(--card)', color: 'var(--text2)',
+                    border: '1px solid var(--brd)', cursor: 'pointer',
+                    fontFamily: "'Public Sans', sans-serif", fontWeight: 600, fontSize: 13,
+                  }}
+                >
+                  Scan another
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* Photo preview while loading */}
+          {loading && preview && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={preview} alt="Scope sheet" style={{ width: '100%', borderRadius: 10, opacity: .5, border: '1px solid var(--brd)' }} />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function Home() {
@@ -846,6 +1117,7 @@ export default function Home() {
   const [narrow, setNarrow] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showValueModal, setShowValueModal] = useState(false);
+  const [showScopeModal, setShowScopeModal] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
   const hits = doSearch(query);
@@ -898,7 +1170,7 @@ export default function Home() {
         const el = document.getElementById('hep-search-input');
         if (el) (el as HTMLInputElement).focus();
       }
-      if (e.key === 'Escape') setShowValueModal(false);
+      if (e.key === 'Escape') { setShowValueModal(false); setShowScopeModal(false); }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
@@ -1194,11 +1466,25 @@ export default function Home() {
             )}
           </div>
 
+          {/* Scope Sheet button */}
+          <button
+            onClick={() => setShowScopeModal(true)}
+            style={{
+              marginLeft: 'auto', flexShrink: 0,
+              fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: 'var(--text2)',
+              background: 'none', letterSpacing: 0.5,
+              padding: '6px 12px', border: '1px solid var(--brd)', borderRadius: 8,
+              cursor: 'pointer', transition: 'all .15s', whiteSpace: 'nowrap',
+            }}
+          >
+            Scan Scope Sheet
+          </button>
+
           {/* Vehicle Value button */}
           <button
             onClick={() => setShowValueModal(true)}
             style={{
-              marginLeft: 'auto', flexShrink: 0,
+              flexShrink: 0,
               fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: 'var(--text2)',
               background: 'none', letterSpacing: 0.5,
               padding: '6px 12px', border: '1px solid var(--brd)', borderRadius: 8,
@@ -1420,6 +1706,17 @@ export default function Home() {
           <ValueModal
             onClose={() => setShowValueModal(false)}
             onVehicleDetected={vt => { switchVehicle(vt); }}
+          />
+        )}
+
+        {/* ── Scope Sheet Modal ── */}
+        {showScopeModal && (
+          <ScopeModal
+            onClose={() => setShowScopeModal(false)}
+            onApply={(panelIds, vt) => {
+              setVehicleType(vt);
+              setSelectedIds(panelIds);
+            }}
           />
         )}
       </div>
