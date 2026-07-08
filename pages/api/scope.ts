@@ -35,11 +35,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { imageData, mediaType } = req.body;
     if (!imageData) return res.status(400).json({ error: 'No image provided' });
 
+    const isPdf = mediaType === 'application/pdf';
+    const fileBlock = isPdf
+      ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: imageData } }
+      : { type: 'image', source: { type: 'base64', media_type: mediaType || 'image/jpeg', data: imageData } };
+
     const payload = {
       model: 'claude-sonnet-5',
       max_tokens: 3000,
       messages: [{ role: 'user', content: [
-        { type: 'image', source: { type: 'base64', media_type: mediaType || 'image/jpeg', data: imageData } },
+        fileBlock,
         { type: 'text', text: SCOPE_PROMPT },
       ]}],
     };

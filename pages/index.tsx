@@ -1012,16 +1012,16 @@ function ScopeModal({ onClose, onApply }: {
                     <circle cx="8.5" cy="8.5" r="1.5"/>
                     <polyline points="21 15 16 10 5 21"/>
                   </svg>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>Upload scope sheet photo</div>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>Upload scope sheet</div>
                   <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: 'var(--text3)' }}>
-                    JPG, PNG or HEIC · reads handwritten PDR Linx sheets
+                    Photo (JPG, PNG) or scanned PDF · reads handwritten PDR Linx sheets
                   </div>
                 </>
               )}
             </button>
           )}
           <input
-            ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
+            ref={fileRef} type="file" accept="image/*,application/pdf,.pdf" style={{ display: 'none' }}
             onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }}
           />
 
@@ -1119,7 +1119,7 @@ function ScopeModal({ onClose, onApply }: {
           )}
 
           {/* Photo preview while loading */}
-          {loading && preview && (
+          {loading && preview && preview.startsWith('data:image') && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={preview} alt="Scope sheet" style={{ width: '100%', borderRadius: 10, opacity: .5, border: '1px solid var(--brd)' }} />
           )}
