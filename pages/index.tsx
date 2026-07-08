@@ -1846,18 +1846,36 @@ export default function Home() {
                 </div>
 
                 {(() => {
-                  // RT panels have no ops of their own — borrow the LT mirror's operations
-                  const resolved = selectedPanels.map(p => {
-                    if (p.operations.length > 0 || !p.id.startsWith('rt-')) return p;
-                    const mirror = PANELS.find(q => q.id === p.id.replace(/^rt-/, 'lt-'));
-                    return mirror && mirror.operations.length > 0
-                      ? { ...p, operations: mirror.operations }
-                      : p;
-                  });
-                  const panelsWithOps = resolved.filter(p => p.operations.length > 0);
-                  const toRender = panelsWithOps.length > 0 ? panelsWithOps : resolved.slice(0, 1);
-                  return toRender.map((panel, idx) => (
-                    <div key={panel.id} style={{ marginBottom: idx < toRender.length - 1 ? 28 : 0 }}>
+                  // Build render sections: LT/RT mirror pairs share ops, so render one
+                  // section per pair with a combined header instead of duplicating notes.
+                  const selectedIdSet = new Set(selectedIds);
+                  const sections: { panel: CarPanel; header: string }[] = [];
+                  for (const p of selectedPanels) {
+                    // Skip RT if its LT mirror is also selected — covered by the LT section
+                    if (p.id.startsWith('rt-') && selectedIdSet.has(p.id.replace(/^rt-/, 'lt-'))) continue;
+
+                    // RT panels have no ops of their own — borrow the LT mirror's operations
+                    let panel = p;
+                    if (panel.operations.length === 0 && panel.id.startsWith('rt-')) {
+                      const mirror = PANELS.find(q => q.id === panel.id.replace(/^rt-/, 'lt-'));
+                      if (mirror && mirror.operations.length > 0) panel = { ...panel, operations: mirror.operations };
+                    }
+
+                    // Combined header when both sides are selected
+                    let header = labelWithDents(p);
+                    if (p.id.startsWith('lt-')) {
+                      const rtId = p.id.replace(/^lt-/, 'rt-');
+                      if (selectedIdSet.has(rtId)) {
+                        const rt = PANELS.find(q => q.id === rtId);
+                        if (rt) header = `${labelWithDents(p)}  &  ${labelWithDents(rt)}`;
+                      }
+                    }
+                    sections.push({ panel, header });
+                  }
+                  const withOps = sections.filter(s => s.panel.operations.length > 0);
+                  const toRender = withOps.length > 0 ? withOps : sections.slice(0, 1);
+                  return toRender.map((s, idx) => (
+                    <div key={s.panel.id} style={{ marginBottom: idx < toRender.length - 1 ? 28 : 0 }}>
                       {toRender.length > 1 && (
                         <div style={{
                           fontFamily: "'IBM Plex Mono', monospace",
@@ -1868,10 +1886,10 @@ export default function Home() {
                           paddingTop: idx > 0 ? 20 : 0,
                           borderTop: idx > 0 ? '1px solid var(--brd)' : 'none',
                         }}>
-                          {labelWithDents(panel)}
+                          {s.header}
                         </div>
                       )}
-                      <PanelOps key={panel.id} panel={panel} />
+                      <PanelOps key={s.panel.id} panel={s.panel} />
                     </div>
                   ));
                 })()}
