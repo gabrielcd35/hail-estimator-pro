@@ -20,6 +20,47 @@ async function geocodeZip(zip: string) {
   };
 }
 
+// Live mode: active NWS severe thunderstorm / tornado warnings for given states
+async function liveSearch(res: NextApiResponse, statesRaw: string) {
+  const states = statesRaw
+    .split(/[,\s]+/)
+    .map(s => s.trim().toUpperCase())
+    .filter(s => /^[A-Z]{2}$/.test(s))
+    .slice(0, 10);
+  if (states.length === 0) return res.status(400).json({ error: 'Enter valid state abbreviations (e.g. TX, MN)' });
+
+  const url = `https://api.weather.gov/alerts/active?area=${states.join(',')}&event=Severe%20Thunderstorm%20Warning,Tornado%20Warning&status=actual`;
+  const r = await fetch(url, {
+    headers: { 'User-Agent': 'hail-estimator-pro (contact: gabrielcd35@gmail.com)', Accept: 'application/geo+json' },
+  });
+  if (!r.ok) return res.status(500).json({ error: `NWS API error (${r.status})` });
+  const data = await r.json();
+
+  interface NwsFeature {
+    properties: {
+      event: string; headline: string; areaDesc: string; senderName: string;
+      sent: string; expires: string; description: string;
+      parameters?: { maxHailSize?: string[]; hailThreat?: string[]; tornadoDetection?: string[] };
+    };
+  }
+
+  const alerts = ((data.features || []) as NwsFeature[]).map(f => {
+    const p = f.properties;
+    const hailSize = parseFloat(p.parameters?.maxHailSize?.[0] || '') || 0;
+    return {
+      event: p.event,
+      areaDesc: p.areaDesc,
+      office: (p.senderName || '').replace(/^NWS\s*/i, ''),
+      sent: p.sent,
+      expires: p.expires,
+      hailSize,
+      hailThreat: p.parameters?.hailThreat?.[0] || '',
+    };
+  }).sort((a, b) => b.hailSize - a.hailSize);
+
+  return res.status(200).json({ states, alerts, checkedAt: new Date().toISOString() });
+}
+
 // Year mode: NWS Local Storm Reports archive (Iowa Environmental Mesonet),
 // fetched per quarter for the ZIP's state, filtered to hail within radius.
 async function yearSearch(res: NextApiResponse, zip: string, year: number) {
@@ -93,7 +134,10 @@ export const config = { maxDuration: 60 };
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   try {
-    const { zip, date, year } = req.body as { zip?: string; date?: string; year?: string };
+    const { zip, date, year, live, states } = req.body as {
+      zip?: string; date?: string; year?: string; live?: boolean; states?: string;
+    };
+    if (live) return liveSearch(res, states || 'TX,MN');
     if (!zip || !/^\d{5}$/.test(zip)) return res.status(400).json({ error: 'Enter a valid 5-digit ZIP code' });
     if (year) {
       const yr = parseInt(year, 10);

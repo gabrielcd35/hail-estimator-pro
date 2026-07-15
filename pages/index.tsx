@@ -1226,25 +1226,35 @@ interface HailReport {
 }
 
 interface HailDay { date: string; count: number; maxSize: number; minDist: number; maxCity: string; }
+interface LiveAlert {
+  event: string; areaDesc: string; office: string;
+  sent: string; expires: string; hailSize: number; hailThreat: string;
+}
 
 function HailModal({ onClose }: { onClose: () => void }) {
-  const [mode, setMode] = useState<'date' | 'year'>('date');
+  const [mode, setMode] = useState<'date' | 'year' | 'live'>('date');
   const [zip, setZip] = useState('');
   const [date, setDate] = useState('');
   const [yearInput, setYearInput] = useState(String(new Date().getFullYear()));
+  const [statesInput, setStatesInput] = useState('TX, MN');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState<{ zipName: string; radiusMi?: number; reports: HailReport[]; note?: string } | null>(null);
   const [yearResult, setYearResult] = useState<{ zipName: string; year: number; radiusMi: number; days: HailDay[] } | null>(null);
+  const [liveResult, setLiveResult] = useState<{ states: string[]; alerts: LiveAlert[]; checkedAt: string } | null>(null);
 
-  const canSearch = zip.length === 5 && (mode === 'date' ? !!date : yearInput.length === 4);
+  const canSearch = mode === 'live'
+    ? statesInput.trim().length >= 2
+    : zip.length === 5 && (mode === 'date' ? !!date : yearInput.length === 4);
 
   const search = async () => {
-    setError(''); setResult(null); setYearResult(null); setLoading(true);
+    setError(''); setResult(null); setYearResult(null); setLiveResult(null); setLoading(true);
     try {
       const body = mode === 'date'
         ? { zip: zip.trim(), date }
-        : { zip: zip.trim(), year: yearInput };
+        : mode === 'year'
+          ? { zip: zip.trim(), year: yearInput }
+          : { live: true, states: statesInput };
       const res = await fetch('/api/hail', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1252,7 +1262,9 @@ function HailModal({ onClose }: { onClose: () => void }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Search failed');
-      if (mode === 'date') setResult(data); else setYearResult(data);
+      if (mode === 'date') setResult(data);
+      else if (mode === 'year') setYearResult(data);
+      else setLiveResult(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Search failed');
     } finally {
@@ -1313,7 +1325,7 @@ function HailModal({ onClose }: { onClose: () => void }) {
 
           {/* Mode toggle */}
           <div style={{ display: 'flex', gap: 6 }}>
-            {(['date', 'year'] as const).map(m => (
+            {([['date', 'Specific Date'], ['year', 'Whole Year'], ['live', 'Live Storms']] as const).map(([m, label]) => (
               <button key={m} onClick={() => { setMode(m); setError(''); }} style={{
                 padding: '6px 16px', borderRadius: 7, fontSize: 12, fontWeight: 600,
                 fontFamily: "'Public Sans', sans-serif", cursor: 'pointer', transition: 'all .15s',
@@ -1321,42 +1333,55 @@ function HailModal({ onClose }: { onClose: () => void }) {
                 color: mode === m ? 'var(--on-gold)' : 'var(--text2)',
                 border: mode === m ? '1px solid var(--gold2)' : '1px solid var(--brd)',
               }}>
-                {m === 'date' ? 'Specific Date' : 'Whole Year'}
+                {label}
               </button>
             ))}
           </div>
 
           {/* Inputs */}
-          <div style={{ display: 'flex', gap: 10 }}>
-            <div style={{ flex: 1 }}>
+          {mode === 'live' ? (
+            <div>
               <label style={{ display: 'block', fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", color: 'var(--text3)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6 }}>
-                ZIP Code
+                States to watch
               </label>
               <input
-                style={inputSt} placeholder="75201" value={zip}
-                onChange={e => setZip(e.target.value.replace(/\D/g, '').slice(0, 5))}
-                inputMode="numeric"
+                style={inputSt} placeholder="TX, MN" value={statesInput}
+                onChange={e => setStatesInput(e.target.value.toUpperCase())}
                 onKeyDown={e => e.key === 'Enter' && search()}
               />
             </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", color: 'var(--text3)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6 }}>
-                {mode === 'date' ? 'Date of Loss' : 'Year'}
-              </label>
-              {mode === 'date' ? (
+          ) : (
+            <div style={{ display: 'flex', gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", color: 'var(--text3)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6 }}>
+                  ZIP Code
+                </label>
                 <input
-                  style={{ ...inputSt, colorScheme: 'dark' }} type="date" value={date}
-                  onChange={e => setDate(e.target.value)}
-                />
-              ) : (
-                <input
-                  style={inputSt} placeholder="2026" value={yearInput} inputMode="numeric"
-                  onChange={e => setYearInput(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                  style={inputSt} placeholder="75201" value={zip}
+                  onChange={e => setZip(e.target.value.replace(/\D/g, '').slice(0, 5))}
+                  inputMode="numeric"
                   onKeyDown={e => e.key === 'Enter' && search()}
                 />
-              )}
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", color: 'var(--text3)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6 }}>
+                  {mode === 'date' ? 'Date of Loss' : 'Year'}
+                </label>
+                {mode === 'date' ? (
+                  <input
+                    style={{ ...inputSt, colorScheme: 'dark' }} type="date" value={date}
+                    onChange={e => setDate(e.target.value)}
+                  />
+                ) : (
+                  <input
+                    style={inputSt} placeholder="2026" value={yearInput} inputMode="numeric"
+                    onChange={e => setYearInput(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    onKeyDown={e => e.key === 'Enter' && search()}
+                  />
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           <button
             onClick={search}
@@ -1370,8 +1395,8 @@ function HailModal({ onClose }: { onClose: () => void }) {
             }}
           >
             {loading
-              ? (mode === 'year' ? 'Searching full year — takes a few seconds…' : 'Searching NOAA reports…')
-              : (mode === 'year' ? 'List Hail Days for the Year' : 'Verify Hail Activity')}
+              ? (mode === 'year' ? 'Searching full year — takes a few seconds…' : mode === 'live' ? 'Checking active warnings…' : 'Searching NOAA reports…')
+              : (mode === 'year' ? 'List Hail Days for the Year' : mode === 'live' ? 'Check Active Storm Warnings' : 'Verify Hail Activity')}
           </button>
 
           {error && (
@@ -1499,10 +1524,65 @@ function HailModal({ onClose }: { onClose: () => void }) {
             )
           )}
 
+          {/* Live results */}
+          {liveResult && (
+            liveResult.alerts.length > 0 ? (
+              <>
+                <div style={{
+                  padding: '13px 16px', borderRadius: 10,
+                  background: 'rgba(239,68,68,.12)', border: '1px solid rgba(239,68,68,.28)',
+                }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: '#ef4444', fontFamily: "'Public Sans', sans-serif" }}>
+                    ⚡ {liveResult.alerts.length} active warning{liveResult.alerts.length !== 1 ? 's' : ''} in {liveResult.states.join(', ')}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {liveResult.alerts.map((a, i) => (
+                    <div key={i} style={{
+                      padding: '12px 14px', borderRadius: 10,
+                      background: 'var(--card)', border: `1px solid ${a.hailSize >= 1 ? 'var(--gold-brd)' : 'var(--brd)'}`,
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        <span style={{ fontWeight: 700, fontSize: 13, color: a.event === 'Tornado Warning' ? '#ef4444' : 'var(--text)', fontFamily: "'Public Sans', sans-serif" }}>
+                          {a.event}
+                        </span>
+                        {a.hailSize > 0 && (
+                          <span style={{
+                            fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 600,
+                            color: 'var(--gold)', background: 'var(--gold-soft)',
+                            border: '1px solid var(--gold-brd)', borderRadius: 5, padding: '1px 7px',
+                          }}>
+                            {a.hailSize.toFixed(2)}&quot; hail
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 12.5, color: 'var(--text2)', fontFamily: "'Public Sans', sans-serif", lineHeight: 1.5 }}>
+                        {a.areaDesc}
+                      </div>
+                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: 'var(--text3)', marginTop: 4 }}>
+                        {a.office} · until {new Date(a.expires).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div style={{
+                padding: '13px 16px', borderRadius: 10, fontSize: 13,
+                background: 'rgba(34,197,94,.12)', border: '1px solid rgba(34,197,94,.28)',
+                color: '#22c55e', fontFamily: "'Public Sans', sans-serif",
+              }}>
+                ✓ No active severe thunderstorm or tornado warnings in {liveResult.states.join(', ')} right now.
+              </div>
+            )
+          )}
+
           <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: 'var(--text3)', lineHeight: 1.6 }}>
             {mode === 'date'
               ? 'Source: NOAA Storm Prediction Center daily storm reports. Times are UTC.'
-              : 'Source: NWS Local Storm Reports archive (Iowa Environmental Mesonet). Ground-observed hail.'}
+              : mode === 'year'
+                ? 'Source: NWS Local Storm Reports archive (Iowa Environmental Mesonet). Ground-observed hail.'
+                : 'Source: National Weather Service active alerts. Hail size is the storm’s forecast maximum.'}
           </div>
         </div>
       </div>
