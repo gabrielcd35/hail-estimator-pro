@@ -171,7 +171,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'fb-ri-1',
-            text: 'R&I Front Bumper required on every estimate. Add under "Front Bumper" group in CCC ONE (also listed as "Bumper & Components" or "Bumper Cover"). Bumper cover must be R&I to remove headlamps — fasteners are hidden behind it.',
+            text: 'Drop front bumper cover. Removal is required to safely access and disconnect the headlamp assemblies, as the mounting fasteners and wiring harness connectors are located behind the bumper cover on most vehicles.',
           },
         ],
       },
