@@ -7,10 +7,18 @@ export const config = {
 
 const SCOPE_PROMPT = `You are reading a PDR (Paintless Dent Repair) scope sheet / vehicle assessment sheet. It may be a handwritten PDR Linx form, a Progressive scope sheet, another carrier's form, or a typed/digital document. Extract ALL information into JSON.
 
+Each panel section on the form is assigned ONE repair mode — determine it like this:
+- "pdr": the panel has a dent count written on it (e.g. "1 NKL", "92-Q", "51" under a size). This is the default when only a dent count/size is present. Most panels are this.
+- "repair": the panel is explicitly marked/labeled for conventional repair (bodywork + paint), not a full panel replacement. Look for words like "REPAIR", "BLEND", or explicit paint-hours notation instead of / alongside a dent count.
+- "rr": the panel itself (not just a trim part on it) is marked to be fully replaced — e.g. the panel name itself circled/marked "R&R", or a handwritten note saying the panel is being replaced.
+If you cannot tell, default to "pdr" when a dent count is present, otherwise null.
+
 Notation guide (varies by form):
 - Dent counts may be written as "COUNT - SIZE" per panel, e.g. "92-Q" = 92 dents, Quarter size. Sizes: D=dime, N=nickel, Q=quarter, H=half dollar. Other forms may use separate count and size columns, or size words (dime/nickel/quarter/half).
 - "OVERSIZE:" or "O/S" followed by a number = count of oversize dents on that panel.
-- Circled/marked R&I or R&R items are operations required for that panel.
+- IMPORTANT — part replacements: each panel section lists small part names (moldings, trim, lamps, mirrors, handles, etc.) each with an "R&I" / "R&R" option printed next to it. When a part name or its "R&R" option is CIRCLED, underlined, or otherwise marked by hand, that specific PART must be replaced — put the part name (e.g. "Upper Molding", "Belt Molding", "Mirror Assy") in that panel's "replacements" array. This is independent of the panel's own repairType — a PDR panel can still have a molding marked for replacement. Handwritten part names not printed on the form, or typed/digital annotations saying to replace something, also go in "replacements".
+- Handwritten instructions that are NOT standard printed/circled items (extra handwritten notes, special instructions) go in the panel's "notes" field.
+- "paintHours" — only for repair-mode panels: if the form writes a number of paint/refinish hours for that panel, capture it; otherwise null.
 - UPD = up-charge for double panel/deep dents.
 - Panel names vary by form (e.g. "Left Fender" = LT FENDER, "Roof Panel" = ROOF, "Deck Lid"/"Trunk" = DECK LID, "L Frt Door" = LF DOOR). Normalize them to the sheetLabel list below.
 
@@ -18,15 +26,17 @@ Return ONLY valid JSON (no markdown fences) with this exact shape:
 {
   "vehicle": { "year": "", "make": "", "model": "", "color": "", "vin": "", "plate": "", "plateState": "", "claim": "", "carrier": "", "member": "", "phone": "" },
   "panels": [
-    { "sheetLabel": "HOOD", "dentCount": 92, "dentSize": "Q", "oversize": 20, "notes": "" }
+    { "sheetLabel": "HOOD", "repairType": "pdr", "dentCount": 92, "dentSize": "Q", "oversize": 20, "paintHours": null, "replacements": [], "notes": "" }
   ]
 }
 
 Rules:
-- Include a panel in "panels" ONLY if it has a dent count, oversize count, or any handwritten marking.
+- Include a panel in "panels" ONLY if it has a dent count, oversize count, a repair/replace marking, a part replacement, or any handwritten marking.
 - sheetLabel must be one of: LT FENDER, RT FENDER, HOOD, WINDSHIELD, LF DOOR, RF DOOR, LR DOOR, RR DOOR, L RAIL, R RAIL, ROOF, LT CAB, RT CAB, LT QUARTER, RT QUARTER, DECK LID, LT BED, RT BED, TAILGATE, FRONT BUMPER, REAR BUMPER.
+- repairType is one of "pdr", "repair", "rr", or null.
 - dentSize is the letter only (D, N, Q, H) or null if unreadable.
-- If a value is unreadable or absent use null (numbers) or "" (strings).
+- replacements is always an array (empty array if none), listing only part names, not the panel itself.
+- If a value is unreadable or absent use null (numbers), "" (strings), or [] (arrays).
 - Read the VIN carefully character by character — it is 17 characters, no letters I, O, or Q.`;
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {

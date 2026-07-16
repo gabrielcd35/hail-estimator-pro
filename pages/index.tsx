@@ -866,16 +866,30 @@ function scanOrderIdx(label: string) {
 }
 
 export interface ScanCounts {
-  [panelId: string]: { dentCount: number | null; dentSize: string | null; oversize: number | null };
+  [panelId: string]: {
+    dentCount: number | null; dentSize: string | null; oversize: number | null;
+    repairType?: 'pdr' | 'repair' | 'rr' | null;
+    paintHours?: number | null;
+    replacements?: string[];
+  };
 }
+
+type PanelRepairType = 'pdr' | 'repair' | 'rr' | null;
 
 interface ScopePanel {
   sheetLabel: string;
+  repairType?: PanelRepairType;
   dentCount: number | null;
   dentSize: string | null;
   oversize: number | null;
+  paintHours?: number | null;
+  replacements?: string[];
   notes: string;
 }
+
+const REPAIR_TYPE_LABEL: Record<Exclude<PanelRepairType, null>, string> = {
+  pdr: 'PDR', repair: 'Repair', rr: 'Replace',
+};
 
 interface ScopeResult {
   vehicle: {
@@ -987,7 +1001,10 @@ function ScopeModal({ onClose, onApply }: {
   const scanCounts: ScanCounts = {};
   for (const p of sortedPanels) {
     const id = SHEET_LABEL_TO_PANEL[p.sheetLabel];
-    if (id) scanCounts[id] = { dentCount: p.dentCount, dentSize: p.dentSize, oversize: p.oversize };
+    if (id) scanCounts[id] = {
+      dentCount: p.dentCount, dentSize: p.dentSize, oversize: p.oversize,
+      repairType: p.repairType, paintHours: p.paintHours, replacements: p.replacements,
+    };
   }
 
   const totalDents = sortedPanels.reduce((s, p) => s + (p.dentCount || 0), 0);
@@ -1152,26 +1169,44 @@ function ScopeModal({ onClose, onApply }: {
               {/* Panels table */}
               <div style={{ border: '1px solid var(--brd)', borderRadius: 10, overflow: 'hidden' }}>
                 <div style={{
-                  display: 'grid', gridTemplateColumns: '1fr 70px 90px 70px',
+                  display: 'grid', gridTemplateColumns: '1fr 62px 70px 90px 60px',
                   padding: '8px 14px', background: 'var(--card)',
                   fontFamily: "'IBM Plex Mono', monospace", fontSize: 9.5,
                   color: 'var(--text3)', letterSpacing: 1, textTransform: 'uppercase',
                   borderBottom: '1px solid var(--brd)',
                 }}>
-                  <span>Panel</span><span>Dents</span><span>Size</span><span>O/S</span>
+                  <span>Panel</span><span>Mode</span><span>Dents</span><span>Size</span><span>O/S</span>
                 </div>
                 {sortedPanels.map((p, i) => (
                   <div key={i} style={{
-                    display: 'grid', gridTemplateColumns: '1fr 70px 90px 70px',
-                    padding: '9px 14px', fontSize: 13,
-                    fontFamily: "'Public Sans', sans-serif", color: 'var(--text)',
+                    padding: '9px 14px',
                     borderBottom: i < scope.panels.length - 1 ? '1px solid var(--brd)' : 'none',
-                    alignItems: 'center',
                   }}>
-                    <span style={{ fontWeight: 600 }}>{p.sheetLabel}</span>
-                    <span style={{ fontFamily: "'IBM Plex Mono', monospace", color: 'var(--gold)' }}>{p.dentCount ?? '—'}</span>
-                    <span style={{ fontSize: 12, color: 'var(--text2)' }}>{p.dentSize ? DENT_SIZE_LABEL[p.dentSize] || p.dentSize : '—'}</span>
-                    <span style={{ fontFamily: "'IBM Plex Mono', monospace", color: p.oversize ? '#f59e0b' : 'var(--text3)' }}>{p.oversize ?? '—'}</span>
+                    <div style={{
+                      display: 'grid', gridTemplateColumns: '1fr 62px 70px 90px 60px',
+                      fontSize: 13, fontFamily: "'Public Sans', sans-serif", color: 'var(--text)',
+                      alignItems: 'center',
+                    }}>
+                      <span style={{ fontWeight: 600 }}>{p.sheetLabel}</span>
+                      <span style={{
+                        fontFamily: "'IBM Plex Mono', monospace", fontSize: 10.5, fontWeight: 600,
+                        color: p.repairType === 'rr' ? '#ef4444' : p.repairType === 'repair' ? '#f59e0b' : 'var(--gold)',
+                      }}>
+                        {p.repairType ? REPAIR_TYPE_LABEL[p.repairType] : '—'}
+                      </span>
+                      <span style={{ fontFamily: "'IBM Plex Mono', monospace", color: 'var(--gold)' }}>{p.dentCount ?? '—'}</span>
+                      <span style={{ fontSize: 12, color: 'var(--text2)' }}>{p.dentSize ? DENT_SIZE_LABEL[p.dentSize] || p.dentSize : '—'}</span>
+                      <span style={{ fontFamily: "'IBM Plex Mono', monospace", color: p.oversize ? '#f59e0b' : 'var(--text3)' }}>{p.oversize ?? '—'}</span>
+                    </div>
+                    {((p.replacements && p.replacements.length > 0) || p.paintHours) && (
+                      <div style={{
+                        marginTop: 5, fontSize: 11.5, fontFamily: "'IBM Plex Mono', monospace",
+                        color: '#ef4444', display: 'flex', flexWrap: 'wrap', gap: '3px 10px',
+                      }}>
+                        {p.paintHours ? <span style={{ color: '#f59e0b' }}>⏱ {p.paintHours}h paint</span> : null}
+                        {p.replacements?.map((r, ri) => <span key={ri}>⚠ Replace: {r}</span>)}
+                      </div>
+                    )}
                   </div>
                 ))}
                 <div style={{
@@ -1285,7 +1320,10 @@ function EstimateAssistantModal({ onClose, onApply }: {
     const counts: ScanCounts = {};
     for (const r of rows) {
       const id = SHEET_LABEL_TO_PANEL[r.sheetLabel];
-      if (id) counts[id] = { dentCount: r.dentCount, dentSize: r.dentSize, oversize: r.oversize };
+      if (id) counts[id] = {
+        dentCount: r.dentCount, dentSize: r.dentSize, oversize: r.oversize,
+        repairType: r.repairType, paintHours: r.paintHours, replacements: r.replacements,
+      };
     }
     onApply(mappedIds, isTruck ? 'truck' : 'sedan', counts, { ...scope, panels: rows });
     setGuideIdx(0);
@@ -1416,54 +1454,116 @@ function EstimateAssistantModal({ onClose, onApply }: {
               </div>
 
               <div style={{ fontSize: 13, color: 'var(--text2)', fontFamily: "'Public Sans', sans-serif", lineHeight: 1.6 }}>
-                Confirm the dent counts read from the scope sheet. Fix anything the AI misread, remove panels that don&apos;t belong, then start the guide.
+                Confirm each panel&apos;s repair mode, dent counts, and any parts marked for replacement. Fix anything the AI misread, remove panels that don&apos;t belong, then start the guide.
               </div>
 
               <div style={{ border: '1px solid var(--brd)', borderRadius: 10, overflow: 'hidden' }}>
                 <div style={{
-                  display: 'grid', gridTemplateColumns: '1fr 76px 96px 66px 34px',
-                  gap: 8, padding: '8px 14px', background: 'var(--card)',
+                  display: 'grid', gridTemplateColumns: '1fr 70px 66px 90px 58px 26px',
+                  gap: 6, padding: '8px 14px', background: 'var(--card)',
                   fontFamily: "'IBM Plex Mono', monospace", fontSize: 9.5,
                   color: 'var(--text3)', letterSpacing: 1, textTransform: 'uppercase',
                   borderBottom: '1px solid var(--brd)', alignItems: 'center',
                 }}>
-                  <span>Panel</span><span>Dents</span><span>Size</span><span>O/S</span><span />
+                  <span>Panel</span><span>Mode</span><span>Dents</span><span>Size</span><span>O/S</span><span />
                 </div>
                 {rows.map((r, i) => (
                   <div key={i} style={{
-                    display: 'grid', gridTemplateColumns: '1fr 76px 96px 66px 34px',
-                    gap: 8, padding: '8px 14px', alignItems: 'center',
+                    padding: '8px 14px',
                     borderBottom: i < rows.length - 1 ? '1px solid var(--brd)' : 'none',
                   }}>
-                    <span style={{ fontWeight: 600, fontSize: 13, fontFamily: "'Public Sans', sans-serif", color: 'var(--text)' }}>
-                      {r.sheetLabel}
-                    </span>
-                    <input
-                      style={inputSt} inputMode="numeric" value={r.dentCount ?? ''}
-                      placeholder="—"
-                      onChange={e => updateRow(i, { dentCount: parseInt(e.target.value.replace(/\D/g, ''), 10) || null })}
-                    />
-                    <select
-                      style={{ ...inputSt, cursor: 'pointer' }}
-                      value={r.dentSize ?? ''}
-                      onChange={e => updateRow(i, { dentSize: e.target.value || null })}
-                    >
-                      <option value="">—</option>
-                      {Object.entries(DENT_SIZE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                    </select>
-                    <input
-                      style={inputSt} inputMode="numeric" value={r.oversize ?? ''}
-                      placeholder="—"
-                      onChange={e => updateRow(i, { oversize: parseInt(e.target.value.replace(/\D/g, ''), 10) || null })}
-                    />
-                    <button
-                      onClick={() => setRows(prev => prev.filter((_, ri) => ri !== i))}
-                      title="Remove panel"
-                      style={{
-                        width: 26, height: 26, borderRadius: 6, border: '1px solid var(--brd)',
-                        background: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 14, lineHeight: 1,
-                      }}
-                    >×</button>
+                    <div style={{
+                      display: 'grid', gridTemplateColumns: '1fr 70px 66px 90px 58px 26px',
+                      gap: 6, alignItems: 'center',
+                    }}>
+                      <span style={{ fontWeight: 600, fontSize: 13, fontFamily: "'Public Sans', sans-serif", color: 'var(--text)' }}>
+                        {r.sheetLabel}
+                      </span>
+                      <select
+                        style={{
+                          ...inputSt, cursor: 'pointer', fontWeight: 600,
+                          color: r.repairType === 'rr' ? '#ef4444' : r.repairType === 'repair' ? '#f59e0b' : 'var(--gold)',
+                        }}
+                        value={r.repairType ?? 'pdr'}
+                        onChange={e => updateRow(i, { repairType: e.target.value as PanelRepairType })}
+                      >
+                        {(['pdr', 'repair', 'rr'] as const).map(rt => (
+                          <option key={rt} value={rt}>{REPAIR_TYPE_LABEL[rt]}</option>
+                        ))}
+                      </select>
+                      <input
+                        style={inputSt} inputMode="numeric" value={r.dentCount ?? ''}
+                        placeholder="—"
+                        onChange={e => updateRow(i, { dentCount: parseInt(e.target.value.replace(/\D/g, ''), 10) || null })}
+                      />
+                      <select
+                        style={{ ...inputSt, cursor: 'pointer' }}
+                        value={r.dentSize ?? ''}
+                        onChange={e => updateRow(i, { dentSize: e.target.value || null })}
+                      >
+                        <option value="">—</option>
+                        {Object.entries(DENT_SIZE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                      </select>
+                      <input
+                        style={inputSt} inputMode="numeric" value={r.oversize ?? ''}
+                        placeholder="—"
+                        onChange={e => updateRow(i, { oversize: parseInt(e.target.value.replace(/\D/g, ''), 10) || null })}
+                      />
+                      <button
+                        onClick={() => setRows(prev => prev.filter((_, ri) => ri !== i))}
+                        title="Remove panel"
+                        style={{
+                          width: 26, height: 26, borderRadius: 6, border: '1px solid var(--brd)',
+                          background: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 14, lineHeight: 1,
+                        }}
+                      >×</button>
+                    </div>
+
+                    {/* Paint hours (repair mode) */}
+                    {r.repairType === 'repair' && (
+                      <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10.5, color: '#f59e0b' }}>⏱ Paint hours:</span>
+                        <input
+                          style={{ ...inputSt, width: 70 }} inputMode="decimal" value={r.paintHours ?? ''}
+                          placeholder="0"
+                          onChange={e => updateRow(i, { paintHours: parseFloat(e.target.value.replace(/[^0-9.]/g, '')) || null })}
+                        />
+                      </div>
+                    )}
+
+                    {/* Part replacements — any panel can have marked parts to replace */}
+                    <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10.5, color: '#ef4444', flexShrink: 0 }}>⚠ Replace:</span>
+                      {(r.replacements ?? []).map((part, pi) => (
+                        <span key={pi} style={{
+                          display: 'flex', alignItems: 'center', gap: 4,
+                          padding: '2px 4px 2px 8px', borderRadius: 6,
+                          background: 'rgba(239,68,68,.12)', border: '1px solid rgba(239,68,68,.28)',
+                          fontSize: 11.5, color: '#ef4444', fontFamily: "'Public Sans', sans-serif",
+                        }}>
+                          {part}
+                          <button
+                            onClick={() => updateRow(i, { replacements: (r.replacements ?? []).filter((_, x) => x !== pi) })}
+                            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 12, lineHeight: 1, padding: 0 }}
+                          >×</button>
+                        </span>
+                      ))}
+                      <input
+                        placeholder="+ add part"
+                        style={{
+                          background: 'none', border: '1px dashed var(--brd-2)', borderRadius: 6,
+                          padding: '2px 8px', fontSize: 11.5, color: 'var(--text2)', width: 100,
+                          fontFamily: "'Public Sans', sans-serif", outline: 'none',
+                        }}
+                        onKeyDown={e => {
+                          const val = (e.target as HTMLInputElement).value.trim();
+                          if (e.key === 'Enter' && val) {
+                            updateRow(i, { replacements: [...(r.replacements ?? []), val] });
+                            (e.target as HTMLInputElement).value = '';
+                          }
+                        }}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -2001,7 +2101,7 @@ function buildChecklist(
     lines.push('');
   }
 
-  // Per damaged panel (PDR mode — hail work)
+  // Per damaged panel
   for (const id of panelIds) {
     const panel = PANELS.find(p => p.id === id);
     if (!panel || panel.id === 'non-negotiables') continue;
@@ -2011,13 +2111,25 @@ function buildChecklist(
       ops = PANELS.find(q => q.id === id.replace(/^rt-/, 'lt-'))?.operations ?? [];
     }
     const c = counts[id];
+    const repairType = c?.repairType || 'pdr';
     const dents = c?.dentCount
       ? ` — ${c.dentCount}${c.dentSize ? `-${c.dentSize}` : ''}${c.oversize ? ` + ${c.oversize} O/S` : ''}`
       : '';
     lines.push(`${panel.label.toUpperCase()}${dents}`);
-    lines.push(`[ ] PDR ${panel.label}`);
-    for (const op of ops.filter(o => o.types.includes('pdr'))) {
-      lines.push(`[ ] ${op.name}`);
+
+    if (repairType === 'rr') {
+      lines.push(`[ ] R&R ${panel.label} (full panel replacement)`);
+      for (const op of ops.filter(o => o.types.includes('rr'))) lines.push(`[ ] ${op.name}`);
+    } else if (repairType === 'repair') {
+      lines.push(`[ ] Repair ${panel.label}${c?.paintHours ? ` — ${c.paintHours}h paint` : ''}`);
+      for (const op of ops.filter(o => o.types.includes('repair'))) lines.push(`[ ] ${op.name}`);
+    } else {
+      lines.push(`[ ] PDR ${panel.label}`);
+      for (const op of ops.filter(o => o.types.includes('pdr'))) lines.push(`[ ] ${op.name}`);
+    }
+
+    if (c?.replacements && c.replacements.length > 0) {
+      for (const part of c.replacements) lines.push(`[ ] R&R ${part}`);
     }
     lines.push('');
   }
@@ -2050,9 +2162,11 @@ export default function Home() {
 
   const labelWithDents = (p: CarPanel) => {
     const c = scanCounts[p.id];
-    if (!c || !c.dentCount) return p.label;
+    if (!c) return p.label;
+    const repl = c.replacements && c.replacements.length > 0 ? ` ⚠ Replace: ${c.replacements.join(', ')}` : '';
+    if (!c.dentCount) return `${p.label}${repl}`;
     const os = c.oversize ? ` + ${c.oversize} O/S` : '';
-    return `${p.label} · ${c.dentCount}${c.dentSize ? `-${c.dentSize}` : ''}${os}`;
+    return `${p.label} · ${c.dentCount}${c.dentSize ? `-${c.dentSize}` : ''}${os}${repl}`;
   };
   const allNotesText = selectedPanels
     .flatMap(p => p.operations.flatMap(op => op.notes.map(n => n.text)))
