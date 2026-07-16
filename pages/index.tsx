@@ -128,12 +128,13 @@ const PANEL_GROUPS: Record<string, string[]> = {
 
 type VehicleType = 'sedan' | 'truck';
 
-function CarDiagram({ selectedIds, onSelect, vehicleType, counts, review }: {
+function CarDiagram({ selectedIds, onSelect, vehicleType, counts, review, maxWidth = 212 }: {
   selectedIds: string[];
   onSelect: (id: string) => void;
   vehicleType: VehicleType;
   counts?: ScanCounts;
   review?: boolean;
+  maxWidth?: number;
 }) {
   const [hovered, setHovered] = useState<string | null>(null);
 
@@ -246,7 +247,7 @@ function CarDiagram({ selectedIds, onSelect, vehicleType, counts, review }: {
 
   if (vehicleType === 'truck') {
     return (
-      <svg viewBox="0 0 200 490" style={{ width: '100%', maxWidth: 212, height: 'auto', display: 'block', margin: '0 auto' }}>
+      <svg viewBox="0 0 200 490" style={{ width: '100%', maxWidth, height: 'auto', display: 'block', margin: '0 auto' }}>
         <defs>
           <clipPath id="truck-cab-clip"><path d={TRUCK_CAB_PATH} /></clipPath>
           <clipPath id="truck-bed-clip"><path d={TRUCK_BED_PATH} /></clipPath>
@@ -276,7 +277,6 @@ function CarDiagram({ selectedIds, onSelect, vehicleType, counts, review }: {
         <line x1={136} y1={168} x2={136} y2={258} stroke="var(--detail)" strokeWidth={1} style={{ pointerEvents: 'none' }} />
         <line x1={18} y1={213} x2={62} y2={213} stroke="var(--detail)" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
         <line x1={136} y1={213} x2={182} y2={213} stroke="var(--detail)" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
-        <line x1={100} y1={45} x2={100} y2={142} stroke="var(--detail)" strokeWidth={0.8} opacity={0.7} style={{ pointerEvents: 'none' }} />
         <path d="M 12,144 C 5,147 4,157 8,162 L 15,160 L 14,144 Z" fill="var(--mirror)" stroke="var(--pillar)" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
         <path d="M 188,144 C 195,147 196,157 192,162 L 185,160 L 186,144 Z" fill="var(--mirror)" stroke="var(--pillar)" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
         {DIAGRAM_PANELS_TRUCK_CAB.map(p => <PanelLabel key={`l-${p.id}`} p={p} />)}
@@ -300,7 +300,7 @@ function CarDiagram({ selectedIds, onSelect, vehicleType, counts, review }: {
   }
 
   return (
-    <svg viewBox="0 0 200 490" style={{ width: '100%', maxWidth: 212, height: 'auto', display: 'block', margin: '0 auto' }}>
+    <svg viewBox="0 0 200 490" style={{ width: '100%', maxWidth, height: 'auto', display: 'block', margin: '0 auto' }}>
       <defs>
         <clipPath id="car-clip"><path d={CAR_PATH} /></clipPath>
       </defs>
@@ -337,7 +337,6 @@ function CarDiagram({ selectedIds, onSelect, vehicleType, counts, review }: {
       <line x1={142} y1={186} x2={142} y2={322} stroke="var(--detail)" strokeWidth={1} style={{ pointerEvents: 'none' }} />
       <line x1={16} y1={254} x2={58} y2={254} stroke="var(--detail)" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
       <line x1={142} y1={254} x2={184} y2={254} stroke="var(--detail)" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
-      <line x1={100} y1={54} x2={100} y2={150} stroke="var(--detail)" strokeWidth={0.8} opacity={0.7} style={{ pointerEvents: 'none' }} />
       <path d="M 12,152 C 5,155 4,165 8,170 L 15,168 L 14,152 Z" fill="var(--mirror)" stroke="var(--pillar)" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
       <path d="M 188,152 C 195,155 196,165 192,170 L 185,168 L 186,152 Z" fill="var(--mirror)" stroke="var(--pillar)" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
       {DIAGRAM_PANELS.map(p => <PanelLabel key={`l-${p.id}`} p={p} />)}
@@ -1328,6 +1327,7 @@ function EstimateAssistantModal({ onClose, onApply }: {
   const [scope, setScope] = useState<ScopeResult | null>(null);
   const [rows, setRows] = useState<ScopePanel[]>([]);
   const [guideIdx, setGuideIdx] = useState(0);
+  const [enlarged, setEnlarged] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const nn = PANELS.find(p => p.id === 'non-negotiables');
@@ -1523,13 +1523,70 @@ function EstimateAssistantModal({ onClose, onApply }: {
                   };
                 }
                 return (
-                  <div style={{ background: 'var(--bg)', border: '1px solid var(--brd)', borderRadius: 12, padding: '16px 12px' }}>
+                  <div style={{ position: 'relative', background: 'var(--bg)', border: '1px solid var(--brd)', borderRadius: 12, padding: '16px 12px' }}>
+                    <button
+                      onClick={() => setEnlarged(true)}
+                      title="Full view"
+                      style={{
+                        position: 'absolute', top: 8, right: 8, zIndex: 2,
+                        width: 30, height: 30, borderRadius: 7, border: '1px solid var(--brd)',
+                        background: 'var(--card)', color: 'var(--text2)', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
+                        <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+                      </svg>
+                    </button>
                     <CarDiagram selectedIds={[]} onSelect={() => {}} vehicleType={isTruck ? 'truck' : 'sedan'} counts={reviewCounts} review />
                     <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 8, fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, color: 'var(--text3)' }}>
                       <span><span style={{ color: 'var(--gold)' }}>●</span> dent count</span>
                       <span><span style={{ color: '#f59e0b' }}>●</span> oversize</span>
                       <span><span style={{ color: '#ef4444' }}>●</span> replace</span>
                     </div>
+
+                    {/* Enlarged full-view overlay */}
+                    {enlarged && (
+                      <div
+                        onClick={() => setEnlarged(false)}
+                        style={{
+                          position: 'fixed', inset: 0, zIndex: 400,
+                          background: 'rgba(0,0,0,.8)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, gap: 14,
+                        }}
+                      >
+                        <div onClick={e => e.stopPropagation()} style={{
+                          background: 'var(--panel-bg)', border: '1px solid var(--brd-2)', borderRadius: 16,
+                          padding: '20px 24px', maxHeight: '92vh', maxWidth: 560, width: '100%', overflowY: 'auto',
+                          boxShadow: '0 24px 80px rgba(0,0,0,.6)', position: 'relative',
+                        }}>
+                          <button
+                            onClick={() => setEnlarged(false)}
+                            style={{
+                              position: 'absolute', top: 12, right: 12, zIndex: 2,
+                              width: 32, height: 32, borderRadius: 8, border: '1px solid var(--brd)',
+                              background: 'var(--input-bg)', color: 'var(--text2)', cursor: 'pointer',
+                              fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}
+                          >×</button>
+                          <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--gold)', marginBottom: 4 }}>
+                            {[scope.vehicle.year, scope.vehicle.make, scope.vehicle.model].filter(Boolean).join(' ') || 'Vehicle'}
+                          </div>
+                          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: 'var(--text3)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 14 }}>
+                            Damage map
+                          </div>
+                          <div style={{ maxWidth: 460, margin: '0 auto' }}>
+                            <CarDiagram selectedIds={[]} onSelect={() => {}} vehicleType={isTruck ? 'truck' : 'sedan'} counts={reviewCounts} review maxWidth={460} />
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'center', gap: 18, marginTop: 12, fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: 'var(--text3)' }}>
+                            <span><span style={{ color: 'var(--gold)' }}>●</span> dent count</span>
+                            <span><span style={{ color: '#f59e0b' }}>●</span> oversize</span>
+                            <span><span style={{ color: '#ef4444' }}>●</span> replace</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })()}
