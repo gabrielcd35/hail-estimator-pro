@@ -886,6 +886,24 @@ interface ScopeResult {
   panels: ScopePanel[];
 }
 
+const TRUCK_MODELS = ['FRONTIER','TACOMA','TUNDRA','F-150','F150','F-250','F250','F-350','F350','SILVERADO','SIERRA','RAM','1500','2500','3500','COLORADO','CANYON','RANGER','TITAN','RIDGELINE','GLADIATOR','MAVERICK','SANTA CRUZ'];
+
+function detectTruck(scope: ScopeResult): boolean {
+  return (
+    scope.panels.some(p => ['LT CAB', 'RT CAB', 'LT BED', 'RT BED', 'TAILGATE'].includes(p.sheetLabel)) ||
+    TRUCK_MODELS.some(m => (scope.vehicle.model || '').toUpperCase().includes(m))
+  );
+}
+
+// On trucks, quarter panels don't exist — the sheet's "quarter panel" is the pickup bed side
+function resolveSheetLabel(label: string, isTruck: boolean): string {
+  if (!isTruck) return label;
+  if (label === 'LT QUARTER') return 'LT BED';
+  if (label === 'RT QUARTER') return 'RT BED';
+  if (label === 'DECK LID') return 'TAILGATE';
+  return label;
+}
+
 interface ScanHistoryEntry {
   id: number;
   savedAt: string;
@@ -955,21 +973,8 @@ function ScopeModal({ onClose, onApply }: {
     try { localStorage.setItem(SCAN_HISTORY_KEY, JSON.stringify(next)); } catch { /* ignore */ }
   };
 
-  const TRUCK_MODELS = ['FRONTIER','TACOMA','TUNDRA','F-150','F150','F-250','F250','F-350','F350','SILVERADO','SIERRA','RAM','1500','2500','3500','COLORADO','CANYON','RANGER','TITAN','RIDGELINE','GLADIATOR','MAVERICK','SANTA CRUZ'];
-
-  const isTruck = !!scope && (
-    scope.panels.some(p => ['LT CAB', 'RT CAB', 'LT BED', 'RT BED', 'TAILGATE'].includes(p.sheetLabel)) ||
-    TRUCK_MODELS.some(m => (scope.vehicle.model || '').toUpperCase().includes(m))
-  );
-
-  // On trucks, quarter panels don't exist — the sheet's "quarter panel" is the pickup bed side
-  const resolveLabel = (label: string) => {
-    if (!isTruck) return label;
-    if (label === 'LT QUARTER') return 'LT BED';
-    if (label === 'RT QUARTER') return 'RT BED';
-    if (label === 'DECK LID') return 'TAILGATE';
-    return label;
-  };
+  const isTruck = !!scope && detectTruck(scope);
+  const resolveLabel = (label: string) => resolveSheetLabel(label, isTruck);
 
   const sortedPanels = scope
     ? scope.panels
@@ -1211,6 +1216,382 @@ function ScopeModal({ onClose, onApply }: {
           {loading && preview && preview.startsWith('data:image') && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={preview} alt="Scope sheet" style={{ width: '100%', borderRadius: 10, opacity: .5, border: '1px solid var(--brd)' }} />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Estimate Assistant (guided wizard) ───────────────────────────────────────
+
+function EstimateAssistantModal({ onClose, onApply }: {
+  onClose: () => void;
+  onApply: (panelIds: string[], vt: VehicleType, counts: ScanCounts, scope: ScopeResult) => void;
+}) {
+  const [step, setStep] = useState<'upload' | 'confirm' | 'guide' | 'done'>('upload');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [scope, setScope] = useState<ScopeResult | null>(null);
+  const [rows, setRows] = useState<ScopePanel[]>([]);
+  const [guideIdx, setGuideIdx] = useState(0);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const nn = PANELS.find(p => p.id === 'non-negotiables');
+  const guideSteps = nn ? nn.operations : [];
+
+  const handleFile = async (file: File) => {
+    setError(''); setLoading(true);
+    try {
+      const reader = new FileReader();
+      const dataUrl: string = await new Promise((resolve, reject) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const [meta, base64] = dataUrl.split(',');
+      const mediaType = meta.match(/data:(.*?);/)?.[1] || 'image/jpeg';
+      const res = await fetch('/api/scope', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageData: base64, mediaType }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to read scope sheet');
+      const scanned: ScopeResult = data.scope;
+      saveScanToHistory(scanned);
+      const truck = detectTruck(scanned);
+      const sorted = scanned.panels
+        .map(p => ({ ...p, sheetLabel: resolveSheetLabel(p.sheetLabel, truck) }))
+        .sort((a, b) => scanOrderIdx(a.sheetLabel) - scanOrderIdx(b.sheetLabel));
+      setScope(scanned);
+      setRows(sorted);
+      setStep('confirm');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to read scope sheet');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateRow = (i: number, patch: Partial<ScopePanel>) => {
+    setRows(prev => prev.map((r, ri) => (ri === i ? { ...r, ...patch } : r)));
+  };
+
+  const confirmAndStart = () => {
+    if (!scope) return;
+    const isTruck = detectTruck(scope);
+    const mappedIds = rows.map(r => SHEET_LABEL_TO_PANEL[r.sheetLabel]).filter(Boolean);
+    const counts: ScanCounts = {};
+    for (const r of rows) {
+      const id = SHEET_LABEL_TO_PANEL[r.sheetLabel];
+      if (id) counts[id] = { dentCount: r.dentCount, dentSize: r.dentSize, oversize: r.oversize };
+    }
+    onApply(mappedIds, isTruck ? 'truck' : 'sedan', counts, { ...scope, panels: rows });
+    setGuideIdx(0);
+    setStep('guide');
+  };
+
+  const inputSt: React.CSSProperties = {
+    width: '100%', padding: '7px 10px', fontSize: 13,
+    fontFamily: "'IBM Plex Mono', monospace",
+    background: 'var(--input-bg)', border: '1px solid var(--brd-2)',
+    borderRadius: 7, color: 'var(--text)', outline: 'none',
+  };
+
+  const current = guideSteps[guideIdx];
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 300,
+        background: 'rgba(0,0,0,.55)',
+        backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: 620, maxHeight: '90vh', overflowY: 'auto',
+          background: 'var(--panel-bg)', borderRadius: 16,
+          border: '1px solid var(--brd-2)', boxShadow: '0 24px 80px rgba(0,0,0,.6)',
+        }}
+      >
+        {/* Modal header */}
+        <div style={{
+          padding: '18px 24px', borderBottom: '1px solid var(--brd)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <div>
+            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 17, color: 'var(--gold)' }}>
+              Estimate Assistant
+            </div>
+            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: 'var(--text3)', letterSpacing: 1.5, marginTop: 2 }}>
+              {step === 'upload' && 'STEP-BY-STEP GUIDE · UPLOAD SCOPE SHEET'}
+              {step === 'confirm' && 'REVIEW & CONFIRM THE SCAN'}
+              {step === 'guide' && `EVERY ESTIMATE · STEP ${guideIdx + 1} OF ${guideSteps.length}`}
+              {step === 'done' && 'PART 1 COMPLETE'}
+            </div>
+          </div>
+          <button onClick={onClose} style={{
+            width: 32, height: 32, borderRadius: 8, border: '1px solid var(--brd)',
+            background: 'var(--input-bg)', color: 'var(--text2)', cursor: 'pointer',
+            fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>×</button>
+        </div>
+
+        <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+          {/* ── Step 1: upload ── */}
+          {step === 'upload' && (
+            <>
+              <button
+                onClick={() => fileRef.current?.click()}
+                disabled={loading}
+                style={{
+                  border: '2px dashed var(--brd-2)', borderRadius: 12,
+                  background: 'var(--card)', color: 'var(--text2)',
+                  padding: '36px 20px', cursor: loading ? 'wait' : 'pointer',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+                  fontFamily: "'Public Sans', sans-serif", transition: 'all .15s',
+                }}
+              >
+                {loading ? (
+                  <>
+                    <div style={{ fontSize: 26 }}>⏳</div>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>Reading scope sheet…</div>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: 'var(--text3)' }}>
+                      Extracting with AI — takes ~15 seconds
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2"/>
+                      <circle cx="8.5" cy="8.5" r="1.5"/>
+                      <polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>Upload scope sheet to begin</div>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: 'var(--text3)' }}>
+                      Photo (JPG, PNG) or scanned PDF — I&apos;ll guide you step by step after reading it
+                    </div>
+                  </>
+                )}
+              </button>
+              <input
+                ref={fileRef} type="file" accept="image/*,application/pdf,.pdf" style={{ display: 'none' }}
+                onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }}
+              />
+            </>
+          )}
+
+          {error && (
+            <div style={{
+              padding: '12px 16px', borderRadius: 9, fontSize: 13,
+              background: 'rgba(239,68,68,.12)', border: '1px solid rgba(239,68,68,.28)',
+              color: '#ef4444', fontFamily: "'Public Sans', sans-serif",
+            }}>
+              {error}
+            </div>
+          )}
+
+          {/* ── Step 2: confirm summary ── */}
+          {step === 'confirm' && scope && (
+            <>
+              <div style={{
+                padding: '12px 16px', borderRadius: 10,
+                background: 'var(--gold-soft)', border: '1px solid var(--gold-brd)',
+              }}>
+                <div style={{ fontFamily: "'Public Sans', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--gold)' }}>
+                  {[scope.vehicle.year, scope.vehicle.make, scope.vehicle.model].filter(Boolean).join(' ') || 'Vehicle'}
+                  {scope.vehicle.color ? ` · ${scope.vehicle.color}` : ''}
+                </div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10.5, color: 'var(--text2)', marginTop: 4, display: 'flex', flexWrap: 'wrap', gap: '4px 16px' }}>
+                  {scope.vehicle.vin && <span>VIN {scope.vehicle.vin}</span>}
+                  {scope.vehicle.claim && <span>CLAIM {scope.vehicle.claim}</span>}
+                  {scope.vehicle.carrier && <span>{scope.vehicle.carrier}</span>}
+                </div>
+              </div>
+
+              <div style={{ fontSize: 13, color: 'var(--text2)', fontFamily: "'Public Sans', sans-serif", lineHeight: 1.6 }}>
+                Confirm the dent counts read from the scope sheet. Fix anything the AI misread, remove panels that don&apos;t belong, then start the guide.
+              </div>
+
+              <div style={{ border: '1px solid var(--brd)', borderRadius: 10, overflow: 'hidden' }}>
+                <div style={{
+                  display: 'grid', gridTemplateColumns: '1fr 76px 96px 66px 34px',
+                  gap: 8, padding: '8px 14px', background: 'var(--card)',
+                  fontFamily: "'IBM Plex Mono', monospace", fontSize: 9.5,
+                  color: 'var(--text3)', letterSpacing: 1, textTransform: 'uppercase',
+                  borderBottom: '1px solid var(--brd)', alignItems: 'center',
+                }}>
+                  <span>Panel</span><span>Dents</span><span>Size</span><span>O/S</span><span />
+                </div>
+                {rows.map((r, i) => (
+                  <div key={i} style={{
+                    display: 'grid', gridTemplateColumns: '1fr 76px 96px 66px 34px',
+                    gap: 8, padding: '8px 14px', alignItems: 'center',
+                    borderBottom: i < rows.length - 1 ? '1px solid var(--brd)' : 'none',
+                  }}>
+                    <span style={{ fontWeight: 600, fontSize: 13, fontFamily: "'Public Sans', sans-serif", color: 'var(--text)' }}>
+                      {r.sheetLabel}
+                    </span>
+                    <input
+                      style={inputSt} inputMode="numeric" value={r.dentCount ?? ''}
+                      placeholder="—"
+                      onChange={e => updateRow(i, { dentCount: parseInt(e.target.value.replace(/\D/g, ''), 10) || null })}
+                    />
+                    <select
+                      style={{ ...inputSt, cursor: 'pointer' }}
+                      value={r.dentSize ?? ''}
+                      onChange={e => updateRow(i, { dentSize: e.target.value || null })}
+                    >
+                      <option value="">—</option>
+                      {Object.entries(DENT_SIZE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                    </select>
+                    <input
+                      style={inputSt} inputMode="numeric" value={r.oversize ?? ''}
+                      placeholder="—"
+                      onChange={e => updateRow(i, { oversize: parseInt(e.target.value.replace(/\D/g, ''), 10) || null })}
+                    />
+                    <button
+                      onClick={() => setRows(prev => prev.filter((_, ri) => ri !== i))}
+                      title="Remove panel"
+                      style={{
+                        width: 26, height: 26, borderRadius: 6, border: '1px solid var(--brd)',
+                        background: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 14, lineHeight: 1,
+                      }}
+                    >×</button>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  onClick={confirmAndStart}
+                  disabled={rows.length === 0}
+                  style={{
+                    flex: 1, padding: '11px 0', borderRadius: 9,
+                    background: 'var(--gold2)', color: 'var(--on-gold)', border: 'none',
+                    cursor: 'pointer', opacity: rows.length === 0 ? 0.5 : 1,
+                    fontFamily: "'Public Sans', sans-serif", fontWeight: 700, fontSize: 13.5,
+                  }}
+                >
+                  Confirm — Start the Guide
+                </button>
+                <button
+                  onClick={() => { setScope(null); setRows([]); setStep('upload'); }}
+                  style={{
+                    padding: '11px 18px', borderRadius: 9,
+                    background: 'var(--card)', color: 'var(--text2)',
+                    border: '1px solid var(--brd)', cursor: 'pointer',
+                    fontFamily: "'Public Sans', sans-serif", fontWeight: 600, fontSize: 13,
+                  }}
+                >
+                  Rescan
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* ── Step 3: guided steps (Every Estimate) ── */}
+          {step === 'guide' && current && (
+            <div key={guideIdx} style={{ animation: 'hepFadeUp .35s ease', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {/* Progress bar */}
+              <div style={{ display: 'flex', gap: 4 }}>
+                {guideSteps.map((_, i) => (
+                  <div key={i} style={{
+                    flex: 1, height: 3, borderRadius: 2,
+                    background: i <= guideIdx ? 'var(--gold2)' : 'var(--brd)',
+                    transition: 'background .3s',
+                  }} />
+                ))}
+              </div>
+
+              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: 'var(--text3)', letterSpacing: 1.5, textTransform: 'uppercase' }}>
+                Every Estimate — add these on every hail claim
+              </div>
+
+              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 20, color: 'var(--gold)' }}>
+                {current.name}
+              </div>
+
+              {current.notes.map(note => (
+                <div key={note.id} style={{
+                  padding: '14px 16px', borderRadius: 10,
+                  background: 'var(--note-bg)', border: '1px solid var(--brd)',
+                }}>
+                  <p style={{
+                    margin: 0, fontSize: 12.5, lineHeight: 1.7,
+                    color: 'var(--note-text)',
+                    fontFamily: "'IBM Plex Mono', ui-monospace, Menlo, monospace",
+                    whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                  }}>
+                    {note.text}
+                  </p>
+                  <CopyButton text={note.text} label="Copy note for CCC ONE" />
+                </div>
+              ))}
+
+              <div style={{ fontSize: 12.5, color: 'var(--text3)', fontFamily: "'Public Sans', sans-serif" }}>
+                Add this line item in CCC ONE (paste the note above), then click Next.
+              </div>
+
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  onClick={() => setGuideIdx(i => Math.max(0, i - 1))}
+                  disabled={guideIdx === 0}
+                  style={{
+                    padding: '11px 18px', borderRadius: 9,
+                    background: 'var(--card)', color: 'var(--text2)',
+                    border: '1px solid var(--brd)', cursor: 'pointer',
+                    opacity: guideIdx === 0 ? 0.4 : 1,
+                    fontFamily: "'Public Sans', sans-serif", fontWeight: 600, fontSize: 13,
+                  }}
+                >
+                  ← Back
+                </button>
+                <button
+                  onClick={() => {
+                    if (guideIdx < guideSteps.length - 1) setGuideIdx(i => i + 1);
+                    else setStep('done');
+                  }}
+                  style={{
+                    flex: 1, padding: '11px 0', borderRadius: 9,
+                    background: 'var(--gold2)', color: 'var(--on-gold)', border: 'none',
+                    cursor: 'pointer',
+                    fontFamily: "'Public Sans', sans-serif", fontWeight: 700, fontSize: 13.5,
+                  }}
+                >
+                  {guideIdx < guideSteps.length - 1 ? 'Next →' : 'Finish Every Estimate ✓'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── Done (part 1) ── */}
+          {step === 'done' && (
+            <div style={{ animation: 'hepFadeUp .35s ease', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '20px 0', textAlign: 'center' }}>
+              <div style={{ fontSize: 40 }}>✅</div>
+              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 19, color: 'var(--gold)' }}>
+                Every Estimate complete!
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--text2)', fontFamily: "'Public Sans', sans-serif", lineHeight: 1.7, maxWidth: 380 }}>
+                All the mandatory line items are in. The damaged panels from the scan are already selected on the diagram — panel-by-panel guidance is coming in the next version.
+              </div>
+              <button
+                onClick={onClose}
+                style={{
+                  padding: '11px 28px', borderRadius: 9,
+                  background: 'var(--gold2)', color: 'var(--on-gold)', border: 'none',
+                  cursor: 'pointer', fontFamily: "'Public Sans', sans-serif", fontWeight: 700, fontSize: 13.5,
+                }}
+              >
+                Close — continue on the diagram
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -1657,6 +2038,7 @@ export default function Home() {
   const [showValueModal, setShowValueModal] = useState(false);
   const [showScopeModal, setShowScopeModal] = useState(false);
   const [showHailModal, setShowHailModal] = useState(false);
+  const [showAssistModal, setShowAssistModal] = useState(false);
   const [scanCounts, setScanCounts] = useState<ScanCounts>({});
   const [lastScan, setLastScan] = useState<ScopeResult | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
@@ -1717,7 +2099,7 @@ export default function Home() {
         const el = document.getElementById('hep-search-input');
         if (el) (el as HTMLInputElement).focus();
       }
-      if (e.key === 'Escape') { setShowValueModal(false); setShowScopeModal(false); setShowHailModal(false); }
+      if (e.key === 'Escape') { setShowValueModal(false); setShowScopeModal(false); setShowHailModal(false); setShowAssistModal(false); }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
@@ -1850,6 +2232,7 @@ export default function Home() {
           ::-webkit-scrollbar-track { background: transparent; }
           ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.14); border-radius: 4px; }
           [data-theme="light"] ::-webkit-scrollbar-thumb { background: rgba(15,34,64,.2); }
+          @keyframes hepFadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
           input::placeholder { color: var(--text3); }
           input:focus { outline: none; border-color: var(--gold2) !important; box-shadow: 0 0 0 3px var(--gold-soft); }
         `}</style>
@@ -2015,11 +2398,25 @@ export default function Home() {
             )}
           </div>
 
+          {/* Estimate Assistant (guided) button */}
+          <button
+            onClick={() => setShowAssistModal(true)}
+            style={{
+              marginLeft: 'auto', flexShrink: 0,
+              fontFamily: "'IBM Plex Mono', monospace", fontSize: 11,
+              color: 'var(--on-gold)', background: 'var(--gold2)', letterSpacing: 0.5,
+              padding: '6px 12px', border: '1px solid var(--gold2)', borderRadius: 8,
+              cursor: 'pointer', transition: 'all .15s', whiteSpace: 'nowrap', fontWeight: 600,
+            }}
+          >
+            Estimate Assistant
+          </button>
+
           {/* Scope Sheet button */}
           <button
             onClick={() => setShowScopeModal(true)}
             style={{
-              marginLeft: 'auto', flexShrink: 0,
+              flexShrink: 0,
               fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: 'var(--text2)',
               background: 'none', letterSpacing: 0.5,
               padding: '6px 12px', border: '1px solid var(--brd)', borderRadius: 8,
@@ -2307,6 +2704,19 @@ export default function Home() {
         {/* ── Scope Sheet Modal ── */}
         {/* ── Hail History Modal ── */}
         {showHailModal && <HailModal onClose={() => setShowHailModal(false)} />}
+
+        {/* ── Estimate Assistant Modal ── */}
+        {showAssistModal && (
+          <EstimateAssistantModal
+            onClose={() => setShowAssistModal(false)}
+            onApply={(panelIds, vt, counts, scanScope) => {
+              setVehicleType(vt);
+              setSelectedIds(panelIds);
+              setScanCounts(counts);
+              setLastScan(scanScope);
+            }}
+          />
+        )}
 
         {showScopeModal && (
           <ScopeModal
