@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 
 export const config = {
-  api: { bodyParser: { sizeLimit: '10mb' } },
+  api: { bodyParser: { sizeLimit: '25mb' } },
   maxDuration: 60,
 };
 
@@ -77,17 +77,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!response.ok) return res.status(500).json({ error: JSON.stringify(data.error || data) });
 
     const text = data.content?.find((b: { type: string }) => b.type === 'text')?.text || '';
-    // Strip possible markdown fences before parsing
-    const jsonStr = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
 
     if (data.stop_reason === 'max_tokens') {
       return res.status(500).json({ error: 'Scan response was too long and got cut off — try again.', stopReason: data.stop_reason });
     }
+
+    // Robustly extract the JSON object even if the model wraps it in prose or
+    // markdown fences: take from the first "{" to the last "}".
+    const first = text.indexOf('{');
+    const last = text.lastIndexOf('}');
+    const jsonStr = first !== -1 && last > first ? text.slice(first, last + 1) : text.trim();
+
     let parsed;
     try {
       parsed = JSON.parse(jsonStr);
     } catch {
-      return res.status(500).json({ error: 'Could not parse scope sheet — try a clearer photo', stopReason: data.stop_reason, raw: text.slice(0, 400) });
+      return res.status(500).json({ error: 'Could not parse scope sheet — try a clearer photo', stopReason: data.stop_reason, raw: text.slice(0, 600) });
     }
 
     return res.status(200).json({ scope: parsed, usage: data.usage });
