@@ -997,6 +997,28 @@ function saveScanToHistory(scope: ScopeResult): ScanHistoryEntry[] {
   return next;
 }
 
+// ── Assisted estimates: confirmed (edited) estimates from the Estimate Assistant ──
+interface AssistedEstimate {
+  id: number;
+  savedAt: string;
+  isTruck: boolean;
+  scope: ScopeResult; // panels hold the confirmed/edited rows
+}
+
+const ASSISTED_KEY = 'hep-assisted-estimates';
+
+function loadAssisted(): AssistedEstimate[] {
+  try { return JSON.parse(localStorage.getItem(ASSISTED_KEY) || '[]'); } catch { return []; }
+}
+
+function saveAssisted(scope: ScopeResult, isTruck: boolean): AssistedEstimate[] {
+  const list = loadAssisted();
+  const entry: AssistedEstimate = { id: Date.now(), savedAt: new Date().toISOString(), isTruck, scope };
+  const next = [entry, ...list].slice(0, 50);
+  try { localStorage.setItem(ASSISTED_KEY, JSON.stringify(next)); } catch { /* storage full */ }
+  return next;
+}
+
 function ScopeModal({ onClose, onApply }: {
   onClose: () => void;
   onApply: (panelIds: string[], vt: VehicleType, counts: ScanCounts, scope: ScopeResult) => void;
@@ -1328,7 +1350,10 @@ function EstimateAssistantModal({ onClose, onApply }: {
   const [rows, setRows] = useState<ScopePanel[]>([]);
   const [guideIdx, setGuideIdx] = useState(0);
   const [enlarged, setEnlarged] = useState(false);
+  const [saved, setSaved] = useState<AssistedEstimate[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { setSaved(loadAssisted()); }, []);
 
   const nn = PANELS.find(p => p.id === 'non-negotiables');
   const guideSteps = nn ? nn.operations : [];
@@ -1384,8 +1409,24 @@ function EstimateAssistantModal({ onClose, onApply }: {
       };
     }
     onApply(mappedIds, isTruck ? 'truck' : 'sedan', counts, { ...scope, panels: rows });
+    setSaved(saveAssisted({ ...scope, panels: rows }, isTruck));
     setGuideIdx(0);
     setStep('guide');
+  };
+
+  const openSaved = (e: AssistedEstimate) => {
+    const sorted = e.scope.panels
+      .slice()
+      .sort((a, b) => scanOrderIdx(a.sheetLabel) - scanOrderIdx(b.sheetLabel));
+    setScope(e.scope);
+    setRows(sorted);
+    setStep('confirm');
+  };
+
+  const deleteSaved = (id: number) => {
+    const next = saved.filter(s => s.id !== id);
+    setSaved(next);
+    try { localStorage.setItem(ASSISTED_KEY, JSON.stringify(next)); } catch { /* ignore */ }
   };
 
   const inputSt: React.CSSProperties = {
@@ -1480,6 +1521,44 @@ function EstimateAssistantModal({ onClose, onApply }: {
                 ref={fileRef} type="file" accept="image/*,application/pdf,.pdf" style={{ display: 'none' }}
                 onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }}
               />
+
+              {/* Saved assisted estimates */}
+              {saved.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", color: 'var(--text3)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 }}>
+                    Saved estimates
+                  </div>
+                  <div style={{ border: '1px solid var(--brd)', borderRadius: 10, overflow: 'hidden' }}>
+                    {saved.map((s, i) => {
+                      const v = s.scope.vehicle;
+                      const title = [v.year, v.make, v.model].filter(Boolean).join(' ') || 'Vehicle';
+                      const d = new Date(s.savedAt);
+                      const dateStr = `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
+                      return (
+                        <div key={s.id} style={{
+                          display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
+                          borderBottom: i < saved.length - 1 ? '1px solid var(--brd)' : 'none',
+                        }}>
+                          <button
+                            onClick={() => openSaved(s)}
+                            style={{ flex: 1, textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: "'Public Sans', sans-serif" }}
+                          >
+                            <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>{title}</div>
+                            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: 'var(--text3)', marginTop: 2 }}>
+                              {dateStr}{v.claim ? ` · CLAIM ${v.claim}` : ''} · {s.scope.panels.length} panels
+                            </div>
+                          </button>
+                          <button
+                            onClick={() => deleteSaved(s.id)}
+                            title="Delete"
+                            style={{ width: 26, height: 26, borderRadius: 6, border: '1px solid var(--brd)', background: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 14, lineHeight: 1, flexShrink: 0 }}
+                          >×</button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </>
           )}
 
