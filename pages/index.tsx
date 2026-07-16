@@ -867,7 +867,7 @@ function scanOrderIdx(label: string) {
 
 export interface ScanCounts {
   [panelId: string]: {
-    dentCount: number | null; dentSize: string | null; oversize: number | null;
+    dentCount: number | null; dentCountText?: string | null; dentSize: string | null; oversize: number | null;
     repairType?: 'pdr' | 'repair' | 'rr' | null;
     paintHours?: number | null;
     replacements?: string[];
@@ -880,6 +880,7 @@ interface ScopePanel {
   sheetLabel: string;
   repairType?: PanelRepairType;
   dentCount: number | null;
+  dentCountText?: string | null;
   dentSize: string | null;
   oversize: number | null;
   paintHours?: number | null;
@@ -1002,7 +1003,7 @@ function ScopeModal({ onClose, onApply }: {
   for (const p of sortedPanels) {
     const id = SHEET_LABEL_TO_PANEL[p.sheetLabel];
     if (id) scanCounts[id] = {
-      dentCount: p.dentCount, dentSize: p.dentSize, oversize: p.oversize,
+      dentCount: p.dentCount, dentCountText: p.dentCountText, dentSize: p.dentSize, oversize: p.oversize,
       repairType: p.repairType, paintHours: p.paintHours, replacements: p.replacements,
     };
   }
@@ -1194,7 +1195,7 @@ function ScopeModal({ onClose, onApply }: {
                       }}>
                         {p.repairType ? REPAIR_TYPE_LABEL[p.repairType] : '—'}
                       </span>
-                      <span style={{ fontFamily: "'IBM Plex Mono', monospace", color: 'var(--gold)' }}>{p.dentCount ?? '—'}</span>
+                      <span style={{ fontFamily: "'IBM Plex Mono', monospace", color: 'var(--gold)' }}>{p.dentCountText || (p.dentCount ?? '—')}</span>
                       <span style={{ fontSize: 12, color: 'var(--text2)' }}>{p.dentSize ? DENT_SIZE_LABEL[p.dentSize] || p.dentSize : '—'}</span>
                       <span style={{ fontFamily: "'IBM Plex Mono', monospace", color: p.oversize ? '#f59e0b' : 'var(--text3)' }}>{p.oversize ?? '—'}</span>
                     </div>
@@ -1321,7 +1322,7 @@ function EstimateAssistantModal({ onClose, onApply }: {
     for (const r of rows) {
       const id = SHEET_LABEL_TO_PANEL[r.sheetLabel];
       if (id) counts[id] = {
-        dentCount: r.dentCount, dentSize: r.dentSize, oversize: r.oversize,
+        dentCount: r.dentCount, dentCountText: r.dentCountText, dentSize: r.dentSize, oversize: r.oversize,
         repairType: r.repairType, paintHours: r.paintHours, replacements: r.replacements,
       };
     }
@@ -1492,9 +1493,13 @@ function EstimateAssistantModal({ onClose, onApply }: {
                         ))}
                       </select>
                       <input
-                        style={inputSt} inputMode="numeric" value={r.dentCount ?? ''}
+                        style={inputSt} value={r.dentCountText ?? (r.dentCount != null ? String(r.dentCount) : '')}
                         placeholder="—"
-                        onChange={e => updateRow(i, { dentCount: parseInt(e.target.value.replace(/\D/g, ''), 10) || null })}
+                        onChange={e => {
+                          const t = e.target.value;
+                          const n = /^\d+$/.test(t.trim()) ? parseInt(t.trim(), 10) : null;
+                          updateRow(i, { dentCountText: t, dentCount: n });
+                        }}
                       />
                       <select
                         style={{ ...inputSt, cursor: 'pointer' }}
@@ -2112,9 +2117,10 @@ function buildChecklist(
     }
     const c = counts[id];
     const repairType = c?.repairType || 'pdr';
-    const dents = c?.dentCount
-      ? ` — ${c.dentCount}${c.dentSize ? `-${c.dentSize}` : ''}${c.oversize ? ` + ${c.oversize} O/S` : ''}`
-      : '';
+    const countStr = c?.dentCountText || (c?.dentCount != null ? String(c.dentCount) : '');
+    const dents = countStr
+      ? ` — ${countStr}${c?.dentSize ? `-${c.dentSize}` : ''}${c?.oversize ? ` + ${c.oversize} O/S` : ''}`
+      : (c?.oversize ? ` — ${c.oversize} O/S` : '');
     lines.push(`${panel.label.toUpperCase()}${dents}`);
 
     if (repairType === 'rr') {
@@ -2164,9 +2170,10 @@ export default function Home() {
     const c = scanCounts[p.id];
     if (!c) return p.label;
     const repl = c.replacements && c.replacements.length > 0 ? ` ⚠ Replace: ${c.replacements.join(', ')}` : '';
-    if (!c.dentCount) return `${p.label}${repl}`;
-    const os = c.oversize ? ` + ${c.oversize} O/S` : '';
-    return `${p.label} · ${c.dentCount}${c.dentSize ? `-${c.dentSize}` : ''}${os}${repl}`;
+    const countStr = c.dentCountText || (c.dentCount != null ? String(c.dentCount) : '');
+    const os = c.oversize ? `${countStr ? ' + ' : ''}${c.oversize} O/S` : '';
+    if (!countStr && !os) return `${p.label}${repl}`;
+    return `${p.label} · ${countStr}${countStr && c.dentSize ? `-${c.dentSize}` : ''}${os}${repl}`;
   };
   const allNotesText = selectedPanels
     .flatMap(p => p.operations.flatMap(op => op.notes.map(n => n.text)))

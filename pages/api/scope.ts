@@ -15,6 +15,7 @@ If you cannot tell, default to "pdr" when a dent count is present, otherwise nul
 
 Notation guide (varies by form):
 - Dent counts may be written as "COUNT - SIZE" per panel, e.g. "92-Q" = 92 dents, Quarter size. Sizes: D=dime, N=nickel, Q=quarter, H=half dollar. Other forms may use separate count and size columns, or size words (dime/nickel/quarter/half).
+- Some forms use a COUNT RANGE / severity bracket instead of an exact number, e.g. "1-5", "6-15", "16-30", "31-50". Capture whatever is written in "dentCountText" (the exact string, e.g. "16-30" or "51"). Also set "dentCount" to the number ONLY when it is a single exact number, otherwise leave dentCount null but still fill dentCountText.
 - "OVERSIZE:" or "O/S" followed by a number = count of oversize dents on that panel.
 - IMPORTANT — part replacements: each panel section lists small part names (moldings, trim, lamps, mirrors, handles, etc.) each with an "R&I" / "R&R" option printed next to it. When a part name or its "R&R" option is CIRCLED, underlined, or otherwise marked by hand, that specific PART must be replaced — put the part name (e.g. "Upper Molding", "Belt Molding", "Mirror Assy") in that panel's "replacements" array. This is independent of the panel's own repairType — a PDR panel can still have a molding marked for replacement. Handwritten part names not printed on the form, or typed/digital annotations saying to replace something, also go in "replacements".
 - Handwritten instructions that are NOT standard printed/circled items (extra handwritten notes, special instructions) go in the panel's "notes" field.
@@ -26,12 +27,13 @@ Return ONLY valid JSON (no markdown fences) with this exact shape:
 {
   "vehicle": { "year": "", "make": "", "model": "", "color": "", "vin": "", "plate": "", "plateState": "", "claim": "", "carrier": "", "member": "", "phone": "" },
   "panels": [
-    { "sheetLabel": "HOOD", "repairType": "pdr", "dentCount": 92, "dentSize": "Q", "oversize": 20, "paintHours": null, "replacements": [], "notes": "" }
+    { "sheetLabel": "HOOD", "repairType": "pdr", "dentCount": 92, "dentCountText": "92", "dentSize": "Q", "oversize": 20, "paintHours": null, "replacements": [], "notes": "" }
   ]
 }
 
 Rules:
-- Include a panel in "panels" ONLY if it has a dent count, oversize count, a repair/replace marking, a part replacement, or any handwritten marking.
+- Include a panel in "panels" ONLY if it has a dent count/range, oversize count, a repair/replace marking, a part replacement, or any handwritten marking.
+- "dentCountText" is the count exactly as written (a number like "51" or a range like "16-30"); use "" if there is no count at all.
 - sheetLabel must be one of: LT FENDER, RT FENDER, HOOD, WINDSHIELD, LF DOOR, RF DOOR, LR DOOR, RR DOOR, L RAIL, R RAIL, ROOF, LT CAB, RT CAB, LT QUARTER, RT QUARTER, DECK LID, LT BED, RT BED, TAILGATE, FRONT BUMPER, REAR BUMPER.
 - repairType is one of "pdr", "repair", "rr", or null.
 - dentSize is the letter only (D, N, Q, H) or null if unreadable.
