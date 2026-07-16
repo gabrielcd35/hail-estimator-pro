@@ -128,13 +128,14 @@ const PANEL_GROUPS: Record<string, string[]> = {
 
 type VehicleType = 'sedan' | 'truck';
 
-function CarDiagram({ selectedIds, onSelect, vehicleType, counts, review, maxWidth = 212 }: {
+function CarDiagram({ selectedIds, onSelect, vehicleType, counts, review, maxWidth = 212, heightVh }: {
   selectedIds: string[];
   onSelect: (id: string) => void;
   vehicleType: VehicleType;
   counts?: ScanCounts;
   review?: boolean;
   maxWidth?: number;
+  heightVh?: number;
 }) {
   const [hovered, setHovered] = useState<string | null>(null);
 
@@ -143,6 +144,48 @@ function CarDiagram({ selectedIds, onSelect, vehicleType, counts, review, maxWid
     const c = counts?.[id];
     return !!c && !!(c.dentCountText || c.dentCount != null || c.oversize || (c.replacements && c.replacements.length));
   };
+
+  // In review mode, widen the viewBox to add side gutters for replacement /
+  // roof-rail callouts drawn outside the car body.
+  const GUT = review ? 78 : 0;
+  const viewBox = `${-GUT} 0 ${200 + GUT * 2} 490`;
+  const svgStyle: React.CSSProperties = heightVh
+    ? { height: `${heightVh}vh`, width: 'auto', maxWidth: '100%', display: 'block', margin: '0 auto' }
+    : { width: '100%', maxWidth, height: 'auto', display: 'block', margin: '0 auto' };
+
+  // Callouts in the side gutters: replacement parts (always) and roof-rail
+  // counts (rails are too thin to read in-panel).
+  const GutterCallouts = ({ panels }: { panels: DiagramPanel[] }) => (
+    <g style={{ pointerEvents: 'none', userSelect: 'none' }}>
+      {panels.map(p => {
+        const c = dataFor(p.id);
+        if (!c) return null;
+        const isRail = p.id.includes('roof-rail');
+        const repl = c.replacements && c.replacements.length ? c.replacements.join(', ') : '';
+        const railCount = isRail ? (c.dentCountText || (c.dentCount != null ? String(c.dentCount) : '')) : '';
+        if (!repl && !railCount) return null;
+        const left = (p.x + p.w / 2) < 100;
+        const gx = left ? -GUT + 4 : 200 + GUT - 4;
+        const anchor = left ? 'start' : 'end';
+        const gy = p.y + p.h / 2;
+        const edgeX = left ? p.x : p.x + p.w;
+        const lines: { t: string; color: string }[] = [];
+        if (railCount) lines.push({ t: `${p.lbl}: ${railCount}`, color: 'var(--gold)' });
+        if (repl) lines.push({ t: `⚠ ${p.lbl} — Replace ${repl}`, color: '#ef4444' });
+        return (
+          <g key={`gc-${p.id}`}>
+            <line x1={edgeX} y1={gy} x2={gx} y2={gy} stroke="var(--brd-2)" strokeWidth={0.4} strokeDasharray="2 2" />
+            {lines.map((ln, i) => (
+              <text key={i} x={gx} y={gy - (lines.length - 1) * 3 + i * 6 + 2} textAnchor={anchor}
+                fontSize={5.5} fontFamily="'IBM Plex Mono', monospace" fontWeight={600} fill={ln.color}>
+                {ln.t}
+              </text>
+            ))}
+          </g>
+        );
+      })}
+    </g>
+  );
 
   const fill = (id: string) => {
     if (review) return hasData(id) ? 'var(--panel-selected)' : 'var(--panel-default)';
@@ -195,13 +238,13 @@ function CarDiagram({ selectedIds, onSelect, vehicleType, counts, review, maxWid
             <>
               {countStr && (
                 <text x={p.lx} y={p.ly + 5} textAnchor="middle" fontSize={Math.max(6, p.fs)}
-                  fontFamily="'IBM Plex Mono', monospace" fontWeight={700} fill="var(--gold)">
+                  fontFamily="'IBM Plex Mono', monospace" fontWeight={700} fill="var(--panel-sel-text)">
                   {countStr}{sizeStr}
                 </text>
               )}
               {osStr && (
                 <text x={p.lx} y={p.ly + (countStr ? 12 : 6)} textAnchor="middle" fontSize={5}
-                  fontFamily="'IBM Plex Mono', monospace" fill="#f59e0b">
+                  fontFamily="'IBM Plex Mono', monospace" fontWeight={600} fill="var(--panel-sel-text)" opacity={0.8}>
                   {osStr}
                 </text>
               )}
@@ -209,13 +252,6 @@ function CarDiagram({ selectedIds, onSelect, vehicleType, counts, review, maxWid
                 <circle cx={p.lx + Math.ceil(p.lbl.length * nameFs * 0.29) + 5} cy={p.ly - 6} r={2.6} fill="#ef4444" />
               )}
             </>
-          )}
-          {has && p.rot && countStr && (
-            <text x={p.lx + 7} y={p.y + 8} textAnchor="middle" fontSize={5}
-              fontFamily="'IBM Plex Mono', monospace" fontWeight={700} fill="var(--gold)"
-              transform={`rotate(-90,${p.lx + 7},${p.y + 8})`}>
-              {countStr}
-            </text>
           )}
         </g>
       );
@@ -247,7 +283,7 @@ function CarDiagram({ selectedIds, onSelect, vehicleType, counts, review, maxWid
 
   if (vehicleType === 'truck') {
     return (
-      <svg viewBox="0 0 200 490" style={{ width: '100%', maxWidth, height: 'auto', display: 'block', margin: '0 auto' }}>
+      <svg viewBox={viewBox} style={svgStyle}>
         <defs>
           <clipPath id="truck-cab-clip"><path d={TRUCK_CAB_PATH} /></clipPath>
           <clipPath id="truck-bed-clip"><path d={TRUCK_BED_PATH} /></clipPath>
@@ -295,12 +331,13 @@ function CarDiagram({ selectedIds, onSelect, vehicleType, counts, review, maxWid
           <line x1={128} y1={295} x2={128} y2={450} stroke="var(--bed-line)" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
         </g>
         {DIAGRAM_PANELS_TRUCK_BED.map(p => <PanelLabel key={`l-${p.id}`} p={p} />)}
+        {review && <GutterCallouts panels={[...DIAGRAM_PANELS_TRUCK_CAB, ...DIAGRAM_PANELS_TRUCK_BED]} />}
       </svg>
     );
   }
 
   return (
-    <svg viewBox="0 0 200 490" style={{ width: '100%', maxWidth, height: 'auto', display: 'block', margin: '0 auto' }}>
+    <svg viewBox={viewBox} style={svgStyle}>
       <defs>
         <clipPath id="car-clip"><path d={CAR_PATH} /></clipPath>
       </defs>
@@ -340,6 +377,7 @@ function CarDiagram({ selectedIds, onSelect, vehicleType, counts, review, maxWid
       <path d="M 12,152 C 5,155 4,165 8,170 L 15,168 L 14,152 Z" fill="var(--mirror)" stroke="var(--pillar)" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
       <path d="M 188,152 C 195,155 196,165 192,170 L 185,168 L 186,152 Z" fill="var(--mirror)" stroke="var(--pillar)" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
       {DIAGRAM_PANELS.map(p => <PanelLabel key={`l-${p.id}`} p={p} />)}
+      {review && <GutterCallouts panels={DIAGRAM_PANELS} />}
     </svg>
   );
 }
@@ -1637,8 +1675,9 @@ function EstimateAssistantModal({ onClose, onApply }: {
                       >
                         <div onClick={e => e.stopPropagation()} style={{
                           background: 'var(--panel-bg)', border: '1px solid var(--brd-2)', borderRadius: 16,
-                          padding: '20px 24px', maxHeight: '92vh', maxWidth: 560, width: '100%', overflowY: 'auto',
+                          padding: '20px 24px', maxHeight: '94vh', maxWidth: 820, width: '100%', overflow: 'hidden',
                           boxShadow: '0 24px 80px rgba(0,0,0,.6)', position: 'relative',
+                          display: 'flex', flexDirection: 'column',
                         }}>
                           <button
                             onClick={() => setEnlarged(false)}
@@ -1655,8 +1694,8 @@ function EstimateAssistantModal({ onClose, onApply }: {
                           <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: 'var(--text3)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 14 }}>
                             Damage map
                           </div>
-                          <div style={{ maxWidth: 460, margin: '0 auto' }}>
-                            <CarDiagram selectedIds={[]} onSelect={() => {}} vehicleType={isTruck ? 'truck' : 'sedan'} counts={reviewCounts} review maxWidth={460} />
+                          <div style={{ margin: '0 auto' }}>
+                            <CarDiagram selectedIds={[]} onSelect={() => {}} vehicleType={isTruck ? 'truck' : 'sedan'} counts={reviewCounts} review heightVh={72} />
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'center', gap: 18, marginTop: 12, fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: 'var(--text3)' }}>
                             <span><span style={{ color: 'var(--gold)' }}>●</span> dent count</span>
