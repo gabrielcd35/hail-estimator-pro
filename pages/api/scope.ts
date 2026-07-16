@@ -52,7 +52,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const payload = {
       model: 'claude-sonnet-5',
-      max_tokens: 3000,
+      max_tokens: 8000,
+      // Structured extraction — no reasoning needed. Leaving adaptive thinking
+      // on (the Sonnet 5 default) burns the token budget on thinking and
+      // truncates the JSON, which breaks parsing.
+      thinking: { type: 'disabled' },
       messages: [{ role: 'user', content: [
         fileBlock,
         { type: 'text', text: SCOPE_PROMPT },
@@ -75,11 +79,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const text = data.content?.find((b: { type: string }) => b.type === 'text')?.text || '';
     // Strip possible markdown fences before parsing
     const jsonStr = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+
+    if (data.stop_reason === 'max_tokens') {
+      return res.status(500).json({ error: 'Scan response was too long and got cut off — try again.', stopReason: data.stop_reason });
+    }
     let parsed;
     try {
       parsed = JSON.parse(jsonStr);
     } catch {
-      return res.status(500).json({ error: 'Could not parse scope sheet — try a clearer photo', raw: text });
+      return res.status(500).json({ error: 'Could not parse scope sheet — try a clearer photo', stopReason: data.stop_reason, raw: text.slice(0, 400) });
     }
 
     return res.status(200).json({ scope: parsed, usage: data.usage });
