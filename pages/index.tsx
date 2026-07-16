@@ -128,14 +128,23 @@ const PANEL_GROUPS: Record<string, string[]> = {
 
 type VehicleType = 'sedan' | 'truck';
 
-function CarDiagram({ selectedIds, onSelect, vehicleType }: {
+function CarDiagram({ selectedIds, onSelect, vehicleType, counts, review }: {
   selectedIds: string[];
   onSelect: (id: string) => void;
   vehicleType: VehicleType;
+  counts?: ScanCounts;
+  review?: boolean;
 }) {
   const [hovered, setHovered] = useState<string | null>(null);
 
+  const dataFor = (id: string) => counts?.[id];
+  const hasData = (id: string) => {
+    const c = counts?.[id];
+    return !!c && !!(c.dentCountText || c.dentCount != null || c.oversize || (c.replacements && c.replacements.length));
+  };
+
   const fill = (id: string) => {
+    if (review) return hasData(id) ? 'var(--panel-selected)' : 'var(--panel-default)';
     if (selectedIds.includes(id)) return 'var(--panel-selected)';
     if (hovered === id) return 'var(--panel-hover)';
     return 'var(--panel-default)';
@@ -144,17 +153,17 @@ function CarDiagram({ selectedIds, onSelect, vehicleType }: {
   const opCount = (id: string) => PANELS.find(p => p.id === id)?.operations.length ?? 0;
 
   const PanelRect = ({ p }: { p: DiagramPanel }) => {
-    const isSel = selectedIds.includes(p.id);
+    const isSel = review ? hasData(p.id) : selectedIds.includes(p.id);
     return (
       <rect
         x={p.x} y={p.y} width={p.w} height={p.h}
         fill={fill(p.id)}
         stroke={isSel ? 'var(--gold)' : 'var(--panel-stroke)'}
         strokeWidth={isSel ? 1.5 : 0.5}
-        style={{ cursor: 'pointer', transition: 'fill 0.15s ease, stroke 0.15s ease' }}
-        onClick={() => onSelect(p.id)}
-        onMouseEnter={() => setHovered(p.id)}
-        onMouseLeave={() => setHovered(null)}
+        style={{ cursor: review ? 'default' : 'pointer', transition: 'fill 0.15s ease, stroke 0.15s ease' }}
+        onClick={() => !review && onSelect(p.id)}
+        onMouseEnter={() => !review && setHovered(p.id)}
+        onMouseLeave={() => !review && setHovered(null)}
         role="button" aria-label={p.lbl}
       />
     );
@@ -162,7 +171,55 @@ function CarDiagram({ selectedIds, onSelect, vehicleType }: {
 
   const PanelLabel = ({ p }: { p: DiagramPanel }) => {
     const count = opCount(p.id);
-    const sel = selectedIds.includes(p.id);
+    const sel = review ? hasData(p.id) : selectedIds.includes(p.id);
+
+    // Review mode: show scanned dent count / O/S / replace flag on the panel
+    if (review) {
+      const c = dataFor(p.id);
+      const has = hasData(p.id);
+      const countStr = c ? (c.dentCountText || (c.dentCount != null ? String(c.dentCount) : '')) : '';
+      const sizeStr = countStr && c?.dentSize ? `-${c.dentSize}` : '';
+      const osStr = c?.oversize ? `${c.oversize} O/S` : '';
+      const hasRepl = !!(c?.replacements && c.replacements.length);
+      const nameFs = Math.max(4.5, p.fs - 1.5);
+      return (
+        <g style={{ pointerEvents: 'none', userSelect: 'none' }}>
+          <text x={p.lx} y={has ? p.ly - 4 : p.ly} textAnchor="middle" fontSize={nameFs}
+            fontFamily="'Public Sans', Arial, sans-serif" fontWeight={has ? 700 : 500}
+            fill={has ? 'var(--panel-sel-text)' : 'var(--panel-lbl)'}
+            transform={p.rot ? `rotate(-90,${p.lx},${p.ly - (has ? 4 : 0)})` : undefined}>
+            {p.lbl}
+          </text>
+          {has && !p.rot && (
+            <>
+              {countStr && (
+                <text x={p.lx} y={p.ly + 5} textAnchor="middle" fontSize={Math.max(6, p.fs)}
+                  fontFamily="'IBM Plex Mono', monospace" fontWeight={700} fill="var(--gold)">
+                  {countStr}{sizeStr}
+                </text>
+              )}
+              {osStr && (
+                <text x={p.lx} y={p.ly + (countStr ? 12 : 6)} textAnchor="middle" fontSize={5}
+                  fontFamily="'IBM Plex Mono', monospace" fill="#f59e0b">
+                  {osStr}
+                </text>
+              )}
+              {hasRepl && (
+                <circle cx={p.lx + Math.ceil(p.lbl.length * nameFs * 0.29) + 5} cy={p.ly - 6} r={2.6} fill="#ef4444" />
+              )}
+            </>
+          )}
+          {has && p.rot && countStr && (
+            <text x={p.lx + 7} y={p.y + 8} textAnchor="middle" fontSize={5}
+              fontFamily="'IBM Plex Mono', monospace" fontWeight={700} fill="var(--gold)"
+              transform={`rotate(-90,${p.lx + 7},${p.y + 8})`}>
+              {countStr}
+            </text>
+          )}
+        </g>
+      );
+    }
+
     const bx = p.rot ? p.lx : p.lx + Math.ceil(p.lbl.length * p.fs * 0.29) + 5;
     const by = p.rot ? p.y + 8 : p.ly - p.fs;
     return (
@@ -1453,6 +1510,29 @@ function EstimateAssistantModal({ onClose, onApply }: {
                   {scope.vehicle.carrier && <span>{scope.vehicle.carrier}</span>}
                 </div>
               </div>
+
+              {/* Visual review diagram with dent counts */}
+              {(() => {
+                const isTruck = detectTruck(scope);
+                const reviewCounts: ScanCounts = {};
+                for (const r of rows) {
+                  const id = SHEET_LABEL_TO_PANEL[r.sheetLabel];
+                  if (id) reviewCounts[id] = {
+                    dentCount: r.dentCount, dentCountText: r.dentCountText, dentSize: r.dentSize,
+                    oversize: r.oversize, repairType: r.repairType, paintHours: r.paintHours, replacements: r.replacements,
+                  };
+                }
+                return (
+                  <div style={{ background: 'var(--bg)', border: '1px solid var(--brd)', borderRadius: 12, padding: '16px 12px' }}>
+                    <CarDiagram selectedIds={[]} onSelect={() => {}} vehicleType={isTruck ? 'truck' : 'sedan'} counts={reviewCounts} review />
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 8, fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, color: 'var(--text3)' }}>
+                      <span><span style={{ color: 'var(--gold)' }}>●</span> dent count</span>
+                      <span><span style={{ color: '#f59e0b' }}>●</span> oversize</span>
+                      <span><span style={{ color: '#ef4444' }}>●</span> replace</span>
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div style={{ fontSize: 13, color: 'var(--text2)', fontFamily: "'Public Sans', sans-serif", lineHeight: 1.6 }}>
                 Confirm each panel&apos;s repair mode, dent counts, and any parts marked for replacement. Fix anything the AI misread, remove panels that don&apos;t belong, then start the guide.
