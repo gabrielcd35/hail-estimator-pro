@@ -138,6 +138,18 @@ export const PANELS: CarPanel[] = [
         ],
       },
       {
+        id: 'nn-high-mount-lamp',
+        name: 'R&I High Mount Lamp',
+        types: ['pdr', 'repair', 'rr'],
+        vehicles: ['truck'],
+        notes: [
+          {
+            id: 'nn-hml-1',
+            text: 'The high mount stop lamp (CHMSL) is mounted at the top of the cab rear window or tailgate and must be removed to allow full PDR tool access to the upper cab corners and roof trailing edge. Leaving it in place obstructs tool insertion and risks cracking the lamp housing from vibration or incidental contact during repair.',
+          },
+        ],
+      },
+      {
         id: 'nn-rear-bumper',
         name: 'R&I Rear Bumper',
         types: ['pdr', 'repair', 'rr'],
