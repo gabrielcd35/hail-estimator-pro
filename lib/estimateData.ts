@@ -79,7 +79,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'nn-bat-1',
-            text: 'Battery must be disconnected before any SRS component handling, as the backup capacitor retains deployment-level charge for up to 2 minutes. This is required by all OEM service procedures and I-CAR standards whenever airbag assemblies or headliner components are disturbed.',
+            text: 'Battery must be disconnected before any SRS component handling, as the backup capacitor retains deployment-level charge for up to 2 minutes. This is required by all OEM service procedures and I-CAR standards whenever airbag assemblies or headliner components are disturbed. Please add for Mechanical Labor Rate.',
           },
         ],
       },
@@ -109,7 +109,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'nn-ab-1',
-            text: 'Head airbags must be removed when performing PDR because they are mounted behind the headliner, directly in the area where tools are inserted to access dents. Leaving them in place risks accidental deployment due to pressure or movement, which will damage the airbags and create a costly repair.',
+            text: 'Head airbags must be removed when performing PDR because they are mounted behind the headliner, directly in the area where tools are inserted to access dents. Leaving them in place risks accidental deployment due to pressure or movement, which will damage the airbags and create a costly repair. Please add for Mechanical Labor Rate.',
           },
         ],
       },
@@ -191,7 +191,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'nn-scan-1',
-            text: 'A pre-scan is required before PDR repairs to document any existing diagnostic trouble codes (DTCs) and verify the condition of all electronic and safety systems. Accessing dents often requires removal of components like the headliner, which can trigger faults in airbag, lighting, or sensor systems.',
+            text: 'A pre-scan is required before PDR repairs to document any existing diagnostic trouble codes (DTCs) and verify the condition of all electronic and safety systems. Accessing dents often requires removal of components like the headliner, which can trigger faults in airbag, lighting, or sensor systems. Please add for Mechanical Labor Rate.',
           },
         ],
       },
@@ -202,7 +202,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'nn-scan-2',
-            text: 'A post-scan is required after PDR repairs to detect and clear any diagnostic trouble codes (DTCs) triggered during disassembly or reassembly, especially when components like the headliner and head airbags are removed. These systems are sensitive and will log faults if disconnected or disturbed.',
+            text: 'A post-scan is required after PDR repairs to detect and clear any diagnostic trouble codes (DTCs) triggered during disassembly or reassembly, especially when components like the headliner and head airbags are removed. These systems are sensitive and will log faults if disconnected or disturbed. Please add for Mechanical Labor Rate.',
           },
         ],
       },
@@ -960,7 +960,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'ltr-pdr-1',
-            text: 'Head airbags must be removed when performing PDR because they are mounted behind the headliner, directly in the area where tools are inserted to access dents. Leaving them in place risks accidental deployment due to pressure or movement, which will damage the airbags and create a costly repair.',
+            text: 'Head airbags must be removed when performing PDR because they are mounted behind the headliner, directly in the area where tools are inserted to access dents. Leaving them in place risks accidental deployment due to pressure or movement, which will damage the airbags and create a costly repair. Please add for Mechanical Labor Rate.',
           },
         ],
       },
