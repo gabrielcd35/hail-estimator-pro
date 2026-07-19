@@ -847,6 +847,17 @@ export const PANELS: CarPanel[] = [
           },
         ],
       },
+      {
+        id: 'ltb-upper-molding',
+        name: 'R&I Upper Molding',
+        types: ['pdr'],
+        notes: [
+          {
+            id: 'ltb-um-1',
+            text: 'The upper bed molding (bed rail cap) must be removed to allow PDR wand tool access to the top edge of the pickup bed side. Dents along the upper portion of the bed panel cannot be reached from inside the bed alone — removing the molding exposes the inner flange and provides the necessary clearance to work the metal from above without obstruction.',
+          },
+        ],
+      },
     ],
   },
 
@@ -876,6 +887,17 @@ export const PANELS: CarPanel[] = [
           {
             id: 'rtb-tl-1',
             text: 'R&I Tail Lamp required on every estimate under the Rear Lamps group — needed for bed panel access.',
+          },
+        ],
+      },
+      {
+        id: 'rtb-upper-molding',
+        name: 'R&I Upper Molding',
+        types: ['pdr'],
+        notes: [
+          {
+            id: 'rtb-um-1',
+            text: 'The upper bed molding (bed rail cap) must be removed to allow PDR wand tool access to the top edge of the pickup bed side. Dents along the upper portion of the bed panel cannot be reached from inside the bed alone — removing the molding exposes the inner flange and provides the necessary clearance to work the metal from above without obstruction.',
           },
         ],
       },
