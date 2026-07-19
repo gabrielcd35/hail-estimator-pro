@@ -9,6 +9,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type RepairType = 'pdr' | 'repair' | 'rr';
+export type VehicleType = 'sedan' | 'suv' | 'truck';
 
 export interface EstimateNote {
   id: string;
@@ -19,6 +20,7 @@ export interface EstimateOperation {
   id: string;
   name: string;
   types: RepairType[];
+  vehicles?: VehicleType[]; // if omitted, applies to all vehicle types
   notes: EstimateNote[];
 }
 
@@ -119,6 +121,30 @@ export const PANELS: CarPanel[] = [
           {
             id: 'nn-rb-1',
             text: 'The bumper cover must be removed to remove the tail lamps because modern vehicle designs secure the tail lamps with fasteners that are hidden beneath or behind the bumper cover.',
+          },
+        ],
+      },
+      {
+        id: 'nn-truck-backglass',
+        name: 'Back Glass R&I',
+        types: ['pdr'],
+        vehicles: ['truck'],
+        notes: [
+          {
+            id: 'nn-truck-bg-1',
+            text: 'The back glass must be removed on pickup trucks to access the roof panel from the rear. PDR access from the sides alone does not provide full visibility of roof damage — working blind increases the risk of over-pushing or missing dents. Removal also protects the glass from heat, vibration, and debris during the repair process.',
+          },
+        ],
+      },
+      {
+        id: 'nn-truck-urethane',
+        name: 'Urethane Glass Kit ($30)',
+        types: ['pdr'],
+        vehicles: ['truck'],
+        notes: [
+          {
+            id: 'nn-truck-ur-1',
+            text: 'Replace Urethane Glass Kit ($30) — required whenever back glass is R&I or R&R. Enter as a manual line item in CCC ONE.',
           },
         ],
       },
