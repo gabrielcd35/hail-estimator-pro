@@ -51,6 +51,17 @@ export const PANELS: CarPanel[] = [
         ],
       },
       {
+        id: 'nn-grille',
+        name: 'R&I Grille',
+        types: ['pdr', 'repair', 'rr'],
+        notes: [
+          {
+            id: 'nn-grille-1',
+            text: 'The grille assembly must be removed to fully disassemble the front bumper cover. On most vehicles the grille is clipped or bolted to the bumper structure, and removing it prevents damage to the mounting tabs and retaining clips during bumper R&I. It also provides clear access to the upper bumper fasteners that are otherwise blocked by the grille frame.',
+          },
+        ],
+      },
+      {
         id: 'nn-headlamps',
         name: 'R&I Headlamps (LT + RT)',
         types: ['pdr', 'repair', 'rr'],
@@ -106,10 +117,23 @@ export const PANELS: CarPanel[] = [
         id: 'nn-taillamps',
         name: 'R&I Tail Lamps (LT + RT)',
         types: ['pdr', 'repair', 'rr'],
+        vehicles: ['sedan', 'suv'],
         notes: [
           {
             id: 'nn-tl-1',
             text: 'Tail lamp assemblies must be removed to allow PDR tool access to the quarter panels.',
+          },
+        ],
+      },
+      {
+        id: 'nn-taillamps-truck',
+        name: 'R&I Tail Lamps (LT + RT)',
+        types: ['pdr', 'repair', 'rr'],
+        vehicles: ['truck'],
+        notes: [
+          {
+            id: 'nn-tl-truck-1',
+            text: 'Tail lamp assemblies must be removed to allow PDR tool access to the pickup bed side.',
           },
         ],
       },
