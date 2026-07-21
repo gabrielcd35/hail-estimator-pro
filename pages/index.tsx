@@ -145,47 +145,10 @@ function CarDiagram({ selectedIds, onSelect, vehicleType, counts, review, maxWid
     return !!c && !!(c.dentCountText || c.dentCount != null || c.oversize || (c.replacements && c.replacements.length));
   };
 
-  // In review mode, widen the viewBox to add side gutters for replacement /
-  // roof-rail callouts drawn outside the car body.
-  const GUT = review ? 78 : 0;
-  const viewBox = `${-GUT} 0 ${200 + GUT * 2} 490`;
+  const viewBox = '0 0 200 490';
   const svgStyle: React.CSSProperties = heightVh
     ? { height: `${heightVh}vh`, width: 'auto', maxWidth: '100%', display: 'block', margin: '0 auto' }
     : { width: '100%', maxWidth, height: 'auto', display: 'block', margin: '0 auto' };
-
-  // Callouts in the side gutters: replacement parts (always) and roof-rail
-  // counts (rails are too thin to read in-panel).
-  const GutterCallouts = ({ panels }: { panels: DiagramPanel[] }) => (
-    <g style={{ pointerEvents: 'none', userSelect: 'none' }}>
-      {panels.map(p => {
-        const c = dataFor(p.id);
-        if (!c) return null;
-        const isRail = p.id.includes('roof-rail');
-        const repl = c.replacements && c.replacements.length ? c.replacements.join(', ') : '';
-        const railCount = isRail ? (c.dentCountText || (c.dentCount != null ? String(c.dentCount) : '')) : '';
-        if (!repl && !railCount) return null;
-        const left = (p.x + p.w / 2) < 100;
-        const gx = left ? -GUT + 4 : 200 + GUT - 4;
-        const anchor = left ? 'start' : 'end';
-        const gy = p.y + p.h / 2;
-        const edgeX = left ? p.x : p.x + p.w;
-        const lines: { t: string; color: string }[] = [];
-        if (railCount) lines.push({ t: `${p.lbl}: ${railCount}`, color: 'var(--gold)' });
-        if (repl) lines.push({ t: `⚠ ${p.lbl} — Replace ${repl}`, color: '#ef4444' });
-        return (
-          <g key={`gc-${p.id}`}>
-            <line x1={edgeX} y1={gy} x2={gx} y2={gy} stroke="var(--brd-2)" strokeWidth={0.4} strokeDasharray="2 2" />
-            {lines.map((ln, i) => (
-              <text key={i} x={gx} y={gy - (lines.length - 1) * 3 + i * 6 + 2} textAnchor={anchor}
-                fontSize={5.5} fontFamily="'IBM Plex Mono', monospace" fontWeight={600} fill={ln.color}>
-                {ln.t}
-              </text>
-            ))}
-          </g>
-        );
-      })}
-    </g>
-  );
 
   const fill = (id: string) => {
     if (review) return hasData(id) ? 'var(--panel-selected)' : 'var(--panel-default)';
@@ -331,7 +294,6 @@ function CarDiagram({ selectedIds, onSelect, vehicleType, counts, review, maxWid
           <line x1={128} y1={295} x2={128} y2={450} stroke="var(--bed-line)" strokeWidth={0.8} style={{ pointerEvents: 'none' }} />
         </g>
         {DIAGRAM_PANELS_TRUCK_BED.map(p => <PanelLabel key={`l-${p.id}`} p={p} />)}
-        {review && <GutterCallouts panels={[...DIAGRAM_PANELS_TRUCK_CAB, ...DIAGRAM_PANELS_TRUCK_BED]} />}
       </svg>
     );
   }
@@ -377,7 +339,6 @@ function CarDiagram({ selectedIds, onSelect, vehicleType, counts, review, maxWid
       <path d="M 12,152 C 5,155 4,165 8,170 L 15,168 L 14,152 Z" fill="var(--mirror)" stroke="var(--pillar)" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
       <path d="M 188,152 C 195,155 196,165 192,170 L 185,168 L 186,152 Z" fill="var(--mirror)" stroke="var(--pillar)" strokeWidth={0.6} style={{ pointerEvents: 'none' }} />
       {DIAGRAM_PANELS.map(p => <PanelLabel key={`l-${p.id}`} p={p} />)}
-      {review && <GutterCallouts panels={DIAGRAM_PANELS} />}
     </svg>
   );
 }
@@ -2856,7 +2817,7 @@ export default function Home() {
           </button>
         </header>
 
-        {/* ── Sub-bar: vehicle toggle + Other Panels chips ── */}
+        {/* ── Sub-bar: Other Panels chips ── */}
         <div style={{
           borderBottom: '1px solid var(--brd)',
           background: 'var(--header-bg)',
@@ -2867,27 +2828,7 @@ export default function Home() {
           flexShrink: 0,
           overflowX: 'auto',
         }}>
-          {(['sedan', 'truck'] as const).map(vt => (
-            <button
-              key={vt}
-              onClick={() => switchVehicle(vt)}
-              style={{
-                padding: '5px 14px',
-                borderRadius: 8, fontSize: 12, cursor: 'pointer', flexShrink: 0,
-                background: vehicleType === vt ? 'var(--gold2)' : 'var(--card)',
-                color: vehicleType === vt ? 'var(--on-gold)' : 'var(--text2)',
-                border: `1px solid ${vehicleType === vt ? 'var(--gold2)' : 'var(--brd)'}`,
-                fontWeight: vehicleType === vt ? 700 : 600,
-                fontFamily: 'inherit', transition: 'all 0.15s',
-              }}
-            >
-              {vt === 'sedan' ? 'Sedan / SUV' : 'Pickup Truck'}
-            </button>
-          ))}
-
-          <div style={{ width: 1, height: 20, background: 'var(--brd)', flexShrink: 0, margin: '0 4px' }} />
-
-          {PANELS.filter(p => !p.onDiagram && !p.onTruckDiagram).map(p => {
+          {PANELS.filter(p => !p.onDiagram && !p.onTruckDiagram && p.id !== 'non-negotiables').map(p => {
             const sel = selectedIds.includes(p.id);
             const count = p.operations.length;
             return (
@@ -2948,6 +2889,66 @@ export default function Home() {
             } : {}),
           }}>
             <div style={{ padding: '18px 16px' }}>
+              {/* Vehicle type question */}
+              <div style={{
+                fontFamily: "'IBM Plex Mono', monospace",
+                fontSize: 9.5, color: 'var(--text3)',
+                textTransform: 'uppercase', letterSpacing: '1.5px',
+                textAlign: 'center', marginBottom: 8,
+              }}>What kind of vehicle?</div>
+              <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
+                {(['sedan', 'truck'] as const).map(vt => (
+                  <button
+                    key={vt}
+                    onClick={() => switchVehicle(vt)}
+                    style={{
+                      flex: 1, padding: '7px 8px',
+                      borderRadius: 8, fontSize: 12, cursor: 'pointer',
+                      background: vehicleType === vt ? 'var(--gold2)' : 'var(--card)',
+                      color: vehicleType === vt ? 'var(--on-gold)' : 'var(--text2)',
+                      border: `1px solid ${vehicleType === vt ? 'var(--gold2)' : 'var(--brd)'}`,
+                      fontWeight: vehicleType === vt ? 700 : 600,
+                      fontFamily: 'inherit', transition: 'all 0.15s',
+                    }}
+                  >
+                    {vt === 'sedan' ? 'Sedan / SUV' : 'Pickup Truck'}
+                  </button>
+                ))}
+              </div>
+
+              {/* Every Estimate */}
+              {(() => {
+                const nn = PANELS.find(p => p.id === 'non-negotiables');
+                if (!nn) return null;
+                const sel = selectedIds.includes(nn.id);
+                return (
+                  <button
+                    onClick={() => handleSelect(nn.id)}
+                    style={{
+                      width: '100%', padding: '9px 12px', marginBottom: 16,
+                      borderRadius: 9, fontSize: 13, cursor: 'pointer',
+                      background: sel ? 'var(--panel-selected)' : 'var(--card)',
+                      color: sel ? 'var(--panel-sel-text)' : 'var(--text)',
+                      border: `1px solid ${sel ? 'var(--gold2)' : 'var(--brd)'}`,
+                      fontWeight: 700, fontFamily: 'inherit', transition: 'all 0.15s',
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+                    }}
+                  >
+                    <span>⭐ Every Estimate</span>
+                    {nn.operations.length > 0 && (
+                      <span style={{
+                        background: sel ? 'var(--gold)' : 'var(--badge-bg)',
+                        color: sel ? '#000' : '#fff',
+                        borderRadius: 10, fontSize: 10.5,
+                        padding: '1px 7px', lineHeight: '16px', fontWeight: 700,
+                      }}>
+                        {nn.operations.length}
+                      </span>
+                    )}
+                  </button>
+                );
+              })()}
+
               <div style={{
                 fontFamily: "'IBM Plex Mono', monospace",
                 fontSize: 9.5, color: 'var(--text3)',
