@@ -519,31 +519,107 @@ function PanelOps({ panel, vehicleType }: { panel: CarPanel; vehicleType: Vehicl
 
 // ─── Empty state ──────────────────────────────────────────────────────────────
 
-function EmptyState() {
+function EmptyState({ vehicleType, onPickVehicle, onClearVehicle, onEveryEstimate, everyEstimateCount, everyEstimateSelected }: {
+  vehicleType: VehicleType | null;
+  onPickVehicle: (vt: VehicleType) => void;
+  onClearVehicle: () => void;
+  onEveryEstimate: () => void;
+  everyEstimateCount: number;
+  everyEstimateSelected: boolean;
+}) {
+  if (vehicleType === null) {
+    return (
+      <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        height: '100%', gap: 18, padding: 40, textAlign: 'center',
+      }}>
+        <div style={{
+          fontFamily: "'IBM Plex Mono', monospace", fontSize: 10.5, color: 'var(--text3)',
+          textTransform: 'uppercase', letterSpacing: '2px',
+        }}>
+          Let&apos;s start with the vehicle
+        </div>
+        <div style={{
+          fontSize: 18, fontWeight: 700, color: 'var(--text)',
+          fontFamily: "'Space Grotesk', sans-serif",
+        }}>
+          What kind of vehicle is it?
+        </div>
+        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', justifyContent: 'center' }}>
+          {([
+            { vt: 'sedan', label: 'Sedan / Coupe', icon: '🚗' },
+            { vt: 'suv',   label: 'SUV / Crossover', icon: '🚙' },
+            { vt: 'truck', label: 'Pickup Truck', icon: '🛻' },
+          ] as const).map(({ vt, label, icon }) => (
+            <button
+              key={vt}
+              onClick={() => onPickVehicle(vt)}
+              style={{
+                width: 150, padding: '24px 14px', borderRadius: 14, cursor: 'pointer',
+                background: 'var(--card)', border: '2px solid var(--brd)',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+                fontFamily: 'inherit', transition: 'border-color 0.15s, transform 0.1s',
+              }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--gold2)';
+                (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.03)';
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--brd)';
+                (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)';
+              }}
+            >
+              <span style={{ fontSize: 32 }}>{icon}</span>
+              <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>{label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const vehLbl = vehicleType === 'sedan' ? 'Sedan / Coupe' : vehicleType === 'suv' ? 'SUV / Crossover' : 'Pickup Truck';
+
   return (
     <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      height: '100%',
-      gap: 16,
-      padding: 40,
-      textAlign: 'center',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      height: '100%', gap: 16, padding: 40, textAlign: 'center',
     }}>
-      <svg width="66" height="66" viewBox="0 0 72 72" fill="none" style={{ opacity: 0.22 }}>
-        <ellipse cx="36" cy="36" rx="23" ry="29" stroke="var(--text2)" strokeWidth="2.5" />
-        <rect x="19" y="26" width="34" height="20" rx="2" stroke="var(--text2)" strokeWidth="1.5" />
-        <line x1="19" y1="36" x2="53" y2="36" stroke="var(--text2)" strokeWidth="1.5" />
-      </svg>
-      <div style={{
-        fontSize: 16, fontWeight: 700, color: 'var(--text2)',
-        fontFamily: "'Space Grotesk', sans-serif",
-      }}>
-        Select a panel to see operations
+      <button
+        onClick={onEveryEstimate}
+        style={{
+          padding: '18px 30px', borderRadius: 14, cursor: 'pointer',
+          background: everyEstimateSelected ? 'var(--panel-selected)' : 'var(--gold-soft)',
+          color: everyEstimateSelected ? 'var(--panel-sel-text)' : 'var(--gold)',
+          border: `2px solid ${everyEstimateSelected ? 'var(--gold2)' : 'var(--gold-brd)'}`,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+          fontFamily: 'inherit', transition: 'all 0.15s',
+        }}
+      >
+        <span style={{ fontSize: 30 }}>⭐</span>
+        <span style={{ fontSize: 16, fontWeight: 700, fontFamily: "'Space Grotesk', sans-serif" }}>
+          Start with Every Estimate
+        </span>
+        {everyEstimateCount > 0 && (
+          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, opacity: 0.85 }}>
+            {everyEstimateCount} required line items
+          </span>
+        )}
+      </button>
+
+      <div style={{ fontSize: 13, color: 'var(--text3)', maxWidth: 320, lineHeight: 1.65 }}>
+        Or click any area on the car diagram, or use the search bar to find operations and copy notes into CCC ONE.
       </div>
-      <div style={{ fontSize: 13, color: 'var(--text3)', maxWidth: 300, lineHeight: 1.65 }}>
-        Click any area on the car diagram, or use the search bar to find operations and copy notes into CCC ONE.
+
+      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: 'var(--text3)' }}>
+        Vehicle: <strong style={{ color: 'var(--text2)' }}>{vehLbl}</strong>
+        {' · '}
+        <button
+          onClick={onClearVehicle}
+          style={{ background: 'none', border: 'none', padding: 0, color: 'var(--gold)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 11, textDecoration: 'underline' }}
+        >
+          change
+        </button>
       </div>
     </div>
   );
@@ -2463,6 +2539,13 @@ export default function Home() {
     setLastScan(null);
   };
 
+  const clearVehicle = () => {
+    setVehicleType(null);
+    setSelectedIds([]);
+    setScanCounts({});
+    setLastScan(null);
+  };
+
   const selectFromSearch = (hit: SearchHit) => {
     const group = PANEL_GROUPS[hit.panelId] || [hit.panelId];
     setSelectedIds(group);
@@ -2967,7 +3050,14 @@ export default function Home() {
           {/* Right: operations + notes */}
           <main style={{ flex: 1, overflowY: 'auto', padding: '26px 30px', background: 'var(--bg)', minWidth: 0 }}>
             {selectedPanels.length === 0 ? (
-              <EmptyState />
+              <EmptyState
+                vehicleType={vehicleType}
+                onPickVehicle={switchVehicle}
+                onClearVehicle={clearVehicle}
+                onEveryEstimate={() => handleSelect('non-negotiables')}
+                everyEstimateCount={PANELS.find(p => p.id === 'non-negotiables')?.operations.length ?? 0}
+                everyEstimateSelected={selectedIds.includes('non-negotiables')}
+              />
             ) : (
               <>
                 <div style={{ marginBottom: 22, paddingBottom: 15, borderBottom: '1px solid var(--brd-2)' }}>
