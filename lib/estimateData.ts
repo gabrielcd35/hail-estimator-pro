@@ -9,6 +9,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type RepairType = 'pdr' | 'repair' | 'rr';
+export type VehicleType = 'sedan' | 'suv' | 'truck';
 
 export interface EstimateNote {
   id: string;
@@ -19,6 +20,7 @@ export interface EstimateOperation {
   id: string;
   name: string;
   types: RepairType[];
+  vehicles?: VehicleType[]; // if omitted, applies to all vehicle types
   notes: EstimateNote[];
 }
 
@@ -49,6 +51,17 @@ export const PANELS: CarPanel[] = [
         ],
       },
       {
+        id: 'nn-grille',
+        name: 'R&I Grille',
+        types: ['pdr', 'repair', 'rr'],
+        notes: [
+          {
+            id: 'nn-grille-1',
+            text: 'The grille assembly must be removed to fully disassemble the front bumper cover. On most vehicles the grille is clipped or bolted to the bumper structure, and removing it prevents damage to the mounting tabs and retaining clips during bumper R&I. It also provides clear access to the upper bumper fasteners that are otherwise blocked by the grille frame.',
+          },
+        ],
+      },
+      {
         id: 'nn-headlamps',
         name: 'R&I Headlamps (LT + RT)',
         types: ['pdr', 'repair', 'rr'],
@@ -66,7 +79,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'nn-bat-1',
-            text: 'Battery must be disconnected before any SRS component handling, as the backup capacitor retains deployment-level charge for up to 2 minutes. This is required by all OEM service procedures and I-CAR standards whenever airbag assemblies or headliner components are disturbed.',
+            text: 'Battery must be disconnected before any SRS component handling, as the backup capacitor retains deployment-level charge for up to 2 minutes. This is required by all OEM service procedures and I-CAR standards whenever airbag assemblies or headliner components are disturbed. Please add for Mechanical Labor Rate.',
           },
         ],
       },
@@ -96,7 +109,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'nn-ab-1',
-            text: 'Head airbags must be removed when performing PDR because they are mounted behind the headliner, directly in the area where tools are inserted to access dents. Leaving them in place risks accidental deployment due to pressure or movement, which will damage the airbags and create a costly repair.',
+            text: 'Head airbags must be removed when performing PDR because they are mounted behind the headliner, directly in the area where tools are inserted to access dents. Leaving them in place risks accidental deployment due to pressure or movement, which will damage the airbags and create a costly repair. Please add for Mechanical Labor Rate.',
           },
         ],
       },
@@ -104,10 +117,35 @@ export const PANELS: CarPanel[] = [
         id: 'nn-taillamps',
         name: 'R&I Tail Lamps (LT + RT)',
         types: ['pdr', 'repair', 'rr'],
+        vehicles: ['sedan', 'suv'],
         notes: [
           {
             id: 'nn-tl-1',
             text: 'Tail lamp assemblies must be removed to allow PDR tool access to the quarter panels.',
+          },
+        ],
+      },
+      {
+        id: 'nn-taillamps-truck',
+        name: 'R&I Tail Lamps (LT + RT)',
+        types: ['pdr', 'repair', 'rr'],
+        vehicles: ['truck'],
+        notes: [
+          {
+            id: 'nn-tl-truck-1',
+            text: 'Tail lamp assemblies must be removed to allow PDR tool access to the pickup bed side.',
+          },
+        ],
+      },
+      {
+        id: 'nn-high-mount-lamp',
+        name: 'R&I High Mount Lamp',
+        types: ['pdr', 'repair', 'rr'],
+        vehicles: ['truck'],
+        notes: [
+          {
+            id: 'nn-hml-1',
+            text: 'The high mount stop lamp (CHMSL) is mounted at the top of the cab rear window or tailgate and must be removed to allow full PDR tool access to the upper cab corners and roof trailing edge. Leaving it in place obstructs tool insertion and risks cracking the lamp housing from vibration or incidental contact during repair.',
           },
         ],
       },
@@ -123,13 +161,37 @@ export const PANELS: CarPanel[] = [
         ],
       },
       {
+        id: 'nn-truck-backglass',
+        name: 'Back Glass R&I',
+        types: ['pdr'],
+        vehicles: ['truck'],
+        notes: [
+          {
+            id: 'nn-truck-bg-1',
+            text: 'The back glass must be removed on pickup trucks to access the roof panel from the rear. PDR access from the sides alone does not provide full visibility of roof damage — working blind increases the risk of over-pushing or missing dents. Removal also protects the glass from heat, vibration, and debris during the repair process.',
+          },
+        ],
+      },
+      {
+        id: 'nn-truck-urethane',
+        name: 'Urethane Glass Kit ($30)',
+        types: ['pdr'],
+        vehicles: ['truck'],
+        notes: [
+          {
+            id: 'nn-truck-ur-1',
+            text: 'Replace Urethane Glass Kit ($30) — required whenever back glass is R&I or R&R. Enter as a manual line item in CCC ONE.',
+          },
+        ],
+      },
+      {
         id: 'nn-pre-scan',
         name: 'Pre-Scan',
         types: ['pdr'],
         notes: [
           {
             id: 'nn-scan-1',
-            text: 'A pre-scan is required before PDR repairs to document any existing diagnostic trouble codes (DTCs) and verify the condition of all electronic and safety systems. Accessing dents often requires removal of components like the headliner, which can trigger faults in airbag, lighting, or sensor systems.',
+            text: 'A pre-scan is required before PDR repairs to document any existing diagnostic trouble codes (DTCs) and verify the condition of all electronic and safety systems. Accessing dents often requires removal of components like the headliner, which can trigger faults in airbag, lighting, or sensor systems. Please add for Mechanical Labor Rate.',
           },
         ],
       },
@@ -140,7 +202,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'nn-scan-2',
-            text: 'A post-scan is required after PDR repairs to detect and clear any diagnostic trouble codes (DTCs) triggered during disassembly or reassembly, especially when components like the headliner and head airbags are removed. These systems are sensitive and will log faults if disconnected or disturbed.',
+            text: 'A post-scan is required after PDR repairs to detect and clear any diagnostic trouble codes (DTCs) triggered during disassembly or reassembly, especially when components like the headliner and head airbags are removed. These systems are sensitive and will log faults if disconnected or disturbed. Please add for Mechanical Labor Rate.',
           },
         ],
       },
@@ -785,6 +847,17 @@ export const PANELS: CarPanel[] = [
           },
         ],
       },
+      {
+        id: 'ltb-upper-molding',
+        name: 'R&I Upper Molding',
+        types: ['pdr'],
+        notes: [
+          {
+            id: 'ltb-um-1',
+            text: 'The upper bed molding (bed rail cap) must be removed to allow PDR wand tool access to the top edge of the pickup bed side. Dents along the upper portion of the bed panel cannot be reached from inside the bed alone — removing the molding exposes the inner flange and provides the necessary clearance to work the metal from above without obstruction.',
+          },
+        ],
+      },
     ],
   },
 
@@ -814,6 +887,17 @@ export const PANELS: CarPanel[] = [
           {
             id: 'rtb-tl-1',
             text: 'R&I Tail Lamp required on every estimate under the Rear Lamps group — needed for bed panel access.',
+          },
+        ],
+      },
+      {
+        id: 'rtb-upper-molding',
+        name: 'R&I Upper Molding',
+        types: ['pdr'],
+        notes: [
+          {
+            id: 'rtb-um-1',
+            text: 'The upper bed molding (bed rail cap) must be removed to allow PDR wand tool access to the top edge of the pickup bed side. Dents along the upper portion of the bed panel cannot be reached from inside the bed alone — removing the molding exposes the inner flange and provides the necessary clearance to work the metal from above without obstruction.',
           },
         ],
       },
@@ -876,7 +960,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'ltr-pdr-1',
-            text: 'Head airbags must be removed when performing PDR because they are mounted behind the headliner, directly in the area where tools are inserted to access dents. Leaving them in place risks accidental deployment due to pressure or movement, which will damage the airbags and create a costly repair.',
+            text: 'Head airbags must be removed when performing PDR because they are mounted behind the headliner, directly in the area where tools are inserted to access dents. Leaving them in place risks accidental deployment due to pressure or movement, which will damage the airbags and create a costly repair. Please add for Mechanical Labor Rate.',
           },
         ],
       },

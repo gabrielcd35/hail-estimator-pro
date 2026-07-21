@@ -126,7 +126,7 @@ const PANEL_GROUPS: Record<string, string[]> = {
 
 // ─── Car/Truck SVG diagram ────────────────────────────────────────────────────
 
-type VehicleType = 'sedan' | 'truck';
+type VehicleType = 'sedan' | 'suv' | 'truck';
 
 function CarDiagram({ selectedIds, onSelect, vehicleType, counts, review, maxWidth = 212, heightVh }: {
   selectedIds: string[];
@@ -386,18 +386,20 @@ const REPAIR_TABS: { type: RepairType; label: string }[] = [
   { type: 'rr',     label: 'R&R' },
 ];
 
-function PanelOps({ panel }: { panel: CarPanel }) {
+function PanelOps({ panel, vehicleType }: { panel: CarPanel; vehicleType: VehicleType | null }) {
   const availableTabs = REPAIR_TABS;
 
   const [activeType, setActiveType] = useState<RepairType>('pdr');
   const [activeOpId, setActiveOpId] = useState<string | null>(null);
+
+  const vehicleOps = panel.operations.filter(op => !op.vehicles || !vehicleType || op.vehicles.includes(vehicleType));
 
   const selectTab = (t: RepairType) => {
     setActiveType(t);
     setActiveOpId(null);
   };
 
-  const filteredOps = panel.operations.filter(op => op.types.includes(activeType));
+  const filteredOps = vehicleOps.filter(op => op.types.includes(activeType));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -405,7 +407,7 @@ function PanelOps({ panel }: { panel: CarPanel }) {
       <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
         {availableTabs.map(tab => {
           const active = activeType === tab.type;
-          const count = panel.operations.filter(op => op.types.includes(tab.type)).length;
+          const count = vehicleOps.filter(op => op.types.includes(tab.type)).length;
           return (
             <button
               key={tab.type}
@@ -574,7 +576,7 @@ function estZone(pct: number) {
   return VALUE_THRESHOLDS[2];
 }
 
-interface VinInfo { year: string; make: string; model: string; bodyClass: string; isPickup: boolean; }
+interface VinInfo { year: string; make: string; model: string; bodyClass: string; isPickup: boolean; detectedVehicle: VehicleType; }
 
 async function decodeVin(vin: string): Promise<VinInfo | null> {
   try {
@@ -582,8 +584,11 @@ async function decodeVin(vin: string): Promise<VinInfo | null> {
     const data = await res.json();
     const get = (v: string) => data.Results?.find((r: { Variable: string; Value: string }) => r.Variable === v)?.Value || '';
     const bodyClass = get('Body Class');
-    const isPickup = bodyClass.toLowerCase().includes('pickup');
-    return { year: get('Model Year'), make: get('Make'), model: get('Model'), bodyClass, isPickup };
+    const bc = bodyClass.toLowerCase();
+    const isPickup = bc.includes('pickup');
+    const isSuv = bc.includes('sport utility') || bc.includes('suv') || bc.includes('multi-purpose');
+    const detectedVehicle: VehicleType = isPickup ? 'truck' : isSuv ? 'suv' : 'sedan';
+    return { year: get('Model Year'), make: get('Make'), model: get('Model'), bodyClass, isPickup, detectedVehicle };
   } catch { return null; }
 }
 
@@ -613,7 +618,7 @@ function ValueModal({ onClose, onVehicleDetected }: {
     setVinLoading(false);
     if (!info || !info.make) { setVinError('Could not decode VIN — check and try again'); return; }
     setVinInfo(info);
-    onVehicleDetected(info.isPickup ? 'truck' : 'sedan');
+    onVehicleDetected(info.detectedVehicle);
   };
 
   const openCarfax = () => {
@@ -759,10 +764,10 @@ function ValueModal({ onClose, onVehicleDetected }: {
                     {vinInfo.year} {vinInfo.make} {vinInfo.model}
                   </div>
                   <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: 'var(--text3)', marginTop: 2, letterSpacing: .5 }}>
-                    {vinInfo.bodyClass} · set to {vinInfo.isPickup ? 'Pickup Truck' : 'Sedan / SUV'}
+                    {vinInfo.bodyClass} · set to {vinInfo.detectedVehicle === 'truck' ? 'Pickup Truck' : vinInfo.detectedVehicle === 'suv' ? 'SUV' : 'Sedan'}
                   </div>
                 </div>
-                <div style={{ fontSize: 20 }}>{vinInfo.isPickup ? '🛻' : '🚗'}</div>
+                <div style={{ fontSize: 20 }}>{vinInfo.detectedVehicle === 'truck' ? '🛻' : vinInfo.detectedVehicle === 'suv' ? '🚙' : '🚗'}</div>
               </div>
             )}
 
@@ -2298,7 +2303,7 @@ function buildChecklist(
   scanScope: ScopeResult,
   panelIds: string[],
   counts: ScanCounts,
-  vt: VehicleType,
+  vt: VehicleType | null,
 ): string {
   const v = scanScope.vehicle;
   const lines: string[] = [];
@@ -2309,7 +2314,7 @@ function buildChecklist(
     v.vin ? `VIN ${v.vin}` : '',
     v.claim ? `Claim ${v.claim}` : '',
     v.carrier || '',
-    vt === 'truck' ? 'Pickup Truck' : 'Sedan / SUV',
+    vt === 'truck' ? 'Pickup Truck' : vt === 'suv' ? 'SUV' : vt === 'sedan' ? 'Sedan' : '',
   ].filter(Boolean).join(' · ');
   if (meta) lines.push(meta);
   lines.push('');
@@ -2362,7 +2367,7 @@ function buildChecklist(
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function Home() {
-  const [vehicleType, setVehicleType] = useState<VehicleType>('sedan');
+  const [vehicleType, setVehicleType] = useState<VehicleType | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [query, setQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
@@ -2395,7 +2400,7 @@ export default function Home() {
     .flatMap(p => p.operations.flatMap(op => op.notes.map(n => n.text)))
     .join('\n\n');
 
-  const vehLabel = vehicleType === 'sedan' ? 'Sedan / SUV' : 'Pickup Truck';
+  const vehLabel = vehicleType === 'sedan' ? 'Sedan' : vehicleType === 'suv' ? 'SUV' : vehicleType === 'truck' ? 'Pickup Truck' : '';
 
   useEffect(() => {
     const saved = localStorage.getItem('hep-theme') as 'dark' | 'light' | null;
@@ -2896,14 +2901,14 @@ export default function Home() {
                 textTransform: 'uppercase', letterSpacing: '1.5px',
                 textAlign: 'center', marginBottom: 8,
               }}>What kind of vehicle?</div>
-              <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
-                {(['sedan', 'truck'] as const).map(vt => (
+              <div style={{ display: 'flex', gap: 5, marginBottom: 14 }}>
+                {([['sedan', 'Sedan'], ['suv', 'SUV'], ['truck', 'Truck']] as const).map(([vt, label]) => (
                   <button
                     key={vt}
                     onClick={() => switchVehicle(vt)}
                     style={{
-                      flex: 1, padding: '7px 8px',
-                      borderRadius: 8, fontSize: 12, cursor: 'pointer',
+                      flex: 1, padding: '7px 4px',
+                      borderRadius: 8, fontSize: 11.5, cursor: 'pointer',
                       background: vehicleType === vt ? 'var(--gold2)' : 'var(--card)',
                       color: vehicleType === vt ? 'var(--on-gold)' : 'var(--text2)',
                       border: `1px solid ${vehicleType === vt ? 'var(--gold2)' : 'var(--brd)'}`,
@@ -2911,7 +2916,7 @@ export default function Home() {
                       fontFamily: 'inherit', transition: 'all 0.15s',
                     }}
                   >
-                    {vt === 'sedan' ? 'Sedan / SUV' : 'Pickup Truck'}
+                    {label}
                   </button>
                 ))}
               </div>
@@ -2955,7 +2960,7 @@ export default function Home() {
                 textTransform: 'uppercase', letterSpacing: '1.5px',
                 textAlign: 'center', marginBottom: 12,
               }}>Click a panel</div>
-              <CarDiagram selectedIds={selectedIds} onSelect={handleSelect} vehicleType={vehicleType} />
+              <CarDiagram selectedIds={selectedIds} onSelect={handleSelect} vehicleType={vehicleType ?? 'sedan'} />
             </div>
           </aside>
 
@@ -3047,7 +3052,7 @@ export default function Home() {
                           {s.header}
                         </div>
                       )}
-                      <PanelOps key={s.panel.id} panel={s.panel} />
+                      <PanelOps key={s.panel.id} panel={s.panel} vehicleType={vehicleType} />
                     </div>
                   ));
                 })()}
