@@ -832,7 +832,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'ltb-markup-1',
-            text: 'For Pickup Trucks: add 25% markup on the Pick Up Box group — bed panels marked as Extended Panel Markup.',
+            text: 'Please add 25% markup for EXTENDED PANEL MARKUP',
           },
         ],
       },
@@ -875,7 +875,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'rtb-markup-1',
-            text: 'For Pickup Trucks: add 25% markup on the Pick Up Box group — bed panels marked as Extended Panel Markup.',
+            text: 'Please add 25% markup for EXTENDED PANEL MARKUP',
           },
         ],
       },
