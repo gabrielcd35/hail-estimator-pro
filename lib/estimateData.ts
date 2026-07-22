@@ -832,7 +832,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'ltb-markup-1',
-            text: 'Please add 25% markup for EXTENDED PANEL MARKUP',
+            text: 'Please add 25% markup for EXTENDED PANEL.',
           },
         ],
       },
@@ -875,7 +875,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'rtb-markup-1',
-            text: 'Please add 25% markup for EXTENDED PANEL MARKUP',
+            text: 'Please add 25% markup for EXTENDED PANEL.',
           },
         ],
       },
