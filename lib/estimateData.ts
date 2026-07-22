@@ -620,7 +620,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'ltq-markup-1',
-            text: 'Sail panel has no tool access — glue pull required. Add 25% markup to the Quarter Panel PDR line item.',
+            text: 'Sail panel has no tool access, glue pull required. Add 25% markup for double panel.',
           },
         ],
       },
