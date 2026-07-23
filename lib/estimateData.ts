@@ -359,7 +359,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'ws-ur-1',
-            text: 'Add Replace Urethane Glass Kit ($30) — required whenever windshield is R&I or R&R. Enter as a manual line item in CCC ONE.',
+            text: 'Required whenever windshield is R&I or R&R.',
           },
         ],
       },
