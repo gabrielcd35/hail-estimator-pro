@@ -22,6 +22,7 @@ export interface EstimateOperation {
   types: RepairType[];
   vehicles?: VehicleType[]; // if omitted, applies to all vehicle types
   notes: EstimateNote[];
+  howTo?: string; // optional CCC ONE how-to-enter tip, shown behind an (i) icon — never mixed into notes[].text
 }
 
 export interface CarPanel {
@@ -43,6 +44,7 @@ export const PANELS: CarPanel[] = [
         id: 'nn-front-bumper',
         name: 'R&I Front Bumper',
         types: ['pdr', 'repair', 'rr'],
+        howTo: 'In CCC ONE, add under the "Front Bumper" group (also listed as "Bumper & Components" or "Bumper Cover" depending on the estimate template).',
         notes: [
           {
             id: 'nn-fb-1',
@@ -54,6 +56,7 @@ export const PANELS: CarPanel[] = [
         id: 'nn-grille',
         name: 'R&I Grille',
         types: ['pdr', 'repair', 'rr'],
+        howTo: 'In CCC ONE, add under the "Grille" or "Front Bumper" group depending on how the template lists it.',
         notes: [
           {
             id: 'nn-grille-1',
@@ -65,6 +68,7 @@ export const PANELS: CarPanel[] = [
         id: 'nn-headlamps',
         name: 'R&I Headlamps (LT + RT)',
         types: ['pdr', 'repair', 'rr'],
+        howTo: 'In CCC ONE, add both LT and RT under the "Headlamps" group.',
         notes: [
           {
             id: 'nn-hl-1',
@@ -76,6 +80,7 @@ export const PANELS: CarPanel[] = [
         id: 'nn-battery',
         name: 'R&I Battery',
         types: ['pdr', 'repair', 'rr'],
+        howTo: 'In CCC ONE, add under "Electrical" or "Battery" group, billed at the Mechanical Labor Rate rather than body/paint labor.',
         notes: [
           {
             id: 'nn-bat-1',
@@ -87,6 +92,7 @@ export const PANELS: CarPanel[] = [
         id: 'nn-antenna',
         name: 'R&I Antenna',
         types: ['pdr', 'repair', 'rr'],
+        howTo: 'In CCC ONE, add under the "Antenna" line (roof-mount) or the relevant trim group if integrated into a roof rail or shark-fin housing.',
         notes: [
           {
             id: 'nn-ant-1',
@@ -106,6 +112,7 @@ export const PANELS: CarPanel[] = [
         id: 'nn-airbags',
         name: 'R&I Head Airbags (LT + RT)',
         types: ['pdr', 'repair', 'rr'],
+        howTo: 'In CCC ONE, add both LT and RT under the "Restraint Systems" group, billed at the Mechanical Labor Rate.',
         notes: [
           {
             id: 'nn-ab-1',
@@ -118,6 +125,7 @@ export const PANELS: CarPanel[] = [
         name: 'R&I Tail Lamps (LT + RT)',
         types: ['pdr', 'repair', 'rr'],
         vehicles: ['sedan', 'suv'],
+        howTo: 'In CCC ONE, add both LT and RT under the "Rear Lamps" group.',
         notes: [
           {
             id: 'nn-tl-1',
@@ -130,6 +138,7 @@ export const PANELS: CarPanel[] = [
         name: 'R&I Tail Lamps (LT + RT)',
         types: ['pdr', 'repair', 'rr'],
         vehicles: ['truck'],
+        howTo: 'In CCC ONE, add both LT and RT under the "Rear Lamps" group.',
         notes: [
           {
             id: 'nn-tl-truck-1',
@@ -142,6 +151,7 @@ export const PANELS: CarPanel[] = [
         name: 'R&I High Mount Lamp',
         types: ['pdr', 'repair', 'rr'],
         vehicles: ['truck'],
+        howTo: 'In CCC ONE, add under "Rear Lamps" or "CHMSL" if listed separately.',
         notes: [
           {
             id: 'nn-hml-1',
@@ -153,6 +163,7 @@ export const PANELS: CarPanel[] = [
         id: 'nn-rear-bumper',
         name: 'R&I Rear Bumper',
         types: ['pdr', 'repair', 'rr'],
+        howTo: 'In CCC ONE, add under the "Rear Bumper" group (also listed as "Bumper & Components" or "Bumper Cover" depending on the estimate template).',
         notes: [
           {
             id: 'nn-rb-1',
@@ -165,6 +176,7 @@ export const PANELS: CarPanel[] = [
         name: 'Back Glass R&I',
         types: ['pdr'],
         vehicles: ['truck'],
+        howTo: 'In CCC ONE, add under the "Back Glass" group.',
         notes: [
           {
             id: 'nn-truck-bg-1',
@@ -177,6 +189,7 @@ export const PANELS: CarPanel[] = [
         name: 'Urethane Glass Kit ($30)',
         types: ['pdr'],
         vehicles: ['truck'],
+        howTo: 'Enter as a manual line item in CCC ONE, $30.',
         notes: [
           {
             id: 'nn-truck-ur-1',
@@ -188,6 +201,7 @@ export const PANELS: CarPanel[] = [
         id: 'nn-pre-scan',
         name: 'Pre-Scan',
         types: ['pdr'],
+        howTo: 'In CCC ONE, add under "Diagnostics" as Pre-Scan, billed at the Mechanical Labor Rate.',
         notes: [
           {
             id: 'nn-scan-1',
@@ -199,6 +213,7 @@ export const PANELS: CarPanel[] = [
         id: 'nn-post-scan',
         name: 'Post-Scan',
         types: ['pdr'],
+        howTo: 'In CCC ONE, add under "Diagnostics" as Post-Scan, billed at the Mechanical Labor Rate.',
         notes: [
           {
             id: 'nn-scan-2',
@@ -210,6 +225,7 @@ export const PANELS: CarPanel[] = [
         id: 'nn-misc',
         name: 'Miscellaneous Line Items',
         types: ['pdr', 'repair', 'rr'],
+        howTo: 'Add each of these individually as a manual line item in CCC ONE.',
         notes: [
           { id: 'nn-misc-1', text: 'R&R Cover car/bag — add as misc line item.' },
           { id: 'nn-misc-2', text: 'R&R Hazardous Waste Removal — $10, add as misc line item.' },

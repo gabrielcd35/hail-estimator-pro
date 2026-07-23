@@ -1429,6 +1429,7 @@ function EstimateAssistantModal({ onClose, onApply }: {
   const [scope, setScope] = useState<ScopeResult | null>(null);
   const [rows, setRows] = useState<ScopePanel[]>([]);
   const [guideIdx, setGuideIdx] = useState(0);
+  const [showHowTo, setShowHowTo] = useState(false);
   const [enlarged, setEnlarged] = useState(false);
   const [saved, setSaved] = useState<AssistedEstimate[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -1916,9 +1917,38 @@ function EstimateAssistantModal({ onClose, onApply }: {
                 Every Estimate — add these on every hail claim
               </div>
 
-              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 20, color: 'var(--gold)' }}>
-                {current.name}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 20, color: 'var(--gold)' }}>
+                  {current.name}
+                </div>
+                <button
+                  onClick={() => setShowHowTo(v => !v)}
+                  title="How to enter this in CCC ONE"
+                  style={{
+                    width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+                    border: `1px solid ${showHowTo ? 'var(--gold2)' : 'var(--brd-2)'}`,
+                    background: showHowTo ? 'var(--gold-soft)' : 'var(--card)',
+                    color: showHowTo ? 'var(--gold)' : 'var(--text3)',
+                    cursor: 'pointer', fontFamily: "'Space Grotesk', sans-serif",
+                    fontSize: 11.5, fontWeight: 700, lineHeight: 1,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all .15s',
+                  }}
+                >
+                  i
+                </button>
               </div>
+
+              {showHowTo && (
+                <div style={{
+                  padding: '11px 14px', borderRadius: 9,
+                  background: 'var(--gold-soft)', border: '1px solid var(--gold-brd)',
+                  fontSize: 12, lineHeight: 1.6, color: 'var(--text2)', fontFamily: "'Public Sans', sans-serif",
+                }}>
+                  <strong style={{ color: 'var(--gold)' }}>How to add this in CCC ONE: </strong>
+                  {current.howTo || 'No CCC ONE tip added yet for this line item.'}
+                </div>
+              )}
 
               {current.notes.map(note => (
                 <div key={note.id} style={{
@@ -1938,12 +1968,12 @@ function EstimateAssistantModal({ onClose, onApply }: {
               ))}
 
               <div style={{ fontSize: 12.5, color: 'var(--text3)', fontFamily: "'Public Sans', sans-serif" }}>
-                Add this line item in CCC ONE (paste the note above), then click Next.
+                Add this line item in CCC ONE (paste the note above — tap the <strong>i</strong> for exactly where), then click Next.
               </div>
 
               <div style={{ display: 'flex', gap: 10 }}>
                 <button
-                  onClick={() => setGuideIdx(i => Math.max(0, i - 1))}
+                  onClick={() => { setGuideIdx(i => Math.max(0, i - 1)); setShowHowTo(false); }}
                   disabled={guideIdx === 0}
                   style={{
                     padding: '11px 18px', borderRadius: 9,
@@ -1959,6 +1989,7 @@ function EstimateAssistantModal({ onClose, onApply }: {
                   onClick={() => {
                     if (guideIdx < guideSteps.length - 1) setGuideIdx(i => i + 1);
                     else setStep('done');
+                    setShowHowTo(false);
                   }}
                   style={{
                     flex: 1, padding: '11px 0', borderRadius: 9,
