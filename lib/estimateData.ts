@@ -377,6 +377,37 @@ export const PANELS: CarPanel[] = [
     ],
   },
 
+  // ── Cowl Grille ───────────────────────────────────────────────────────────
+  {
+    id: 'cowl-grille',
+    label: 'Cowl Grille',
+    onDiagram: false,
+    operations: [
+      {
+        id: 'cg-wipers',
+        name: 'R&R Cowl Grille → R&I Windshield Wipers',
+        types: ['rr'],
+        notes: [
+          {
+            id: 'cg-wipers-1',
+            text: 'Windshield wipers must be removed to access and remove the cowl grille, as the wiper arms sit directly over the cowl panel and block its fasteners.',
+          },
+        ],
+      },
+      {
+        id: 'cg-arms',
+        name: 'R&R Cowl Grille → R&I Windshield Arms',
+        types: ['rr'],
+        notes: [
+          {
+            id: 'cg-arms-1',
+            text: 'Windshield wiper arms must be removed to allow the cowl grille to be lifted free of the wiper pivots during replacement.',
+          },
+        ],
+      },
+    ],
+  },
+
   // ── LT Front Door ─────────────────────────────────────────────────────────
   {
     id: 'lt-front-door',
