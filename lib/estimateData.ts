@@ -340,6 +340,18 @@ export const PANELS: CarPanel[] = [
         ],
       },
       {
+        id: 'ltf-liner',
+        name: 'R&I Fender Liner',
+        types: ['pdr'],
+        howTo: 'In CCC ONE, add under the "Fender" group as R&I Fender Liner (Splash Shield).',
+        notes: [
+          {
+            id: 'ltf-liner-1',
+            text: 'Fender liner must be R&I on panels with more than 6 dents — it provides secondary tool access from behind the fender when the primary access point is not enough to reach every dent.',
+          },
+        ],
+      },
+      {
         id: 'ltf-blend',
         name: 'Blend LT Fender',
         types: ['rr'],
