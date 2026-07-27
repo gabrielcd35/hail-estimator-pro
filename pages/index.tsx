@@ -1437,7 +1437,8 @@ function EstimateAssistantModal({ onClose, onApply }: {
   useEffect(() => { setSaved(loadAssisted()); }, []);
 
   const nn = PANELS.find(p => p.id === 'non-negotiables');
-  const guideSteps = nn ? nn.operations : [];
+  const guideVehicleType: VehicleType = scope && detectTruck(scope) ? 'truck' : 'sedan';
+  const guideSteps = nn ? nn.operations.filter(op => !op.vehicles || op.vehicles.includes(guideVehicleType)) : [];
 
   const handleFile = async (file: File) => {
     setError(''); setLoading(true);

@@ -56,6 +56,7 @@ export const PANELS: CarPanel[] = [
         id: 'nn-grille',
         name: 'R&I Grille',
         types: ['pdr', 'repair', 'rr'],
+        vehicles: ['truck'],
         howTo: 'In CCC ONE, add under the "Grille" or "Front Bumper" group depending on how the template lists it.',
         notes: [
           {
