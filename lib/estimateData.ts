@@ -403,15 +403,6 @@ export const PANELS: CarPanel[] = [
           },
         ],
       },
-    ],
-  },
-
-  // ── Cowl Grille ───────────────────────────────────────────────────────────
-  {
-    id: 'cowl-grille',
-    label: 'Cowl Grille',
-    onDiagram: false,
-    operations: [
       {
         id: 'cg-wipers',
         name: 'R&R Cowl Grille → R&I Windshield Wipers',
