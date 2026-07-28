@@ -393,7 +393,10 @@ function PanelOps({ panel, vehicleType }: { panel: CarPanel; vehicleType: Vehicl
   const [activeOpId, setActiveOpId] = useState<string | null>(null);
   const [howToOpId, setHowToOpId] = useState<string | null>(null);
 
-  const vehicleOps = panel.operations.filter(op => !op.vehicles || !vehicleType || op.vehicles.includes(vehicleType));
+  // Vehicle-restricted ops only show once a vehicle type is chosen — otherwise
+  // e.g. both the sedan/SUV and truck versions of "R&I Tail Lamps" would show
+  // at once and look like a duplicate.
+  const vehicleOps = panel.operations.filter(op => !op.vehicles || (!!vehicleType && op.vehicles.includes(vehicleType)));
 
   const selectTab = (t: RepairType) => {
     setActiveType(t);
