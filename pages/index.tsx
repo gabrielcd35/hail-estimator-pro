@@ -409,6 +409,7 @@ function PanelOps({ panel, vehicleType }: { panel: CarPanel; vehicleType: Vehicl
         {availableTabs.map(tab => {
           const active = activeType === tab.type;
           const count = vehicleOps.filter(op => op.types.includes(tab.type)).length;
+          const label = panel.tabLabelOverrides?.[tab.type] ?? tab.label;
           return (
             <button
               key={tab.type}
@@ -428,7 +429,7 @@ function PanelOps({ panel, vehicleType }: { panel: CarPanel; vehicleType: Vehicl
                 transition: 'all 0.15s ease',
               }}
             >
-              {tab.label}&nbsp;&nbsp;·&nbsp;&nbsp;{count}
+              {label}&nbsp;&nbsp;·&nbsp;&nbsp;{count}
             </button>
           );
         })}
@@ -2491,7 +2492,8 @@ function buildChecklist(
       lines.push(`[ ] Repair ${panel.label}${c?.paintHours ? ` — ${c.paintHours}h paint` : ''}`);
       for (const op of ops.filter(o => o.types.includes('repair'))) lines.push(`[ ] ${op.name}`);
     } else {
-      lines.push(`[ ] PDR ${panel.label}`);
+      const pdrLabel = panel.tabLabelOverrides?.pdr ?? 'PDR';
+      lines.push(`[ ] ${pdrLabel} ${panel.label}`);
       for (const op of ops.filter(o => o.types.includes('pdr'))) lines.push(`[ ] ${op.name}`);
     }
 

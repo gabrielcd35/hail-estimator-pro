@@ -31,6 +31,7 @@ export interface CarPanel {
   onDiagram?: boolean;       // shown on sedan/SUV SVG diagram
   onTruckDiagram?: boolean;  // shown on pickup truck SVG diagram
   operations: EstimateOperation[];
+  tabLabelOverrides?: Partial<Record<RepairType, string>>; // e.g. relabel the 'pdr' tab to 'R&I' for glass panels
 }
 
 export const PANELS: CarPanel[] = [
@@ -380,6 +381,7 @@ export const PANELS: CarPanel[] = [
     id: 'windshield',
     label: 'Windshield',
     onDiagram: false,
+    tabLabelOverrides: { pdr: 'R&I' },
     operations: [
       {
         id: 'ws-urethane',
@@ -405,8 +407,8 @@ export const PANELS: CarPanel[] = [
       },
       {
         id: 'cg-wipers',
-        name: 'R&R Cowl Grille → R&I Windshield Wipers',
-        types: ['rr'],
+        name: 'Cowl Grille R&I or R&R → R&I Windshield Wipers',
+        types: ['pdr', 'rr'],
         notes: [
           {
             id: 'cg-wipers-1',
@@ -416,12 +418,12 @@ export const PANELS: CarPanel[] = [
       },
       {
         id: 'cg-arms',
-        name: 'R&R Cowl Grille → R&I Windshield Arms',
-        types: ['rr'],
+        name: 'Cowl Grille R&I or R&R → R&I Windshield Arms',
+        types: ['pdr', 'rr'],
         notes: [
           {
             id: 'cg-arms-1',
-            text: 'Windshield wiper arms must be removed to allow the cowl grille to be lifted free of the wiper pivots during replacement.',
+            text: 'Windshield wiper arms must be removed to allow the cowl grille to be lifted free of the wiper pivots.',
           },
         ],
       },
