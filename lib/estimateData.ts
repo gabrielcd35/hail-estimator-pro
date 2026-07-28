@@ -538,11 +538,11 @@ export const PANELS: CarPanel[] = [
         id: 'roof-pdr-overhead-console',
         name: 'PDR → R&I Overhead Console',
         types: ['pdr'],
-        howTo: 'In CCC ONE, add under the "Interior" or "Overhead Console" group — separate line from the headliner.',
+        howTo: 'Overhead console can be found in CCC ONE under the "Console" group.',
         notes: [
           {
             id: 'roof-pdr-oc-1',
-            text: 'Overhead console must be R&I to remove the headliner — it is not included with the R&I of the headliner and must be added as its own line item.',
+            text: 'Overhead console must be R&I to remove the headliner.',
           },
         ],
       },

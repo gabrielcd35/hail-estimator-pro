@@ -391,6 +391,7 @@ function PanelOps({ panel, vehicleType }: { panel: CarPanel; vehicleType: Vehicl
 
   const [activeType, setActiveType] = useState<RepairType>('pdr');
   const [activeOpId, setActiveOpId] = useState<string | null>(null);
+  const [howToOpId, setHowToOpId] = useState<string | null>(null);
 
   const vehicleOps = panel.operations.filter(op => !op.vehicles || !vehicleType || op.vehicles.includes(vehicleType));
 
@@ -479,7 +480,38 @@ function PanelOps({ panel, vehicleType }: { panel: CarPanel; vehicleType: Vehicl
                   display: 'block',
                 }} />
                 <span style={{ flex: 1 }}>{op.name}</span>
+                {op.howTo && (
+                  <span
+                    role="button"
+                    onClick={e => { e.stopPropagation(); setHowToOpId(prev => (prev === op.id ? null : op.id)); }}
+                    title="How to enter this in CCC ONE"
+                    style={{
+                      width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+                      border: `1px solid ${howToOpId === op.id ? 'var(--gold)' : 'var(--brd-2)'}`,
+                      background: howToOpId === op.id ? 'var(--gold-soft)' : 'transparent',
+                      color: howToOpId === op.id ? 'var(--gold)' : (active ? 'var(--panel-sel-text)' : 'var(--text3)'),
+                      fontFamily: "'Space Grotesk', sans-serif", fontSize: 10.5, fontWeight: 700,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'all .15s', cursor: 'pointer',
+                    }}
+                  >
+                    i
+                  </span>
+                )}
               </button>
+              {active && howToOpId === op.id && op.howTo && (
+                <div style={{
+                  padding: '10px 14px',
+                  background: 'var(--gold-soft)',
+                  border: '1px solid var(--gold-brd)',
+                  borderTop: 'none',
+                  borderRadius: op.notes.length > 0 ? 0 : '0 0 9px 9px',
+                  fontSize: 12, lineHeight: 1.6, color: 'var(--text2)', fontFamily: "'Public Sans', sans-serif",
+                }}>
+                  <strong style={{ color: 'var(--gold)' }}>How to add this in CCC ONE: </strong>
+                  {op.howTo}
+                </div>
+              )}
               {active && op.notes.length > 0 && (
                 <div style={{
                   border: `1px solid var(--gold2)`,
