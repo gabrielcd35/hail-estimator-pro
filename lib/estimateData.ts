@@ -672,6 +672,27 @@ export const PANELS: CarPanel[] = [
     ],
   },
 
+  // ── PDR MAX ───────────────────────────────────────────────────────────────
+  {
+    id: 'pdr-max',
+    label: 'PDR MAX',
+    onDiagram: false,
+    operations: [
+      {
+        id: 'pdrmax-cap',
+        name: 'PDR MAX → Priced as Replace',
+        types: ['pdr'],
+        howTo: 'In CCC ONE, keep the operation set to PDR, but price the line at the panel\'s replacement (R&R) rate instead of per-dent PDR pricing.',
+        notes: [
+          {
+            id: 'pdrmax-1',
+            text: 'This panel\'s dent density exceeds the maximum count allowed under the PDR severity matrix. The method of repair remains Paintless Dent Repair, but the line is priced at the replacement rate — the ceiling the matrix allows for panel repair — rather than per-dent PDR pricing.',
+          },
+        ],
+      },
+    ],
+  },
+
   // ── LT Quarter Panel ─────────────────────────────────────────────────────
   {
     id: 'lt-quarter',
