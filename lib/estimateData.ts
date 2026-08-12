@@ -686,7 +686,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'pdrmax-1',
-            text: 'This panel\'s dent density exceeds the maximum count allowed under the PDR severity matrix. The method of repair remains Paintless Dent Repair, but the line is priced at the replacement rate — the ceiling the matrix allows for panel repair — rather than per-dent PDR pricing.',
+            text: 'PDR damages exceed the PDR matrix. The repair method stays PDR, but it is priced as a replacement — the highest amount the matrix allows for panel repair.',
           },
         ],
       },
