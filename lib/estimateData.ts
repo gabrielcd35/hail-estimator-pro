@@ -528,6 +528,19 @@ export const PANELS: CarPanel[] = [
         ],
       },
       {
+        id: 'roof-pdr-rack',
+        name: 'PDR → R&I Roof Rack / Luggage Carrier (if equipped)',
+        types: ['pdr'],
+        vehicles: ['sedan', 'suv'],
+        howTo: 'In CCC ONE, add under the "Roof Rack" or "Luggage Rack" group, if listed on the estimate.',
+        notes: [
+          {
+            id: 'roof-pdr-rack-1',
+            text: 'If equipped, the roof rack or luggage carrier must be R&I to allow full PDR tool access to the roof panel and to prevent damage to the mounting hardware during repair.',
+          },
+        ],
+      },
+      {
         id: 'roof-pdr-overhead-console',
         name: 'PDR → R&I Overhead Console',
         types: ['pdr'],
