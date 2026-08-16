@@ -536,7 +536,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'roof-pdr-rack-1',
-            text: 'If equipped, the roof rack or luggage carrier must be R&I to allow full PDR tool access to the roof panel and to prevent damage to the mounting hardware during repair.',
+            text: 'The roof rack or luggage carrier must be R&I to allow full PDR tool access to the roof panel and to prevent damage to the mounting hardware during repair.',
           },
         ],
       },
