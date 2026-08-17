@@ -541,6 +541,18 @@ export const PANELS: CarPanel[] = [
         ],
       },
       {
+        id: 'roof-pdr-sunroof',
+        name: 'PDR → R&I Sunroof Frame (drop, when applicable)',
+        types: ['pdr'],
+        howTo: 'In CCC ONE, the sunroof frame is found under the "Roof" section, when applicable.',
+        notes: [
+          {
+            id: 'roof-pdr-sunroof-1',
+            text: 'The sunroof frame must be dropped to allow PDR tool access to the roof panel around the sunroof opening.',
+          },
+        ],
+      },
+      {
         id: 'roof-pdr-overhead-console',
         name: 'PDR → R&I Overhead Console',
         types: ['pdr'],
