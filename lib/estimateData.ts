@@ -474,6 +474,18 @@ export const PANELS: CarPanel[] = [
           },
         ],
       },
+      {
+        id: 'lfd-weatherstrip',
+        name: 'R&I Door Weatherstrip',
+        types: ['repair'],
+        howTo: 'In CCC ONE, add under the "Weatherstrip" group.',
+        notes: [
+          {
+            id: 'lfd-weatherstrip-1',
+            text: 'Door weatherstrip must be R&I due to the conventional repair being performed on the adjacent roof rail — it overlaps the rail and must be removed to protect it from overspray and allow a clean blend at the rail-to-door seam.',
+          },
+        ],
+      },
     ],
   },
 
@@ -503,6 +515,18 @@ export const PANELS: CarPanel[] = [
           {
             id: 'lrd-trim-1',
             text: 'Door trim R&I required — door has 6 or more dents; interior trim removal is necessary for proper access and repair.',
+          },
+        ],
+      },
+      {
+        id: 'lrd-weatherstrip',
+        name: 'R&I Door Weatherstrip',
+        types: ['repair'],
+        howTo: 'In CCC ONE, add under the "Weatherstrip" group.',
+        notes: [
+          {
+            id: 'lrd-weatherstrip-1',
+            text: 'Door weatherstrip must be R&I due to the conventional repair being performed on the adjacent roof rail — it overlaps the rail and must be removed to protect it from overspray and allow a clean blend at the rail-to-door seam.',
           },
         ],
       },
@@ -1061,6 +1085,18 @@ export const PANELS: CarPanel[] = [
           {
             id: 'ltr-rep-2',
             text: 'Head airbags must be removed when conventionally repairing roof rails because they are mounted directly along the rails, making them vulnerable to heat, grinding, and impact damage. Leaving them in place will expose them to sparks, debris, and potential distortion, which can compromise their function and lead to deployment failure or unnecessary replacement.',
+          },
+        ],
+      },
+      {
+        id: 'ltr-repair-weatherstrip',
+        name: 'Conventional Repair → R&I Door Weatherstrip',
+        types: ['repair'],
+        howTo: 'In CCC ONE, add under the "Weatherstrip" group.',
+        notes: [
+          {
+            id: 'ltr-rep-ws-1',
+            text: 'Door weatherstrip must be R&I when conventionally repairing the roof rail — it overlaps the rail along the door opening and must come off for proper access and a clean paint blend.',
           },
         ],
       },
