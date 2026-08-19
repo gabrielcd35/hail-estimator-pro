@@ -2005,7 +2005,9 @@ function EstimateAssistantModal({ onClose, onApply }: {
               ))}
 
               <div style={{ fontSize: 12.5, color: 'var(--text3)', fontFamily: "'Public Sans', sans-serif" }}>
-                Add this line item in CCC ONE (paste the note above — tap the <strong>i</strong> for exactly where), then click Next.
+                {current.notes.length > 0
+                  ? <>Add this line item in CCC ONE (paste the note above — tap the <strong>i</strong> for exactly where), then click Next.</>
+                  : <>Add this line item in CCC ONE (tap the <strong>i</strong> for exactly where), then click Next.</>}
               </div>
 
               <div style={{ display: 'flex', gap: 10 }}>
