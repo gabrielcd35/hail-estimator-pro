@@ -2131,7 +2131,16 @@ function PdfToJpgModal({ onClose }: { onClose: () => void }) {
         // Flatten transparency onto white — JPEG has no alpha channel
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        await page.render({ canvasContext: ctx, viewport }).promise;
+        // pdfjs-dist v5+ requires canvas:null when rendering via canvasContext
+        // directly — passing a canvas that already has a 2D context obtained
+        // makes pdfjs try to transferControlToOffscreen() it internally, which
+        // throws (context already exists) and hangs the render promise forever
+        // instead of rejecting. Timeout guard below is a second safety net.
+        const renderPromise = page.render({ canvas: null, canvasContext: ctx, viewport }).promise;
+        await Promise.race([
+          renderPromise,
+          new Promise((_, reject) => setTimeout(() => reject(new Error(`Timed out rendering page ${i}`)), 20000)),
+        ]);
 
         const blob: Blob | null = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', jpegQuality));
         if (blob) {
