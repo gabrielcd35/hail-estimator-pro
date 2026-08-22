@@ -2078,10 +2078,285 @@ interface HailReport {
   county: string; state: string; distanceMi: number;
 }
 
-interface HailDay { date: string; count: number; maxSize: number; minDist: number; maxCity: string; }
-interface LiveAlert {
-  event: string; areaDesc: string; office: string;
-  sent: string; expires: string; hailSize: number; hailThreat: string;
+// ─── PDF → JPG Converter Modal ────────────────────────────────────────────────
+// Fully client-side via pdfjs-dist — the file never leaves the browser.
+
+interface ConvertedPage {
+  pageNum: number;
+  url: string;
+  width: number;
+  height: number;
+  sizeKB: number;
+}
+
+function PdfToJpgModal({ onClose }: { onClose: () => void }) {
+  const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState({ done: 0, total: 0 });
+  const [error, setError] = useState('');
+  const [fileName, setFileName] = useState('');
+  const [quality, setQuality] = useState<'standard' | 'high'>('standard');
+  const [pages, setPages] = useState<ConvertedPage[]>([]);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const reset = () => {
+    pages.forEach(p => URL.revokeObjectURL(p.url));
+    setPages([]); setError(''); setFileName(''); setProgress({ done: 0, total: 0 });
+  };
+
+  const handleFile = async (file: File) => {
+    reset();
+    if (file.type !== 'application/pdf') { setError('Please choose a PDF file.'); return; }
+    setLoading(true);
+    setFileName(file.name.replace(/\.pdf$/i, ''));
+    try {
+      const pdfjsLib = await import('pdfjs-dist');
+      pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      setProgress({ done: 0, total: pdf.numPages });
+
+      const scale = quality === 'high' ? 3 : 1.8;
+      const jpegQuality = quality === 'high' ? 0.95 : 0.88;
+      const results: ConvertedPage[] = [];
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale });
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.ceil(viewport.width);
+        canvas.height = Math.ceil(viewport.height);
+        const ctx = canvas.getContext('2d');
+        if (!ctx) continue;
+        // Flatten transparency onto white — JPEG has no alpha channel
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        await page.render({ canvasContext: ctx, viewport }).promise;
+
+        const blob: Blob | null = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', jpegQuality));
+        if (blob) {
+          results.push({
+            pageNum: i,
+            url: URL.createObjectURL(blob),
+            width: canvas.width,
+            height: canvas.height,
+            sizeKB: Math.round(blob.size / 1024),
+          });
+        }
+        setProgress({ done: i, total: pdf.numPages });
+      }
+
+      setPages(results);
+    } catch (e) {
+      setError(e instanceof Error ? `Could not convert this PDF — ${e.message}` : 'Could not convert this PDF.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const downloadPage = (p: ConvertedPage) => {
+    const a = document.createElement('a');
+    a.href = p.url;
+    a.download = pages.length > 1 ? `${fileName}-page-${p.pageNum}.jpg` : `${fileName}.jpg`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
+  const downloadAll = async () => {
+    for (const p of pages) {
+      downloadPage(p);
+      await new Promise(r => setTimeout(r, 300)); // let each download start before the next
+    }
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 300,
+        background: 'rgba(0,0,0,.55)',
+        backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: 620, maxHeight: '90vh', overflowY: 'auto',
+          background: 'var(--panel-bg)', borderRadius: 16,
+          border: '1px solid var(--brd-2)', boxShadow: '0 24px 80px rgba(0,0,0,.6)',
+        }}
+      >
+        {/* Modal header */}
+        <div style={{
+          padding: '18px 24px', borderBottom: '1px solid var(--brd)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <div>
+            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 17, color: 'var(--gold)' }}>
+              PDF → JPG
+            </div>
+            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: 'var(--text3)', letterSpacing: 1.5, marginTop: 2 }}>
+              CONVERTS IN YOUR BROWSER · FILE NEVER UPLOADED
+            </div>
+          </div>
+          <button onClick={onClose} style={{
+            width: 32, height: 32, borderRadius: 8, border: '1px solid var(--brd)',
+            background: 'var(--input-bg)', color: 'var(--text2)', cursor: 'pointer',
+            fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>×</button>
+        </div>
+
+        <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+          {pages.length === 0 && (
+            <>
+              {/* Quality toggle */}
+              <div>
+                <div style={{ fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", color: 'var(--text3)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 }}>
+                  Quality
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {(['standard', 'high'] as const).map(q => (
+                    <button key={q} onClick={() => setQuality(q)} style={{
+                      padding: '6px 16px', borderRadius: 7, fontSize: 12, fontWeight: 600,
+                      fontFamily: "'Public Sans', sans-serif", cursor: 'pointer', transition: 'all .15s',
+                      background: quality === q ? 'var(--gold2)' : 'var(--card)',
+                      color: quality === q ? 'var(--on-gold)' : 'var(--text2)',
+                      border: quality === q ? '1px solid var(--gold2)' : '1px solid var(--brd)',
+                    }}>
+                      {q === 'standard' ? 'Standard' : 'High Quality'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Upload area */}
+              <button
+                onClick={() => fileRef.current?.click()}
+                disabled={loading}
+                style={{
+                  border: '2px dashed var(--brd-2)', borderRadius: 12,
+                  background: 'var(--card)', color: 'var(--text2)',
+                  padding: '36px 20px', cursor: loading ? 'wait' : 'pointer',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+                  fontFamily: "'Public Sans', sans-serif", transition: 'all .15s',
+                }}
+              >
+                {loading ? (
+                  <>
+                    <div style={{ fontSize: 26 }}>⏳</div>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>
+                      Converting page {progress.done} of {progress.total}…
+                    </div>
+                    <div style={{ width: '100%', maxWidth: 240, height: 4, background: 'var(--brd)', borderRadius: 2, overflow: 'hidden' }}>
+                      <div style={{
+                        width: progress.total ? `${(progress.done / progress.total) * 100}%` : '0%',
+                        height: '100%', background: 'var(--gold2)', transition: 'width .2s',
+                      }} />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                      <polyline points="14 2 14 8 20 8"/>
+                    </svg>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>Upload a PDF to convert</div>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: 'var(--text3)' }}>
+                      Each page becomes its own JPG — nothing leaves your device
+                    </div>
+                  </>
+                )}
+              </button>
+              <input
+                ref={fileRef} type="file" accept="application/pdf,.pdf" style={{ display: 'none' }}
+                onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }}
+              />
+            </>
+          )}
+
+          {error && (
+            <div style={{
+              padding: '12px 16px', borderRadius: 9, fontSize: 13,
+              background: 'rgba(239,68,68,.12)', border: '1px solid rgba(239,68,68,.28)',
+              color: '#ef4444', fontFamily: "'Public Sans', sans-serif",
+            }}>
+              {error}
+            </div>
+          )}
+
+          {/* Results */}
+          {pages.length > 0 && (
+            <>
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '12px 16px', borderRadius: 10,
+                background: 'rgba(34,197,94,.12)', border: '1px solid rgba(34,197,94,.28)',
+              }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: '#22c55e', fontFamily: "'Public Sans', sans-serif" }}>
+                  ✓ Converted {pages.length} page{pages.length !== 1 ? 's' : ''}
+                </div>
+                {pages.length > 1 && (
+                  <button
+                    onClick={downloadAll}
+                    style={{
+                      padding: '7px 14px', borderRadius: 8,
+                      background: 'var(--gold2)', color: 'var(--on-gold)', border: 'none',
+                      cursor: 'pointer', fontFamily: "'Public Sans', sans-serif", fontWeight: 700, fontSize: 12,
+                    }}
+                  >
+                    Download All
+                  </button>
+                )}
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12 }}>
+                {pages.map(p => (
+                  <div key={p.pageNum} style={{
+                    border: '1px solid var(--brd)', borderRadius: 10, overflow: 'hidden',
+                    background: 'var(--card)', display: 'flex', flexDirection: 'column',
+                  }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={p.url} alt={`Page ${p.pageNum}`} style={{ width: '100%', display: 'block', borderBottom: '1px solid var(--brd)' }} />
+                    <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: 'var(--text3)' }}>
+                        Page {p.pageNum} · {p.sizeKB} KB
+                      </div>
+                      <button
+                        onClick={() => downloadPage(p)}
+                        style={{
+                          padding: '6px 0', borderRadius: 7, fontSize: 11.5, fontWeight: 700,
+                          background: 'var(--card)', color: 'var(--gold)',
+                          border: '1px solid var(--gold-brd)', cursor: 'pointer',
+                          fontFamily: "'Public Sans', sans-serif",
+                        }}
+                      >
+                        Download JPG
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={reset}
+                style={{
+                  padding: '10px 0', borderRadius: 9,
+                  background: 'var(--card)', color: 'var(--text2)',
+                  border: '1px solid var(--brd)', cursor: 'pointer',
+                  fontFamily: "'Public Sans', sans-serif", fontWeight: 600, fontSize: 13,
+                }}
+              >
+                Convert another PDF
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function HailModal({ onClose }: { onClose: () => void }) {
@@ -2525,6 +2800,7 @@ export default function Home() {
   const [showScopeModal, setShowScopeModal] = useState(false);
   const [showHailModal, setShowHailModal] = useState(false);
   const [showAssistModal, setShowAssistModal] = useState(false);
+  const [showPdfModal, setShowPdfModal] = useState(false);
   const [scanCounts, setScanCounts] = useState<ScanCounts>({});
   const [lastScan, setLastScan] = useState<ScopeResult | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
@@ -2588,7 +2864,7 @@ export default function Home() {
         const el = document.getElementById('hep-search-input');
         if (el) (el as HTMLInputElement).focus();
       }
-      if (e.key === 'Escape') { setShowValueModal(false); setShowScopeModal(false); setShowHailModal(false); setShowAssistModal(false); }
+      if (e.key === 'Escape') { setShowValueModal(false); setShowScopeModal(false); setShowHailModal(false); setShowAssistModal(false); setShowPdfModal(false); }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
@@ -2936,6 +3212,20 @@ export default function Home() {
             Hail History
           </button>
 
+          {/* PDF to JPG button */}
+          <button
+            onClick={() => setShowPdfModal(true)}
+            style={{
+              flexShrink: 0,
+              fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: 'var(--text2)',
+              background: 'none', letterSpacing: 0.5,
+              padding: '6px 12px', border: '1px solid var(--brd)', borderRadius: 8,
+              cursor: 'pointer', transition: 'all .15s', whiteSpace: 'nowrap',
+            }}
+          >
+            PDF → JPG
+          </button>
+
           {/* Vehicle Value button */}
           <button
             onClick={() => setShowValueModal(true)}
@@ -3243,6 +3533,9 @@ export default function Home() {
             onVehicleDetected={vt => { switchVehicle(vt); }}
           />
         )}
+
+        {/* ── PDF to JPG Modal ── */}
+        {showPdfModal && <PdfToJpgModal onClose={() => setShowPdfModal(false)} />}
 
         {/* ── Scope Sheet Modal ── */}
         {/* ── Hail History Modal ── */}
