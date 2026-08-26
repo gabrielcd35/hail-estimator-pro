@@ -2094,7 +2094,7 @@ function PdfToJpgModal({ onClose }: { onClose: () => void }) {
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [error, setError] = useState('');
   const [fileName, setFileName] = useState('');
-  const [quality, setQuality] = useState<'standard' | 'high'>('standard');
+  const [quality, setQuality] = useState<'standard' | 'high'>('high');
   const [pages, setPages] = useState<ConvertedPage[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -2227,7 +2227,7 @@ function PdfToJpgModal({ onClose }: { onClose: () => void }) {
                   Quality
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>
-                  {(['standard', 'high'] as const).map(q => (
+                  {(['high', 'standard'] as const).map(q => (
                     <button key={q} onClick={() => setQuality(q)} style={{
                       padding: '6px 16px', borderRadius: 7, fontSize: 12, fontWeight: 600,
                       fontFamily: "'Public Sans', sans-serif", cursor: 'pointer', transition: 'all .15s',
