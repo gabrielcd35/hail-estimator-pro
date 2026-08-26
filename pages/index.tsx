@@ -2495,6 +2495,103 @@ function PdfToJpgModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+// ─── Budget App Password Gate ─────────────────────────────────────────────────
+
+const BUDGET_APP_URL = 'https://orcamentos-app-iota.vercel.app/';
+const BUDGET_APP_PASSWORD = '4815162342';
+
+function BudgetGateModal({ onClose }: { onClose: () => void }) {
+  const [pw, setPw] = useState('');
+  const [error, setError] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { inputRef.current?.focus(); }, []);
+
+  const submit = () => {
+    if (pw === BUDGET_APP_PASSWORD) {
+      window.open(BUDGET_APP_URL, '_blank', 'noopener,noreferrer');
+      onClose();
+    } else {
+      setError('Incorrect password.');
+      setPw('');
+    }
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 300,
+        background: 'rgba(0,0,0,.55)',
+        backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: 360,
+          background: 'var(--panel-bg)', borderRadius: 16,
+          border: '1px solid var(--brd-2)', boxShadow: '0 24px 80px rgba(0,0,0,.6)',
+        }}
+      >
+        <div style={{
+          padding: '18px 24px', borderBottom: '1px solid var(--brd)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16, color: 'var(--gold)' }}>
+              Budget App
+            </div>
+          </div>
+          <button onClick={onClose} style={{
+            width: 30, height: 30, borderRadius: 8, border: '1px solid var(--brd)',
+            background: 'var(--input-bg)', color: 'var(--text2)', cursor: 'pointer',
+            fontSize: 17, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>×</button>
+        </div>
+
+        <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ fontSize: 12.5, color: 'var(--text3)', fontFamily: "'Public Sans', sans-serif" }}>
+            Enter the password to open the budget control app.
+          </div>
+          <input
+            ref={inputRef}
+            type="password"
+            value={pw}
+            onChange={e => { setPw(e.target.value); setError(''); }}
+            onKeyDown={e => e.key === 'Enter' && submit()}
+            placeholder="Password"
+            style={{
+              width: '100%', padding: '10px 14px', fontSize: 14,
+              fontFamily: "'IBM Plex Mono', monospace",
+              background: 'var(--input-bg)', border: `1px solid ${error ? '#ef4444' : 'var(--brd-2)'}`,
+              borderRadius: 8, color: 'var(--text)', outline: 'none',
+            }}
+          />
+          {error && (
+            <div style={{ fontSize: 12, color: '#ef4444', fontFamily: "'Public Sans', sans-serif" }}>{error}</div>
+          )}
+          <button
+            onClick={submit}
+            style={{
+              padding: '10px 0', borderRadius: 9,
+              background: 'var(--gold2)', color: 'var(--on-gold)', border: 'none',
+              cursor: 'pointer', fontFamily: "'Public Sans', sans-serif", fontWeight: 700, fontSize: 13.5,
+            }}
+          >
+            Unlock
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function HailModal({ onClose }: { onClose: () => void }) {
   const [mode, setMode] = useState<'date' | 'year' | 'live'>('date');
   const [zip, setZip] = useState('');
@@ -2937,6 +3034,7 @@ export default function Home() {
   const [showHailModal, setShowHailModal] = useState(false);
   const [showAssistModal, setShowAssistModal] = useState(false);
   const [showPdfModal, setShowPdfModal] = useState(false);
+  const [showBudgetGate, setShowBudgetGate] = useState(false);
   const [scanCounts, setScanCounts] = useState<ScanCounts>({});
   const [lastScan, setLastScan] = useState<ScopeResult | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
@@ -3000,7 +3098,7 @@ export default function Home() {
         const el = document.getElementById('hep-search-input');
         if (el) (el as HTMLInputElement).focus();
       }
-      if (e.key === 'Escape') { setShowValueModal(false); setShowScopeModal(false); setShowHailModal(false); setShowAssistModal(false); setShowPdfModal(false); }
+      if (e.key === 'Escape') { setShowValueModal(false); setShowScopeModal(false); setShowHailModal(false); setShowAssistModal(false); setShowPdfModal(false); setShowBudgetGate(false); }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
@@ -3376,6 +3474,25 @@ export default function Home() {
             Vehicle Value
           </button>
 
+          {/* Budget App (password gated) */}
+          <button
+            onClick={() => setShowBudgetGate(true)}
+            title="Open Budget App"
+            style={{
+              flexShrink: 0,
+              width: 36, height: 36, borderRadius: 9,
+              border: '1px solid var(--brd)', background: 'var(--input-bg)',
+              color: 'var(--text2)', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'all 0.15s',
+            }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+          </button>
+
           {/* Theme toggle */}
           <button
             onClick={toggleTheme}
@@ -3672,6 +3789,9 @@ export default function Home() {
 
         {/* ── PDF to JPG Modal ── */}
         {showPdfModal && <PdfToJpgModal onClose={() => setShowPdfModal(false)} />}
+
+        {/* ── Budget App Gate ── */}
+        {showBudgetGate && <BudgetGateModal onClose={() => setShowBudgetGate(false)} />}
 
         {/* ── Scope Sheet Modal ── */}
         {/* ── Hail History Modal ── */}
