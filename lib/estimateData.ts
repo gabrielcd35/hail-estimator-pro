@@ -752,6 +752,75 @@ export const PANELS: CarPanel[] = [
     ],
   },
 
+  // ── Markups ───────────────────────────────────────────────────────────────
+  {
+    id: 'markups',
+    label: 'Markups',
+    onDiagram: false,
+    operations: [
+      {
+        id: 'markup-hss',
+        name: 'HSS (High Strength Steel) Markup',
+        types: ['pdr'],
+        howTo: 'In CCC ONE, add as a percentage markup on the panel\'s PDR line item.',
+        notes: [
+          {
+            id: 'markup-hss-1',
+            text: 'High strength steel resists dent removal more than mild steel, requiring more time and specialized tooling to work the panel without cracking the metal or damaging the finish.',
+          },
+        ],
+      },
+      {
+        id: 'markup-tall',
+        name: 'Tall Vehicle Markup',
+        types: ['pdr'],
+        howTo: 'In CCC ONE, add as a percentage markup on the affected panel\'s PDR line item.',
+        notes: [
+          {
+            id: 'markup-tall-1',
+            text: 'Vehicle height requires a ladder or lift to safely reach and work the panel, adding time beyond what a standard-height vehicle requires.',
+          },
+        ],
+      },
+      {
+        id: 'markup-extended',
+        name: 'Extended Panel Markup',
+        types: ['pdr'],
+        howTo: 'In CCC ONE, add as a percentage markup on the panel\'s PDR line item.',
+        notes: [
+          {
+            id: 'markup-extended-1',
+            text: 'Panel size exceeds standard dimensions, requiring additional tool time and reach to fully access and repair the entire surface.',
+          },
+        ],
+      },
+      {
+        id: 'markup-aluminum',
+        name: 'Aluminum Markup',
+        types: ['pdr'],
+        howTo: 'In CCC ONE, add as a percentage markup on the panel\'s PDR line item.',
+        notes: [
+          {
+            id: 'markup-aluminum-1',
+            text: 'Aluminum panels are more prone to cracking and stretching than steel, requiring specialized tools and slower, more careful technique to avoid overworking the metal.',
+          },
+        ],
+      },
+      {
+        id: 'markup-gluepull',
+        name: 'Glue Pull Markup',
+        types: ['pdr'],
+        howTo: 'In CCC ONE, add as a percentage markup on the panel\'s PDR line item.',
+        notes: [
+          {
+            id: 'markup-gluepull-1',
+            text: 'No direct tool access to the dent — repair requires the glue pull system (tabs, glue, slide hammer), which adds setup, curing, and cleanup time that direct-access repair does not.',
+          },
+        ],
+      },
+    ],
+  },
+
   // ── LT Quarter Panel ─────────────────────────────────────────────────────
   {
     id: 'lt-quarter',
