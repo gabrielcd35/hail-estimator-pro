@@ -2096,11 +2096,46 @@ function PdfToJpgModal({ onClose }: { onClose: () => void }) {
   const [fileName, setFileName] = useState('');
   const [quality, setQuality] = useState<'standard' | 'high'>('high');
   const [pages, setPages] = useState<ConvertedPage[]>([]);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [rangeInput, setRangeInput] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
   const reset = () => {
     pages.forEach(p => URL.revokeObjectURL(p.url));
     setPages([]); setError(''); setFileName(''); setProgress({ done: 0, total: 0 });
+    setSelected(new Set()); setRangeInput('');
+  };
+
+  // Parses "1-3, 5, 7-9" into a set of valid page numbers, clamped to the doc.
+  const parseRange = (input: string, maxPage: number): Set<number> => {
+    const result = new Set<number>();
+    for (const part of input.split(',')) {
+      const trimmed = part.trim();
+      if (!trimmed) continue;
+      const m = trimmed.match(/^(\d+)\s*-\s*(\d+)$/);
+      if (m) {
+        let [a, b] = [parseInt(m[1], 10), parseInt(m[2], 10)];
+        if (a > b) [a, b] = [b, a];
+        for (let n = a; n <= b; n++) if (n >= 1 && n <= maxPage) result.add(n);
+      } else if (/^\d+$/.test(trimmed)) {
+        const n = parseInt(trimmed, 10);
+        if (n >= 1 && n <= maxPage) result.add(n);
+      }
+    }
+    return result;
+  };
+
+  const applyRange = () => {
+    if (!rangeInput.trim()) return;
+    setSelected(parseRange(rangeInput, pages.length));
+  };
+
+  const togglePage = (n: number) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(n)) next.delete(n); else next.add(n);
+      return next;
+    });
   };
 
   const handleFile = async (file: File) => {
@@ -2176,6 +2211,14 @@ function PdfToJpgModal({ onClose }: { onClose: () => void }) {
     for (const p of pages) {
       downloadPage(p);
       await new Promise(r => setTimeout(r, 300)); // let each download start before the next
+    }
+  };
+
+  const downloadSelected = async () => {
+    for (const p of pages) {
+      if (!selected.has(p.pageNum)) continue;
+      downloadPage(p);
+      await new Promise(r => setTimeout(r, 300));
     }
   };
 
@@ -2321,12 +2364,96 @@ function PdfToJpgModal({ onClose }: { onClose: () => void }) {
                 )}
               </div>
 
+              {/* Page range / selection controls */}
+              {pages.length > 1 && (
+                <div style={{
+                  display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8,
+                  padding: '10px 12px', borderRadius: 10,
+                  background: 'var(--card)', border: '1px solid var(--brd)',
+                }}>
+                  <input
+                    value={rangeInput}
+                    onChange={e => setRangeInput(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && applyRange()}
+                    placeholder="e.g. 1-3, 5, 7"
+                    style={{
+                      flex: '1 1 140px', minWidth: 100, padding: '7px 10px', fontSize: 12.5,
+                      fontFamily: "'IBM Plex Mono', monospace",
+                      background: 'var(--input-bg)', border: '1px solid var(--brd-2)',
+                      borderRadius: 7, color: 'var(--text)', outline: 'none',
+                    }}
+                  />
+                  <button onClick={applyRange} style={{
+                    padding: '7px 12px', borderRadius: 7, fontSize: 11.5, fontWeight: 700,
+                    background: 'var(--card)', color: 'var(--text2)',
+                    border: '1px solid var(--brd)', cursor: 'pointer', fontFamily: "'Public Sans', sans-serif",
+                  }}>
+                    Select Range
+                  </button>
+                  <button onClick={() => setSelected(new Set(pages.map(p => p.pageNum)))} style={{
+                    padding: '7px 12px', borderRadius: 7, fontSize: 11.5, fontWeight: 600,
+                    background: 'none', color: 'var(--text3)',
+                    border: '1px solid var(--brd)', cursor: 'pointer', fontFamily: "'Public Sans', sans-serif",
+                  }}>
+                    Select All
+                  </button>
+                  {selected.size > 0 && (
+                    <button onClick={() => setSelected(new Set())} style={{
+                      padding: '7px 12px', borderRadius: 7, fontSize: 11.5, fontWeight: 600,
+                      background: 'none', color: 'var(--text3)',
+                      border: '1px solid var(--brd)', cursor: 'pointer', fontFamily: "'Public Sans', sans-serif",
+                    }}>
+                      Clear
+                    </button>
+                  )}
+                  <div style={{ flexGrow: 1 }} />
+                  <button
+                    onClick={downloadSelected}
+                    disabled={selected.size === 0}
+                    style={{
+                      padding: '7px 14px', borderRadius: 7, fontSize: 12, fontWeight: 700,
+                      background: selected.size > 0 ? 'var(--gold-soft)' : 'var(--card)',
+                      color: selected.size > 0 ? 'var(--gold)' : 'var(--text3)',
+                      border: `1px solid ${selected.size > 0 ? 'var(--gold-brd)' : 'var(--brd)'}`,
+                      cursor: selected.size > 0 ? 'pointer' : 'default',
+                      fontFamily: "'Public Sans', sans-serif", whiteSpace: 'nowrap',
+                    }}
+                  >
+                    Download Selected {selected.size > 0 ? `(${selected.size})` : ''}
+                  </button>
+                </div>
+              )}
+
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12 }}>
                 {pages.map(p => (
                   <div key={p.pageNum} style={{
-                    border: '1px solid var(--brd)', borderRadius: 10, overflow: 'hidden',
+                    position: 'relative',
+                    border: `1px solid ${selected.has(p.pageNum) ? 'var(--gold2)' : 'var(--brd)'}`,
+                    borderRadius: 10, overflow: 'hidden',
                     background: 'var(--card)', display: 'flex', flexDirection: 'column',
                   }}>
+                    {pages.length > 1 && (
+                      <label style={{
+                        position: 'absolute', top: 6, left: 6, zIndex: 1,
+                        width: 20, height: 20, borderRadius: 5,
+                        background: selected.has(p.pageNum) ? 'var(--gold2)' : 'rgba(0,0,0,.55)',
+                        border: `1px solid ${selected.has(p.pageNum) ? 'var(--gold2)' : 'var(--brd-2)'}`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'pointer',
+                      }}>
+                        <input
+                          type="checkbox"
+                          checked={selected.has(p.pageNum)}
+                          onChange={() => togglePage(p.pageNum)}
+                          style={{ position: 'absolute', opacity: 0, width: 20, height: 20, cursor: 'pointer' }}
+                        />
+                        {selected.has(p.pageNum) && (
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--on-gold)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12"/>
+                          </svg>
+                        )}
+                      </label>
+                    )}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={p.url} alt={`Page ${p.pageNum}`} style={{ width: '100%', display: 'block', borderBottom: '1px solid var(--brd)' }} />
                     <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
