@@ -136,6 +136,19 @@ export const PANELS: CarPanel[] = [
         ],
       },
       {
+        id: 'nn-truck-urethane',
+        name: 'Urethane Glass Kit ($30)',
+        types: ['pdr'],
+        vehicles: ['truck'],
+        howTo: 'Enter as a manual line item in CCC ONE, $30.',
+        notes: [
+          {
+            id: 'nn-truck-ur-1',
+            text: 'Replace Urethane Glass Kit ($30) — required whenever back glass is R&I or R&R. Enter as a manual line item in CCC ONE.',
+          },
+        ],
+      },
+      {
         id: 'nn-taillamps',
         name: 'R&I Tail Lamps (LT + RT)',
         types: ['pdr', 'repair', 'rr'],
@@ -183,19 +196,6 @@ export const PANELS: CarPanel[] = [
           {
             id: 'nn-rb-1',
             text: 'The bumper cover must be removed to remove the tail lamps because modern vehicle designs secure the tail lamps with fasteners that are hidden beneath or behind the bumper cover.',
-          },
-        ],
-      },
-      {
-        id: 'nn-truck-urethane',
-        name: 'Urethane Glass Kit ($30)',
-        types: ['pdr'],
-        vehicles: ['truck'],
-        howTo: 'Enter as a manual line item in CCC ONE, $30.',
-        notes: [
-          {
-            id: 'nn-truck-ur-1',
-            text: 'Replace Urethane Glass Kit ($30) — required whenever back glass is R&I or R&R. Enter as a manual line item in CCC ONE.',
           },
         ],
       },
