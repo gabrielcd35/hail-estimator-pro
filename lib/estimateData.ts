@@ -123,6 +123,19 @@ export const PANELS: CarPanel[] = [
         ],
       },
       {
+        id: 'nn-truck-backglass',
+        name: 'Back Glass R&I',
+        types: ['pdr'],
+        vehicles: ['truck'],
+        howTo: 'In CCC ONE, add under the "Back Glass" group.',
+        notes: [
+          {
+            id: 'nn-truck-bg-1',
+            text: 'The back glass must be removed on pickup trucks to access the roof panel from the rear. PDR access from the sides alone does not provide full visibility of roof damage — working blind increases the risk of over-pushing or missing dents. Removal also protects the glass from heat, vibration, and debris during the repair process.',
+          },
+        ],
+      },
+      {
         id: 'nn-taillamps',
         name: 'R&I Tail Lamps (LT + RT)',
         types: ['pdr', 'repair', 'rr'],
@@ -170,19 +183,6 @@ export const PANELS: CarPanel[] = [
           {
             id: 'nn-rb-1',
             text: 'The bumper cover must be removed to remove the tail lamps because modern vehicle designs secure the tail lamps with fasteners that are hidden beneath or behind the bumper cover.',
-          },
-        ],
-      },
-      {
-        id: 'nn-truck-backglass',
-        name: 'Back Glass R&I',
-        types: ['pdr'],
-        vehicles: ['truck'],
-        howTo: 'In CCC ONE, add under the "Back Glass" group.',
-        notes: [
-          {
-            id: 'nn-truck-bg-1',
-            text: 'The back glass must be removed on pickup trucks to access the roof panel from the rear. PDR access from the sides alone does not provide full visibility of roof damage — working blind increases the risk of over-pushing or missing dents. Removal also protects the glass from heat, vibration, and debris during the repair process.',
           },
         ],
       },
