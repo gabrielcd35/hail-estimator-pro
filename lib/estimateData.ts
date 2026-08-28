@@ -766,7 +766,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'markup-hss-1',
-            text: 'High strength steel resists dent removal more than mild steel, requiring more time and specialized tooling to work the panel without cracking the metal or damaging the finish.',
+            text: 'High strength steel resists dent removal more than mild steel, requiring more time and specialized tooling to work the panel without cracking the metal or damaging the finish. Add 25% markup.',
           },
         ],
       },
@@ -778,7 +778,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'markup-tall-1',
-            text: 'Vehicle height requires a ladder or lift to safely reach and work the panel, adding time beyond what a standard-height vehicle requires.',
+            text: 'Vehicle height requires a ladder or lift to safely reach and work the panel, adding time beyond what a standard-height vehicle requires. Add 25% markup.',
           },
         ],
       },
@@ -790,7 +790,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'markup-extended-1',
-            text: 'Panel size exceeds standard dimensions, requiring additional tool time and reach to fully access and repair the entire surface.',
+            text: 'Panel size exceeds standard dimensions, requiring additional tool time and reach to fully access and repair the entire surface. Add 25% markup.',
           },
         ],
       },
@@ -802,7 +802,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'markup-aluminum-1',
-            text: 'Aluminum panels are more prone to cracking and stretching than steel, requiring specialized tools and slower, more careful technique to avoid overworking the metal.',
+            text: 'Aluminum panels are more prone to cracking and stretching than steel, requiring specialized tools and slower, more careful technique to avoid overworking the metal. Add 25% markup.',
           },
         ],
       },
@@ -814,7 +814,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'markup-gluepull-1',
-            text: 'No direct tool access to the dent — repair requires the glue pull system (tabs, glue, slide hammer), which adds setup, curing, and cleanup time that direct-access repair does not.',
+            text: 'No direct tool access to the dent — repair requires the glue pull system (tabs, glue, slide hammer), which adds setup, curing, and cleanup time that direct-access repair does not. Add 25% markup.',
           },
         ],
       },
