@@ -2095,6 +2095,7 @@ function PdfToJpgModal({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState('');
   const [fileName, setFileName] = useState('');
   const [quality, setQuality] = useState<'standard' | 'high'>('high');
+  const [isDragging, setIsDragging] = useState(false);
   const [pages, setPages] = useState<ConvertedPage[]>([]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [rangeInput, setRangeInput] = useState('');
@@ -2288,9 +2289,21 @@ function PdfToJpgModal({ onClose }: { onClose: () => void }) {
               <button
                 onClick={() => fileRef.current?.click()}
                 disabled={loading}
+                onDragEnter={e => { e.preventDefault(); e.stopPropagation(); if (!loading) setIsDragging(true); }}
+                onDragOver={e => { e.preventDefault(); e.stopPropagation(); if (!loading) setIsDragging(true); }}
+                onDragLeave={e => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); }}
+                onDrop={e => {
+                  e.preventDefault(); e.stopPropagation();
+                  setIsDragging(false);
+                  if (loading) return;
+                  const f = e.dataTransfer.files?.[0];
+                  if (f) handleFile(f);
+                }}
                 style={{
-                  border: '2px dashed var(--brd-2)', borderRadius: 12,
-                  background: 'var(--card)', color: 'var(--text2)',
+                  border: `2px dashed ${isDragging ? 'var(--gold2)' : 'var(--brd-2)'}`,
+                  borderRadius: 12,
+                  background: isDragging ? 'var(--gold-soft)' : 'var(--card)',
+                  color: 'var(--text2)',
                   padding: '36px 20px', cursor: loading ? 'wait' : 'pointer',
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
                   fontFamily: "'Public Sans', sans-serif", transition: 'all .15s',
@@ -2309,6 +2322,11 @@ function PdfToJpgModal({ onClose }: { onClose: () => void }) {
                       }} />
                     </div>
                   </>
+                ) : isDragging ? (
+                  <>
+                    <div style={{ fontSize: 28 }}>🔥</div>
+                    <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--gold)' }}>Drop like it&apos;s hot</div>
+                  </>
                 ) : (
                   <>
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -2317,7 +2335,7 @@ function PdfToJpgModal({ onClose }: { onClose: () => void }) {
                     </svg>
                     <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>Upload a PDF to convert</div>
                     <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: 'var(--text3)' }}>
-                      Each page becomes its own JPG — nothing leaves your device
+                      Drag & drop, or click to browse — nothing leaves your device
                     </div>
                   </>
                 )}
