@@ -2325,7 +2325,7 @@ function PdfToJpgModal({ onClose }: { onClose: () => void }) {
                 ) : isDragging ? (
                   <>
                     <div style={{ fontSize: 28 }}>🔥</div>
-                    <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--gold)' }}>Drop like it&apos;s hot</div>
+                    <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--gold)' }}>Drop like it&apos;s hot, Gabriel</div>
                   </>
                 ) : (
                   <>
