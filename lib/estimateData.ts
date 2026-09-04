@@ -111,6 +111,18 @@ export const PANELS: CarPanel[] = [
         ],
       },
       {
+        id: 'nn-overhead-console',
+        name: 'R&I Overhead Console',
+        types: ['pdr', 'repair', 'rr'],
+        howTo: 'Overhead console can usually be found in CCC ONE under the "Console" group, or sometimes under "Roof" in Interior Trim.',
+        notes: [
+          {
+            id: 'nn-oc-1',
+            text: 'Overhead console must be R&I to remove the headliner.',
+          },
+        ],
+      },
+      {
         id: 'nn-airbags',
         name: 'R&I Head Airbags (LT + RT)',
         types: ['pdr', 'repair', 'rr'],
@@ -590,7 +602,7 @@ export const PANELS: CarPanel[] = [
         id: 'roof-pdr-overhead-console',
         name: 'PDR → R&I Overhead Console',
         types: ['pdr'],
-        howTo: 'Overhead console can be found in CCC ONE under the "Console" group.',
+        howTo: 'Overhead console can usually be found in CCC ONE under the "Console" group, or sometimes under "Roof" in Interior Trim.',
         notes: [
           {
             id: 'roof-pdr-oc-1',
