@@ -389,12 +389,28 @@ export const PANELS: CarPanel[] = [
       {
         id: 'ltf-wheel-opening-molding',
         name: 'R&I Wheel Opening Molding',
-        types: ['repair', 'rr'],
+        types: ['repair'],
         howTo: 'It stays on the "Fender" group on CCC ONE.',
         notes: [
           {
-            id: 'ltf-wom-1',
-            text: 'Wheel opening molding must be R&I for repair or replacement of the fender.',
+            id: 'ltf-wom-blend',
+            text: 'Wheel opening molding must be R&I to allow full paint blend coverage of the fender without overspray on the molding.',
+          },
+          {
+            id: 'ltf-wom-repair',
+            text: 'Wheel opening molding must be R&I to access the fender for repair work.',
+          },
+        ],
+      },
+      {
+        id: 'ltf-wheel-opening-molding-rr',
+        name: 'R&I Wheel Opening Molding',
+        types: ['rr'],
+        howTo: 'It stays on the "Fender" group on CCC ONE.',
+        notes: [
+          {
+            id: 'ltf-wom-rr-1',
+            text: 'Wheel opening molding must be transferred from the damaged fender to the replacement panel.',
           },
         ],
       },
