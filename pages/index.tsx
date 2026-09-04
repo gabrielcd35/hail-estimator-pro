@@ -2226,19 +2226,46 @@ function PdfToJpgModal({ onClose }: { onClose: () => void }) {
   return (
     <div
       onClick={onClose}
+      onDragEnter={e => { e.preventDefault(); e.stopPropagation(); if (!loading && pages.length === 0) setIsDragging(true); }}
+      onDragOver={e => { e.preventDefault(); e.stopPropagation(); if (!loading && pages.length === 0) setIsDragging(true); }}
+      onDragLeave={e => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); }}
+      onDrop={e => {
+        e.preventDefault(); e.stopPropagation();
+        setIsDragging(false);
+        if (loading || pages.length > 0) return;
+        const f = e.dataTransfer.files?.[0];
+        if (f) handleFile(f);
+      }}
       style={{
         position: 'fixed', inset: 0, zIndex: 300,
-        background: 'rgba(0,0,0,.55)',
+        background: isDragging ? 'var(--gold-soft)' : 'rgba(0,0,0,.55)',
         backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+        transition: 'background .15s',
       }}
     >
+      {isDragging && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 301,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          gap: 12, pointerEvents: 'none',
+        }}>
+          <div style={{ fontSize: 64 }}>🔥</div>
+          <div style={{
+            fontWeight: 700, fontSize: 26, color: 'var(--gold)',
+            fontFamily: "'Space Grotesk', sans-serif", textShadow: '0 2px 12px rgba(0,0,0,.5)',
+          }}>
+            Drop like it&apos;s hot, Gabriel
+          </div>
+        </div>
+      )}
       <div
         onClick={e => e.stopPropagation()}
         style={{
           width: '100%', maxWidth: 620, maxHeight: '90vh', overflowY: 'auto',
           background: 'var(--panel-bg)', borderRadius: 16,
           border: '1px solid var(--brd-2)', boxShadow: '0 24px 80px rgba(0,0,0,.6)',
+          opacity: isDragging ? 0.15 : 1, transition: 'opacity .15s',
         }}
       >
         {/* Modal header */}
@@ -2289,20 +2316,10 @@ function PdfToJpgModal({ onClose }: { onClose: () => void }) {
               <button
                 onClick={() => fileRef.current?.click()}
                 disabled={loading}
-                onDragEnter={e => { e.preventDefault(); e.stopPropagation(); if (!loading) setIsDragging(true); }}
-                onDragOver={e => { e.preventDefault(); e.stopPropagation(); if (!loading) setIsDragging(true); }}
-                onDragLeave={e => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); }}
-                onDrop={e => {
-                  e.preventDefault(); e.stopPropagation();
-                  setIsDragging(false);
-                  if (loading) return;
-                  const f = e.dataTransfer.files?.[0];
-                  if (f) handleFile(f);
-                }}
                 style={{
-                  border: `2px dashed ${isDragging ? 'var(--gold2)' : 'var(--brd-2)'}`,
+                  border: '2px dashed var(--brd-2)',
                   borderRadius: 12,
-                  background: isDragging ? 'var(--gold-soft)' : 'var(--card)',
+                  background: 'var(--card)',
                   color: 'var(--text2)',
                   padding: '36px 20px', cursor: loading ? 'wait' : 'pointer',
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
@@ -2321,11 +2338,6 @@ function PdfToJpgModal({ onClose }: { onClose: () => void }) {
                         height: '100%', background: 'var(--gold2)', transition: 'width .2s',
                       }} />
                     </div>
-                  </>
-                ) : isDragging ? (
-                  <>
-                    <div style={{ fontSize: 28 }}>🔥</div>
-                    <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--gold)' }}>Drop like it&apos;s hot, Gabriel</div>
                   </>
                 ) : (
                   <>
