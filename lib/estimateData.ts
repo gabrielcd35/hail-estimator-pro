@@ -386,6 +386,18 @@ export const PANELS: CarPanel[] = [
           },
         ],
       },
+      {
+        id: 'ltf-liner-repair',
+        name: 'R&I Fender Liner',
+        types: ['repair', 'rr'],
+        howTo: 'It stays on the "Fender" group on CCC ONE.',
+        notes: [
+          {
+            id: 'ltf-liner-repair-1',
+            text: 'Fender liner must be R&I to access the back side of the fender for repair or replacement work.',
+          },
+        ],
+      },
     ],
   },
 
