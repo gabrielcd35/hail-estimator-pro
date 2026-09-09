@@ -2084,6 +2084,7 @@ interface HailReport {
 interface ConvertedPage {
   pageNum: number;
   url: string;
+  blob: Blob;
   width: number;
   height: number;
   sizeKB: number;
@@ -2183,6 +2184,7 @@ function PdfToJpgModal({ onClose }: { onClose: () => void }) {
           results.push({
             pageNum: i,
             url: URL.createObjectURL(blob),
+            blob,
             width: canvas.width,
             height: canvas.height,
             sizeKB: Math.round(blob.size / 1024),
@@ -2208,20 +2210,26 @@ function PdfToJpgModal({ onClose }: { onClose: () => void }) {
     a.remove();
   };
 
-  const downloadAll = async () => {
-    for (const p of pages) {
-      downloadPage(p);
-      await new Promise(r => setTimeout(r, 300)); // let each download start before the next
+  const downloadAsZip = async (pagesToZip: ConvertedPage[]) => {
+    const JSZip = (await import('jszip')).default;
+    const zip = new JSZip();
+    const folder = zip.folder(fileName) as ReturnType<typeof zip.folder>;
+    for (const p of pagesToZip) {
+      folder!.file(pagesToZip.length > 1 ? `${p.pageNum}-${fileName}.jpg` : `${fileName}.jpg`, p.blob);
     }
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(zipBlob);
+    a.download = `${fileName}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(a.href);
   };
 
-  const downloadSelected = async () => {
-    for (const p of pages) {
-      if (!selected.has(p.pageNum)) continue;
-      downloadPage(p);
-      await new Promise(r => setTimeout(r, 300));
-    }
-  };
+  const downloadAll = () => downloadAsZip(pages);
+
+  const downloadSelected = () => downloadAsZip(pages.filter(p => selected.has(p.pageNum)));
 
   return (
     <div
