@@ -2227,9 +2227,33 @@ function PdfToJpgModal({ onClose }: { onClose: () => void }) {
     URL.revokeObjectURL(a.href);
   };
 
-  const downloadAll = () => downloadAsZip(pages);
+  // Chrome/Edge only — lets the user pick a real folder and writes the JPGs
+  // straight into it, no zip involved. Falls back to a zip download on
+  // browsers without File System Access API support (Firefox, Safari).
+  const downloadToFolder = async (pagesToSave: ConvertedPage[]) => {
+    const showPicker = (window as unknown as { showDirectoryPicker?: (opts?: unknown) => Promise<FileSystemDirectoryHandle> }).showDirectoryPicker;
+    if (!showPicker) {
+      await downloadAsZip(pagesToSave);
+      return;
+    }
+    try {
+      const dirHandle = await showPicker({ id: 'pdf-to-jpg', mode: 'readwrite' });
+      for (const p of pagesToSave) {
+        const name = pagesToSave.length > 1 ? `${p.pageNum}-${fileName}.jpg` : `${fileName}.jpg`;
+        const fileHandle = await dirHandle.getFileHandle(name, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(p.blob);
+        await writable.close();
+      }
+    } catch (e) {
+      // AbortError means the user cancelled the folder picker — not an error.
+      if (e instanceof Error && e.name !== 'AbortError') setError(`Could not save to folder — ${e.message}`);
+    }
+  };
 
-  const downloadSelected = () => downloadAsZip(pages.filter(p => selected.has(p.pageNum)));
+  const downloadAll = () => downloadToFolder(pages);
+
+  const downloadSelected = () => downloadToFolder(pages.filter(p => selected.has(p.pageNum)));
 
   return (
     <div
