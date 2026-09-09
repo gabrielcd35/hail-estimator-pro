@@ -2202,7 +2202,7 @@ function PdfToJpgModal({ onClose }: { onClose: () => void }) {
   const downloadPage = (p: ConvertedPage) => {
     const a = document.createElement('a');
     a.href = p.url;
-    a.download = pages.length > 1 ? `${fileName}-page-${p.pageNum}.jpg` : `${fileName}.jpg`;
+    a.download = pages.length > 1 ? `${p.pageNum}-${fileName}.jpg` : `${fileName}.jpg`;
     document.body.appendChild(a);
     a.click();
     a.remove();
