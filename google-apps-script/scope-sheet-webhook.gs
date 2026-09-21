@@ -31,16 +31,14 @@ function doPost(e) {
     sheet = ss.insertSheet(SHEET_NAME);
     sheet.appendRow(HEADERS);
   }
-  // Force every column to plain text — otherwise Sheets auto-parses values
-  // like "1-5" or "6-15" as dates (e.g. Jan 5) instead of keeping them as text.
-  sheet.getRange(1, 1, Math.max(sheet.getMaxRows(), 2), HEADERS.length).setNumberFormat('@');
 
   var data = JSON.parse(e.postData.contents);
   var submittedAt = data.submittedAt || new Date().toISOString();
   var name = data.name || 'Untitled scope sheet';
+  var panels = data.panels || [];
 
-  (data.panels || []).forEach(function (p) {
-    sheet.appendRow([
+  var rows = panels.map(function (p) {
+    return [
       submittedAt,
       name,
       p.panel || '',
@@ -49,8 +47,19 @@ function doPost(e) {
       (p.replacements || []).join(', '),
       p.note || '',
       p.oversize || '',
-    ]);
+    ];
   });
+  if (rows.length === 0) {
+    return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // Write directly into the exact new rows (not appendRow) so the plain-text
+  // format is guaranteed to apply BEFORE the values land — otherwise Sheets
+  // auto-parses strings like "1-5" or "6-15" as dates (e.g. Jan 5).
+  var startRow = sheet.getLastRow() + 1;
+  var range = sheet.getRange(startRow, 1, rows.length, HEADERS.length);
+  range.setNumberFormat('@');
+  range.setValues(rows);
 
   return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
 }
