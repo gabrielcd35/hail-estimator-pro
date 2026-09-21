@@ -2071,6 +2071,70 @@ function EstimateAssistantModal({ onClose, onApply }: {
   );
 }
 
+// ─── Scope Sheet Modal ──────────────────────────────────────────────────────
+
+function ScopeSheetModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 300,
+        background: 'rgba(0,0,0,.55)',
+        backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto',
+          background: 'var(--panel-bg)', borderRadius: 16,
+          border: '1px solid var(--brd-2)', boxShadow: '0 24px 80px rgba(0,0,0,.6)',
+        }}
+      >
+        {/* Modal header */}
+        <div style={{
+          padding: '18px 24px', borderBottom: '1px solid var(--brd)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <div>
+            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 17, color: 'var(--gold)' }}>
+              Scope Sheet
+            </div>
+            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: 'var(--text3)', letterSpacing: 1.5, marginTop: 2 }}>
+              PRINTABLE PDR SCOPE SHEET TEMPLATE
+            </div>
+          </div>
+          <button onClick={onClose} style={{
+            width: 32, height: 32, borderRadius: 8, border: '1px solid var(--brd)',
+            background: 'var(--input-bg)', color: 'var(--text2)', cursor: 'pointer',
+            fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>×</button>
+        </div>
+
+        <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <a
+            href="/scope-sheet-template.pdf"
+            download="Hail Estimator PRO Scope Sheet.pdf"
+            style={{
+              border: '2px dashed var(--brd-2)', borderRadius: 12,
+              background: 'var(--card)', color: 'var(--text2)', textDecoration: 'none',
+              padding: '36px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+              fontFamily: "'Public Sans', sans-serif", transition: 'all .15s',
+            }}
+          >
+            <div style={{ fontSize: 26 }}>📄</div>
+            <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--gold)' }}>Download Scope Sheet PDF</div>
+            <div style={{ fontSize: 12, color: 'var(--text3)', textAlign: 'center' }}>
+              Click to download the blank scope sheet as a PDF, ready to print.
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Hail History Modal ───────────────────────────────────────────────────────
 
 interface HailReport {
@@ -3072,6 +3136,7 @@ export default function Home() {
   const [showAssistModal, setShowAssistModal] = useState(false);
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [showBudgetGate, setShowBudgetGate] = useState(false);
+  const [showScopeSheetModal, setShowScopeSheetModal] = useState(false);
   const [scanCounts, setScanCounts] = useState<ScanCounts>({});
   const [lastScan, setLastScan] = useState<ScopeResult | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
@@ -3135,7 +3200,7 @@ export default function Home() {
         const el = document.getElementById('hep-search-input');
         if (el) (el as HTMLInputElement).focus();
       }
-      if (e.key === 'Escape') { setShowValueModal(false); setShowScopeModal(false); setShowHailModal(false); setShowAssistModal(false); setShowPdfModal(false); setShowBudgetGate(false); }
+      if (e.key === 'Escape') { setShowValueModal(false); setShowScopeModal(false); setShowHailModal(false); setShowAssistModal(false); setShowPdfModal(false); setShowBudgetGate(false); setShowScopeSheetModal(false); }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
@@ -3455,7 +3520,21 @@ export default function Home() {
             Estimate Assistant
           </button>
 
-          {/* Scope Sheet button */}
+          {/* Scope Sheet (printable template) button */}
+          <button
+            onClick={() => setShowScopeSheetModal(true)}
+            style={{
+              flexShrink: 0,
+              fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: 'var(--text2)',
+              background: 'none', letterSpacing: 0.5,
+              padding: '6px 12px', border: '1px solid var(--brd)', borderRadius: 8,
+              cursor: 'pointer', transition: 'all .15s', whiteSpace: 'nowrap',
+            }}
+          >
+            Scope Sheet
+          </button>
+
+          {/* Scan Scope Sheet button */}
           <button
             onClick={() => setShowScopeModal(true)}
             style={{
@@ -3826,6 +3905,8 @@ export default function Home() {
 
         {/* ── PDF to JPG Modal ── */}
         {showPdfModal && <PdfToJpgModal onClose={() => setShowPdfModal(false)} />}
+
+        {showScopeSheetModal && <ScopeSheetModal onClose={() => setShowScopeSheetModal(false)} />}
 
         {/* ── Budget App Gate ── */}
         {showBudgetGate && <BudgetGateModal onClose={() => setShowBudgetGate(false)} />}
