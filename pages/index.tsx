@@ -2089,6 +2089,7 @@ const FILL_PANELS: FillPanelDef[] = [
   { id: 'lt-rail', label: 'LT Rail', replacementOptions: ['Roof Rail Molding', 'Roof Rack / Luggage Carrier'] },
   { id: 'roof', label: 'Roof', replacementOptions: ['Antenna', 'Sunroof Frame', 'Overhead Console'] },
   { id: 'lift-gate', label: 'Lift Gate', replacementOptions: ['Lift Gate Glass', 'Wiper Arm'] },
+  { id: 'rt-rail', label: 'RT Rail', replacementOptions: ['Roof Rail Molding', 'Roof Rack / Luggage Carrier'] },
   { id: 'rt-quarter', label: 'RT Quarter Panel', replacementOptions: ['Quarter Glass', 'Fuel Door'] },
   { id: 'rt-rear-door', label: 'RT Rear Door', replacementOptions: ['Belt Molding', 'Door Handle'] },
   { id: 'rt-front-door', label: 'RT Front Door', replacementOptions: ['Belt Molding', 'Door Handle'], isFrontDoor: true },
@@ -2153,16 +2154,17 @@ const HEADER_OVERLAY_POINTS: Record<keyof HeaderInfo, { x: number; y: number }> 
 // dent range is drawn at this point, the oversize count just below it.
 const SCOPE_OVERLAY_POINTS: Record<string, { x: number; y: number }> = {
   'lt-fender': { x: 95, y: 528 },
-  'hood': { x: 337, y: 522 },
+  'hood': { x: 290, y: 522 },
   'rt-fender': { x: 508, y: 528 },
   'lt-front-door': { x: 95, y: 420 },
-  'lt-rail': { x: 182, y: 227 },
+  'lt-rail': { x: 182, y: 320 },
+  'rt-rail': { x: 395, y: 320 },
   'roof': { x: 300, y: 360 },
   'rt-front-door': { x: 508, y: 420 },
   'lt-rear-door': { x: 95, y: 265 },
   'rt-rear-door': { x: 508, y: 265 },
-  'lt-quarter': { x: 95, y: 114 },
-  'rt-quarter': { x: 508, y: 114 },
+  'lt-quarter': { x: 95, y: 120 },
+  'rt-quarter': { x: 508, y: 120 },
   'lift-gate': { x: 300, y: 70 },
 };
 const PDF_PAGE_W = 612;
@@ -2210,7 +2212,7 @@ async function renderFilledScopeCanvas(fillData: Record<string, FillPanelData>, 
       ctx.fillText(data.dentRange, x, y);
     }
     if (data.oversize) {
-      ctx.fillText(data.oversize, x, y + 14 * pxPerPt);
+      ctx.fillText(data.oversize, x, y + 11 * pxPerPt);
     }
   }
 
@@ -2243,7 +2245,7 @@ async function downloadFilledScopePdf(fillData: Record<string, FillPanelData>, f
       page.drawText(data.dentRange, { x: pos.x, y: pos.y, size: 9, color: red });
     }
     if (data.oversize) {
-      page.drawText(data.oversize, { x: pos.x, y: pos.y - 14, size: 9, color: red });
+      page.drawText(data.oversize, { x: pos.x, y: pos.y - 11, size: 9, color: red });
     }
   }
 
