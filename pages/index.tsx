@@ -2095,7 +2095,7 @@ const FILL_PANELS: FillPanelDef[] = [
   { id: 'rt-fender', label: 'RT Fender', replacementOptions: ['Fender Liner', 'Wheel Opening Molding'] },
 ];
 
-const DENT_RANGES = ['None', '1-5', '6-15', '16-30', '31-50', '50+'];
+const DENT_RANGES = ['None', '1-5', '6-15', '16-30', '31-50', '51-75', '76-100', '101-150', '151-200', '201-300', '301+'];
 const REPAIR_MODES: { value: 'pdr' | 'repair' | 'rr'; label: string }[] = [
   { value: 'pdr', label: 'PDR' },
   { value: 'repair', label: 'Repair' },
