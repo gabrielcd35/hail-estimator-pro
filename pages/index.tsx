@@ -4274,6 +4274,11 @@ export default function Home() {
           background: 'var(--header-bg)',
           flexShrink: 0,
           zIndex: 10,
+          ...(narrow ? {
+            overflowX: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            scrollbarWidth: 'none',
+          } : {}),
         }}>
           {/* Hamburger — narrow only */}
           {narrow && (
@@ -4333,7 +4338,7 @@ export default function Home() {
           </div>
 
           {/* Search */}
-          <div ref={searchRef} id="hep-search" style={{ flex: 1, maxWidth: 440, position: 'relative' }}>
+          <div ref={searchRef} id="hep-search" style={{ flex: narrow ? '0 0 auto' : 1, width: narrow ? 160 : undefined, maxWidth: narrow ? 160 : 440, position: 'relative' }}>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
                 style={{ position: 'absolute', left: 13, pointerEvents: 'none' }}>
