@@ -2073,8 +2073,85 @@ function EstimateAssistantModal({ onClose, onApply }: {
 
 // ─── Scope Sheet Modal ──────────────────────────────────────────────────────
 
+interface FillPanelDef {
+  id: string;
+  label: string;
+  replacementOptions: string[];
+  isFrontDoor?: boolean;
+}
+
+const FILL_PANELS: FillPanelDef[] = [
+  { id: 'hood', label: 'Hood', replacementOptions: ['Hood Insulation Pad', 'Hood Emblem'] },
+  { id: 'lt-fender', label: 'LT Fender', replacementOptions: ['Fender Liner', 'Wheel Opening Molding'] },
+  { id: 'lt-front-door', label: 'LT Front Door', replacementOptions: ['Belt Molding', 'Door Handle'], isFrontDoor: true },
+  { id: 'lt-rear-door', label: 'LT Rear Door', replacementOptions: ['Belt Molding', 'Door Handle'] },
+  { id: 'lt-quarter', label: 'LT Quarter Panel', replacementOptions: ['Quarter Glass', 'Fuel Door'] },
+  { id: 'lt-rail', label: 'LT Rail', replacementOptions: ['Roof Rail Molding', 'Roof Rack / Luggage Carrier'] },
+  { id: 'roof', label: 'Roof', replacementOptions: ['Antenna', 'Sunroof Frame', 'Overhead Console'] },
+  { id: 'lift-gate', label: 'Lift Gate', replacementOptions: ['Lift Gate Glass', 'Wiper Arm'] },
+  { id: 'rt-quarter', label: 'RT Quarter Panel', replacementOptions: ['Quarter Glass', 'Fuel Door'] },
+  { id: 'rt-rear-door', label: 'RT Rear Door', replacementOptions: ['Belt Molding', 'Door Handle'] },
+  { id: 'rt-front-door', label: 'RT Front Door', replacementOptions: ['Belt Molding', 'Door Handle'], isFrontDoor: true },
+  { id: 'rt-fender', label: 'RT Fender', replacementOptions: ['Fender Liner', 'Wheel Opening Molding'] },
+];
+
+const DENT_RANGES = ['None', '1-5', '6-15', '16-30', '31-50', '50+'];
+const REPAIR_MODES: { value: 'pdr' | 'repair' | 'rr'; label: string }[] = [
+  { value: 'pdr', label: 'PDR' },
+  { value: 'repair', label: 'Repair' },
+  { value: 'rr', label: 'R&R' },
+];
+
+interface FillPanelData {
+  dentRange: string;
+  mode: 'pdr' | 'repair' | 'rr' | '';
+  replacements: string[];
+  note: string;
+  mirrorOverlap: boolean;
+}
+
+const emptyFillData = (): FillPanelData => ({ dentRange: '', mode: '', replacements: [], note: '', mirrorOverlap: false });
+
+const FILL_STORAGE_KEY = 'hep-scope-fill-v1';
+
 function ScopeSheetModal({ onClose }: { onClose: () => void }) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [mode, setMode] = useState<'view' | 'fill' | 'summary'>('view');
+  const [fillIndex, setFillIndex] = useState(0);
+  const [fillData, setFillData] = useState<Record<string, FillPanelData>>({});
+  const [showJump, setShowJump] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(FILL_STORAGE_KEY);
+      if (saved) setFillData(JSON.parse(saved));
+    } catch { /* ignore — start blank */ }
+  }, []);
+
+  const saveFillData = (next: Record<string, FillPanelData>) => {
+    setFillData(next);
+    try { localStorage.setItem(FILL_STORAGE_KEY, JSON.stringify(next)); } catch { /* storage unavailable */ }
+  };
+
+  const currentPanel = FILL_PANELS[fillIndex];
+  const currentData = fillData[currentPanel?.id] || emptyFillData();
+
+  const updateCurrent = (patch: Partial<FillPanelData>) => {
+    saveFillData({ ...fillData, [currentPanel.id]: { ...currentData, ...patch } });
+  };
+
+  const toggleReplacement = (item: string) => {
+    const has = currentData.replacements.includes(item);
+    updateCurrent({ replacements: has ? currentData.replacements.filter(r => r !== item) : [...currentData.replacements, item] });
+  };
+
+  const goNext = () => {
+    if (fillIndex < FILL_PANELS.length - 1) setFillIndex(fillIndex + 1);
+    else setMode('summary');
+  };
+  const goBack = () => {
+    if (fillIndex > 0) setFillIndex(fillIndex - 1);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -2102,97 +2179,492 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
     return () => { cancelled = true; if (objectUrl) URL.revokeObjectURL(objectUrl); };
   }, []);
 
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 300,
-        background: 'rgba(0,0,0,.55)',
-        backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
-      }}
-    >
+  // ── View mode: preview + Download/Fill ──────────────────────────────────
+  if (mode === 'view') {
+    return (
       <div
-        onClick={e => e.stopPropagation()}
+        onClick={onClose}
         style={{
-          width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto',
-          background: 'var(--panel-bg)', borderRadius: 16,
-          border: '1px solid var(--brd-2)', boxShadow: '0 24px 80px rgba(0,0,0,.6)',
+          position: 'fixed', inset: 0, zIndex: 300,
+          background: 'rgba(0,0,0,.55)',
+          backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
         }}
       >
-        {/* Modal header */}
-        <div style={{
-          padding: '18px 24px', borderBottom: '1px solid var(--brd)',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        }}>
-          <div>
-            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 17, color: 'var(--gold)' }}>
-              Scope Sheet
-            </div>
-            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: 'var(--text3)', letterSpacing: 1.5, marginTop: 2 }}>
-              PRINTABLE PDR SCOPE SHEET TEMPLATE
-            </div>
-          </div>
-          <button onClick={onClose} style={{
-            width: 32, height: 32, borderRadius: 8, border: '1px solid var(--brd)',
-            background: 'var(--input-bg)', color: 'var(--text2)', cursor: 'pointer',
-            fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>×</button>
-        </div>
-
-        <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{
+            width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto',
+            background: 'var(--panel-bg)', borderRadius: 16,
+            border: '1px solid var(--brd-2)', boxShadow: '0 24px 80px rgba(0,0,0,.6)',
+          }}
+        >
+          {/* Modal header */}
           <div style={{
-            border: '1px solid var(--brd)', borderRadius: 12,
-            background: 'var(--card)', padding: 14,
+            padding: '18px 24px', borderBottom: '1px solid var(--brd)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}>
-            {previewUrl ? (
-              <img
-                src={previewUrl}
-                alt="Scope sheet preview"
-                style={{
-                  width: '100%', borderRadius: 8, border: '1px solid var(--brd)',
-                  boxShadow: '0 8px 24px rgba(0,0,0,.25)', display: 'block',
-                }}
-              />
-            ) : (
-              <div style={{
-                width: '100%', aspectRatio: '8.5 / 11', borderRadius: 8,
-                background: 'var(--input-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: 'var(--text3)', fontSize: 12,
-              }}>
-                Loading preview…
+            <div>
+              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 17, color: 'var(--gold)' }}>
+                Scope Sheet
               </div>
-            )}
+              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: 'var(--text3)', letterSpacing: 1.5, marginTop: 2 }}>
+                PRINTABLE PDR SCOPE SHEET TEMPLATE
+              </div>
+            </div>
+            <button onClick={onClose} style={{
+              width: 32, height: 32, borderRadius: 8, border: '1px solid var(--brd)',
+              background: 'var(--input-bg)', color: 'var(--text2)', cursor: 'pointer',
+              fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>×</button>
           </div>
 
-          <div style={{ display: 'flex', gap: 10 }}>
-            <a
-              href="/scope-sheet-template.pdf"
-              download="Hail Estimator PRO Scope Sheet.pdf"
-              style={{
-                flex: 1, textAlign: 'center', textDecoration: 'none',
-                padding: '11px 16px', borderRadius: 9,
-                background: 'var(--gold2)', color: 'var(--on-gold)',
-                border: '1px solid var(--gold2)', fontFamily: "'Public Sans', sans-serif",
-                fontWeight: 700, fontSize: 13.5, cursor: 'pointer',
-              }}
-            >
-              Download
-            </a>
-            <button
-              onClick={() => { /* Fill flow — spec coming */ }}
-              style={{
-                flex: 1, textAlign: 'center',
-                padding: '11px 16px', borderRadius: 9,
-                background: 'var(--card)', color: 'var(--text2)',
-                border: '1px solid var(--brd)', fontFamily: "'Public Sans', sans-serif",
-                fontWeight: 700, fontSize: 13.5, cursor: 'pointer',
-              }}
-            >
-              Fill
-            </button>
+          <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{
+              border: '1px solid var(--brd)', borderRadius: 12,
+              background: 'var(--card)', padding: 14,
+            }}>
+              {previewUrl ? (
+                <img
+                  src={previewUrl}
+                  alt="Scope sheet preview"
+                  style={{
+                    width: '100%', borderRadius: 8, border: '1px solid var(--brd)',
+                    boxShadow: '0 8px 24px rgba(0,0,0,.25)', display: 'block',
+                  }}
+                />
+              ) : (
+                <div style={{
+                  width: '100%', aspectRatio: '8.5 / 11', borderRadius: 8,
+                  background: 'var(--input-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: 'var(--text3)', fontSize: 12,
+                }}>
+                  Loading preview…
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <a
+                href="/scope-sheet-template.pdf"
+                download="Hail Estimator PRO Scope Sheet.pdf"
+                style={{
+                  flex: 1, textAlign: 'center', textDecoration: 'none',
+                  padding: '11px 16px', borderRadius: 9,
+                  background: 'var(--gold2)', color: 'var(--on-gold)',
+                  border: '1px solid var(--gold2)', fontFamily: "'Public Sans', sans-serif",
+                  fontWeight: 700, fontSize: 13.5, cursor: 'pointer',
+                }}
+              >
+                Download
+              </a>
+              <button
+                onClick={() => setMode('fill')}
+                style={{
+                  flex: 1, textAlign: 'center',
+                  padding: '11px 16px', borderRadius: 9,
+                  background: 'var(--card)', color: 'var(--text2)',
+                  border: '1px solid var(--brd)', fontFamily: "'Public Sans', sans-serif",
+                  fontWeight: 700, fontSize: 13.5, cursor: 'pointer',
+                }}
+              >
+                Fill
+              </button>
+            </div>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // ── Summary mode: review everything entered, submit ─────────────────────
+  if (mode === 'summary') {
+    const touched = FILL_PANELS
+      .map(p => ({ panel: p, data: fillData[p.id] }))
+      .filter(({ data }) => data && (data.dentRange && data.dentRange !== 'None' || data.replacements.length > 0 || data.note.trim() || data.mirrorOverlap));
+
+    return (
+      <ScopeSummaryScreen
+        touched={touched}
+        onClose={onClose}
+        onBackToFill={() => { setFillIndex(0); setMode('fill'); }}
+        onEditPanel={(idx) => { setFillIndex(idx); setMode('fill'); }}
+        onStartOver={() => { saveFillData({}); setFillIndex(0); setMode('fill'); }}
+      />
+    );
+  }
+
+  // ── Fill mode: one panel at a time, mobile-first ─────────────────────────
+  const mirrorAuto = currentPanel.isFrontDoor && currentData.mirrorOverlap;
+
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 300,
+        background: 'var(--bg)',
+        display: 'flex', flexDirection: 'column',
+      }}
+    >
+      {/* Top bar */}
+      <div style={{
+        padding: '14px 16px', borderBottom: '1px solid var(--brd)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
+      }}>
+        <button onClick={() => setMode('view')} style={{
+          background: 'none', border: 'none', color: 'var(--text3)', fontSize: 20, cursor: 'pointer', padding: 4,
+        }}>×</button>
+        <button
+          onClick={() => setShowJump(true)}
+          style={{
+            fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: 'var(--text3)',
+            background: 'none', border: '1px solid var(--brd)', borderRadius: 8,
+            padding: '5px 10px', cursor: 'pointer', letterSpacing: 0.5,
+          }}
+        >
+          {fillIndex + 1} / {FILL_PANELS.length} · Jump
+        </button>
+      </div>
+
+      {/* Progress bar */}
+      <div style={{ height: 3, background: 'var(--brd)', flexShrink: 0 }}>
+        <div style={{
+          height: '100%', background: 'var(--gold2)', transition: 'width .2s',
+          width: `${((fillIndex + 1) / FILL_PANELS.length) * 100}%`,
+        }} />
+      </div>
+
+      {/* Panel form — the only thing on screen */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '28px 20px 100px', display: 'flex', flexDirection: 'column', gap: 22, maxWidth: 480, margin: '0 auto', width: '100%' }}>
+        <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 24, color: 'var(--gold)', textAlign: 'center' }}>
+          {currentPanel.label}
+        </div>
+
+        {/* Dent range */}
+        <div>
+          <div style={{ fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", color: 'var(--text3)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 }}>
+            Dent Range
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {DENT_RANGES.map(r => (
+              <button key={r} onClick={() => updateCurrent({ dentRange: r })} style={{
+                padding: '10px 16px', borderRadius: 9, fontSize: 14, fontWeight: 600,
+                fontFamily: "'Public Sans', sans-serif", cursor: 'pointer',
+                background: currentData.dentRange === r ? 'var(--gold2)' : 'var(--card)',
+                color: currentData.dentRange === r ? 'var(--on-gold)' : 'var(--text2)',
+                border: currentData.dentRange === r ? '1px solid var(--gold2)' : '1px solid var(--brd)',
+              }}>
+                {r}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Repair mode */}
+        <div>
+          <div style={{ fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", color: 'var(--text3)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 }}>
+            Mode
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {REPAIR_MODES.map(m => (
+              <button key={m.value} onClick={() => updateCurrent({ mode: m.value })} style={{
+                flex: 1, padding: '10px 12px', borderRadius: 9, fontSize: 13.5, fontWeight: 600,
+                fontFamily: "'Public Sans', sans-serif", cursor: 'pointer',
+                background: currentData.mode === m.value ? 'var(--gold2)' : 'var(--card)',
+                color: currentData.mode === m.value ? 'var(--on-gold)' : 'var(--text2)',
+                border: currentData.mode === m.value ? '1px solid var(--gold2)' : '1px solid var(--brd)',
+              }}>
+                {m.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Replacement dropdown (multi-toggle) */}
+        <div>
+          <div style={{ fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", color: 'var(--text3)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 }}>
+            Replacement (if needed)
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {currentPanel.replacementOptions.map(item => (
+              <button key={item} onClick={() => toggleReplacement(item)} style={{
+                padding: '9px 14px', borderRadius: 9, fontSize: 13, fontWeight: 600,
+                fontFamily: "'Public Sans', sans-serif", cursor: 'pointer',
+                background: currentData.replacements.includes(item) ? 'var(--gold-soft)' : 'var(--card)',
+                color: currentData.replacements.includes(item) ? 'var(--gold)' : 'var(--text2)',
+                border: currentData.replacements.includes(item) ? '1px solid var(--gold2)' : '1px solid var(--brd)',
+              }}>
+                {item}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Mirror overlap — front doors only */}
+        {currentPanel.isFrontDoor && (
+          <label style={{
+            display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer',
+            padding: 14, borderRadius: 10, background: 'var(--card)', border: '1px solid var(--brd)',
+          }}>
+            <input
+              type="checkbox"
+              checked={currentData.mirrorOverlap}
+              onChange={e => updateCurrent({ mirrorOverlap: e.target.checked })}
+              style={{ marginTop: 2, width: 18, height: 18, accentColor: 'var(--gold2)', cursor: 'pointer' }}
+            />
+            <div>
+              <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>Mirror overlap</div>
+              <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>
+                Automatically adds R&I Interior Trim and R&I Mirror to the final scope.
+              </div>
+            </div>
+          </label>
+        )}
+        {mirrorAuto && (
+          <div style={{
+            fontSize: 12, color: 'var(--gold)', background: 'var(--gold-soft)',
+            border: '1px solid var(--gold2)', borderRadius: 8, padding: '8px 12px',
+          }}>
+            ✓ Auto-added: R&I Interior Trim, R&I Mirror
+          </div>
+        )}
+
+        {/* Note */}
+        <div>
+          <div style={{ fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", color: 'var(--text3)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 }}>
+            Note (optional)
+          </div>
+          <textarea
+            value={currentData.note}
+            onChange={e => updateCurrent({ note: e.target.value })}
+            placeholder="Anything specific to this panel…"
+            rows={3}
+            style={{
+              width: '100%', borderRadius: 9, border: '1px solid var(--brd)',
+              background: 'var(--card)', color: 'var(--text)', padding: 12, fontSize: 13.5,
+              fontFamily: "'Public Sans', sans-serif", resize: 'vertical',
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Bottom nav */}
+      <div style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0,
+        padding: '12px 16px calc(12px + env(safe-area-inset-bottom))',
+        background: 'var(--panel-bg)', borderTop: '1px solid var(--brd)',
+        display: 'flex', gap: 10,
+      }}>
+        <button
+          onClick={goBack}
+          disabled={fillIndex === 0}
+          style={{
+            padding: '13px 20px', borderRadius: 10, fontSize: 14, fontWeight: 700,
+            fontFamily: "'Public Sans', sans-serif", cursor: fillIndex === 0 ? 'default' : 'pointer',
+            background: 'var(--card)', color: fillIndex === 0 ? 'var(--text3)' : 'var(--text2)',
+            border: '1px solid var(--brd)', opacity: fillIndex === 0 ? 0.5 : 1,
+          }}
+        >
+          Back
+        </button>
+        <button
+          onClick={goNext}
+          style={{
+            flex: 1, padding: '13px 20px', borderRadius: 10, fontSize: 14, fontWeight: 700,
+            fontFamily: "'Public Sans', sans-serif", cursor: 'pointer',
+            background: 'var(--gold2)', color: 'var(--on-gold)', border: '1px solid var(--gold2)',
+          }}
+        >
+          {fillIndex < FILL_PANELS.length - 1 ? 'Next' : 'Review'}
+        </button>
+      </div>
+
+      {/* Jump-to-panel overlay */}
+      {showJump && (
+        <div
+          onClick={() => setShowJump(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 310, background: 'rgba(0,0,0,.6)',
+            display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: '100%', maxWidth: 480, maxHeight: '70vh', overflowY: 'auto',
+              background: 'var(--panel-bg)', borderRadius: '16px 16px 0 0',
+              border: '1px solid var(--brd-2)', padding: 16,
+            }}
+          >
+            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--gold)', marginBottom: 12 }}>
+              Jump to panel
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              {FILL_PANELS.map((p, idx) => {
+                const d = fillData[p.id];
+                const hasData = d && (d.dentRange && d.dentRange !== 'None' || d.replacements.length > 0 || d.note.trim() || d.mirrorOverlap);
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => { setFillIndex(idx); setShowJump(false); }}
+                    style={{
+                      padding: '10px 12px', borderRadius: 9, fontSize: 13, fontWeight: 600, textAlign: 'left',
+                      fontFamily: "'Public Sans', sans-serif", cursor: 'pointer',
+                      background: idx === fillIndex ? 'var(--gold2)' : 'var(--card)',
+                      color: idx === fillIndex ? 'var(--on-gold)' : 'var(--text2)',
+                      border: idx === fillIndex ? '1px solid var(--gold2)' : '1px solid var(--brd)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6,
+                    }}
+                  >
+                    <span>{p.label}</span>
+                    {hasData && <span style={{ width: 6, height: 6, borderRadius: '50%', background: idx === fillIndex ? 'var(--on-gold)' : 'var(--gold2)', flexShrink: 0 }} />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Scope Summary Screen (review + submit to Google Sheets) ──────────────
+
+function ScopeSummaryScreen({
+  touched, onClose, onBackToFill, onEditPanel, onStartOver,
+}: {
+  touched: { panel: FillPanelDef; data: FillPanelData }[];
+  onClose: () => void;
+  onBackToFill: () => void;
+  onEditPanel: (idx: number) => void;
+  onStartOver: () => void;
+}) {
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    setSubmitError('');
+    try {
+      const res = await fetch('/api/scope-sheet-save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          submittedAt: new Date().toISOString(),
+          panels: touched.map(({ panel, data }) => ({
+            panel: panel.label,
+            dentRange: data.dentRange,
+            mode: data.mode,
+            replacements: [
+              ...data.replacements,
+              ...(panel.isFrontDoor && data.mirrorOverlap ? ['Interior Trim (mirror overlap)', 'Mirror (mirror overlap)'] : []),
+            ],
+            note: data.note,
+          })),
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Save failed (${res.status})`);
+      }
+      setSubmitted(true);
+    } catch (e) {
+      setSubmitError(e instanceof Error ? e.message : 'Could not save — try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+      <div style={{
+        padding: '14px 16px', borderBottom: '1px solid var(--brd)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
+      }}>
+        <button onClick={onBackToFill} style={{ background: 'none', border: 'none', color: 'var(--text3)', fontSize: 20, cursor: 'pointer', padding: 4 }}>‹</button>
+        <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--gold)' }}>Review Scope</div>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text3)', fontSize: 20, cursor: 'pointer', padding: 4 }}>×</button>
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 16px 100px', maxWidth: 480, margin: '0 auto', width: '100%', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {touched.length === 0 && (
+          <div style={{ color: 'var(--text3)', fontSize: 13.5, textAlign: 'center', padding: '40px 20px' }}>
+            No panels have damage entered yet.
+          </div>
+        )}
+
+        {touched.map(({ panel, data }, i) => {
+          const idx = FILL_PANELS.findIndex(p => p.id === panel.id);
+          return (
+            <div key={panel.id} onClick={() => onEditPanel(idx)} style={{
+              padding: 14, borderRadius: 10, background: 'var(--card)', border: '1px solid var(--brd)', cursor: 'pointer',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>{panel.label}</div>
+                <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: "'IBM Plex Mono', monospace" }}>edit ›</div>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, fontSize: 12 }}>
+                {data.dentRange && data.dentRange !== 'None' && (
+                  <span style={{ background: 'var(--gold-soft)', color: 'var(--gold)', padding: '3px 8px', borderRadius: 6 }}>{data.dentRange} dents</span>
+                )}
+                {data.mode && (
+                  <span style={{ background: 'var(--input-bg)', color: 'var(--text2)', padding: '3px 8px', borderRadius: 6 }}>{data.mode.toUpperCase()}</span>
+                )}
+                {data.replacements.map(r => (
+                  <span key={r} style={{ background: 'var(--input-bg)', color: 'var(--text2)', padding: '3px 8px', borderRadius: 6 }}>{r}</span>
+                ))}
+                {panel.isFrontDoor && data.mirrorOverlap && (
+                  <>
+                    <span style={{ background: 'var(--input-bg)', color: 'var(--text2)', padding: '3px 8px', borderRadius: 6 }}>Interior Trim (mirror overlap)</span>
+                    <span style={{ background: 'var(--input-bg)', color: 'var(--text2)', padding: '3px 8px', borderRadius: 6 }}>Mirror (mirror overlap)</span>
+                  </>
+                )}
+              </div>
+              {data.note.trim() && (
+                <div style={{ fontSize: 12.5, color: 'var(--text3)', marginTop: 8, fontStyle: 'italic' }}>{data.note}</div>
+              )}
+            </div>
+          );
+        })}
+
+        {submitError && (
+          <div style={{ fontSize: 12.5, color: '#ff6b6b', background: 'rgba(255,107,107,.1)', border: '1px solid rgba(255,107,107,.3)', borderRadius: 8, padding: '8px 12px' }}>
+            {submitError}
+          </div>
+        )}
+        {submitted && (
+          <div style={{ fontSize: 12.5, color: 'var(--gold)', background: 'var(--gold-soft)', border: '1px solid var(--gold2)', borderRadius: 8, padding: '8px 12px' }}>
+            ✓ Saved to your Google Sheet.
+          </div>
+        )}
+      </div>
+
+      <div style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0,
+        padding: '12px 16px calc(12px + env(safe-area-inset-bottom))',
+        background: 'var(--panel-bg)', borderTop: '1px solid var(--brd)',
+        display: 'flex', gap: 10, maxWidth: 480, margin: '0 auto',
+      }}>
+        <button onClick={onStartOver} style={{
+          padding: '13px 16px', borderRadius: 10, fontSize: 13.5, fontWeight: 700,
+          fontFamily: "'Public Sans', sans-serif", cursor: 'pointer',
+          background: 'var(--card)', color: 'var(--text2)', border: '1px solid var(--brd)',
+        }}>
+          Start Over
+        </button>
+        <button
+          onClick={handleSubmit}
+          disabled={submitting || touched.length === 0}
+          style={{
+            flex: 1, padding: '13px 20px', borderRadius: 10, fontSize: 14, fontWeight: 700,
+            fontFamily: "'Public Sans', sans-serif", cursor: submitting ? 'wait' : 'pointer',
+            background: 'var(--gold2)', color: 'var(--on-gold)', border: '1px solid var(--gold2)',
+            opacity: touched.length === 0 ? 0.5 : 1,
+          }}
+        >
+          {submitting ? 'Saving…' : 'Save to Sheet'}
+        </button>
       </div>
     </div>
   );
