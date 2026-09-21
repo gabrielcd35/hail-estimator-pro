@@ -2074,6 +2074,34 @@ function EstimateAssistantModal({ onClose, onApply }: {
 // ─── Scope Sheet Modal ──────────────────────────────────────────────────────
 
 function ScopeSheetModal({ onClose }: { onClose: () => void }) {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl: string | null = null;
+    (async () => {
+      const pdfjsLib = await import('pdfjs-dist');
+      pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+      const pdf = await pdfjsLib.getDocument('/scope-sheet-template.pdf').promise;
+      const page = await pdf.getPage(1);
+      const viewport = page.getViewport({ scale: 2 });
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      await page.render({ canvas: null, canvasContext: ctx, viewport }).promise;
+      const blob: Blob | null = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+      if (blob && !cancelled) {
+        objectUrl = URL.createObjectURL(blob);
+        setPreviewUrl(objectUrl);
+      }
+    })();
+    return () => { cancelled = true; if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, []);
+
   return (
     <div
       onClick={onClose}
@@ -2117,17 +2145,31 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
             href="/scope-sheet-template.pdf"
             download="Hail Estimator PRO Scope Sheet.pdf"
             style={{
-              border: '2px dashed var(--brd-2)', borderRadius: 12,
+              border: '1px solid var(--brd)', borderRadius: 12,
               background: 'var(--card)', color: 'var(--text2)', textDecoration: 'none',
-              padding: '36px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+              padding: 14, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
               fontFamily: "'Public Sans', sans-serif", transition: 'all .15s',
             }}
           >
-            <div style={{ fontSize: 26 }}>📄</div>
+            {previewUrl ? (
+              <img
+                src={previewUrl}
+                alt="Scope sheet preview"
+                style={{
+                  width: '100%', borderRadius: 8, border: '1px solid var(--brd)',
+                  boxShadow: '0 8px 24px rgba(0,0,0,.25)',
+                }}
+              />
+            ) : (
+              <div style={{
+                width: '100%', aspectRatio: '8.5 / 11', borderRadius: 8,
+                background: 'var(--input-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'var(--text3)', fontSize: 12,
+              }}>
+                Loading preview…
+              </div>
+            )}
             <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--gold)' }}>Download Scope Sheet PDF</div>
-            <div style={{ fontSize: 12, color: 'var(--text3)', textAlign: 'center' }}>
-              Click to download the blank scope sheet as a PDF, ready to print.
-            </div>
           </a>
         </div>
       </div>
