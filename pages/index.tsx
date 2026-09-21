@@ -2117,23 +2117,27 @@ const FILL_STORAGE_KEY = 'hep-scope-fill-v1';
 
 const LABEL_TO_ID: Record<string, string> = Object.fromEntries(FILL_PANELS.map(p => [p.label, p.id]));
 
-// Fractions of the page (0-1, top-left origin) where each panel's printed
-// "OVERSIZE:" blank sits on scope-sheet-template.pdf — the dent range is
-// drawn just above that blank, the oversize count right on it.
-const SCOPE_OVERLAY_POS: Record<string, { x: number; y: number }> = {
-  'lt-fender': { x: 0.17, y: 0.407 },
-  'hood': { x: 0.50, y: 0.407 },
-  'rt-fender': { x: 0.83, y: 0.407 },
-  'lt-front-door': { x: 0.17, y: 0.614 },
-  'lt-rail': { x: 0.34, y: 0.46 },
-  'roof': { x: 0.52, y: 0.561 },
-  'rt-front-door': { x: 0.83, y: 0.614 },
-  'lt-rear-door': { x: 0.17, y: 0.829 },
-  'rt-rear-door': { x: 0.83, y: 0.829 },
-  'lt-quarter': { x: 0.17, y: 0.972 },
-  'rt-quarter': { x: 0.83, y: 0.972 },
-  'lift-gate': { x: 0.50, y: 0.972 },
+// Where each panel's printed "OVERSIZE:" blank sits on
+// scope-sheet-template.pdf, in PDF point space (612x792, origin bottom-left —
+// pulled directly from the template's text layer via pdf.js getTextContent,
+// not eyeballed). The dent range is drawn just above that blank (larger y =
+// higher up the page), the oversize count directly on it.
+const SCOPE_OVERLAY_POINTS: Record<string, { x: number; y: number }> = {
+  'lt-fender': { x: 157, y: 466 },
+  'hood': { x: 387, y: 466 },
+  'rt-fender': { x: 570, y: 466 },
+  'lt-front-door': { x: 157, y: 310 },
+  'lt-rail': { x: 182, y: 232 },
+  'roof': { x: 324, y: 292 },
+  'rt-front-door': { x: 570, y: 310 },
+  'lt-rear-door': { x: 157, y: 154.5 },
+  'rt-rear-door': { x: 570, y: 154.5 },
+  'lt-quarter': { x: 157, y: 36 },
+  'rt-quarter': { x: 570, y: 36 },
+  'lift-gate': { x: 376, y: 38 },
 };
+const PDF_PAGE_W = 612;
+const PDF_PAGE_H = 792;
 
 // Draws the entered dent ranges + oversize counts onto a rendered copy of
 // the scope sheet template — used for both the in-app preview and as the
@@ -2153,18 +2157,19 @@ async function renderFilledScopeCanvas(fillData: Record<string, FillPanelData>):
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   await page.render({ canvas: null, canvasContext: ctx, viewport }).promise;
 
-  ctx.fillStyle = '#c8971a';
-  ctx.font = `700 ${Math.round(canvas.width * 0.013)}px "IBM Plex Mono", monospace`;
-  ctx.textAlign = 'center';
+  const pxPerPt = canvas.width / PDF_PAGE_W;
+  ctx.fillStyle = '#b3231c';
+  ctx.font = `700 ${Math.round(9 * pxPerPt)}px "IBM Plex Mono", monospace`;
+  ctx.textAlign = 'left';
 
   for (const panel of FILL_PANELS) {
     const data = fillData[panel.id];
-    const pos = SCOPE_OVERLAY_POS[panel.id];
+    const pos = SCOPE_OVERLAY_POINTS[panel.id];
     if (!data || !pos) continue;
-    const x = pos.x * canvas.width;
-    const y = pos.y * canvas.height;
+    const x = pos.x * pxPerPt;
+    const y = canvas.height - pos.y * pxPerPt;
     if (data.dentRange && data.dentRange !== 'None') {
-      ctx.fillText(data.dentRange, x, y - canvas.height * 0.02);
+      ctx.fillText(data.dentRange, x, y - 14 * pxPerPt);
     }
     if (data.oversize) {
       ctx.fillText(data.oversize, x, y);
@@ -2181,22 +2186,17 @@ async function downloadFilledScopePdf(fillData: Record<string, FillPanelData>, f
   ]);
   const pdfDoc = await PDFDocument.load(bytes);
   const page = pdfDoc.getPages()[0];
-  const { width, height } = page.getSize();
-  const gold = rgb(0.784, 0.592, 0.102);
+  const red = rgb(0.70, 0.137, 0.11);
 
   for (const panel of FILL_PANELS) {
     const data = fillData[panel.id];
-    const pos = SCOPE_OVERLAY_POS[panel.id];
+    const pos = SCOPE_OVERLAY_POINTS[panel.id];
     if (!data || !pos) continue;
-    const x = pos.x * width;
-    const y = height - pos.y * height;
     if (data.dentRange && data.dentRange !== 'None') {
-      const w = data.dentRange.length * 5.5;
-      page.drawText(data.dentRange, { x: x - w / 2, y: y + height * 0.016, size: 9, color: gold });
+      page.drawText(data.dentRange, { x: pos.x, y: pos.y + 14, size: 9, color: red });
     }
     if (data.oversize) {
-      const w = data.oversize.length * 5.5;
-      page.drawText(data.oversize, { x: x - w / 2, y, size: 9, color: gold });
+      page.drawText(data.oversize, { x: pos.x, y: pos.y, size: 9, color: red });
     }
   }
 
@@ -2279,8 +2279,17 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
   const currentPanel = FILL_PANELS[fillIndex];
   const currentData = fillData[currentPanel?.id] || emptyFillData();
 
+  // Functional update — two rapid taps (e.g. picking a dent range then typing
+  // an oversize count) can both fire before React re-renders. Reading off the
+  // latest state here (instead of the `currentData` closure) stops the second
+  // update from clobbering the first.
   const updateCurrent = (patch: Partial<FillPanelData>) => {
-    saveFillData({ ...fillData, [currentPanel.id]: { ...currentData, ...patch } });
+    setFillData(prev => {
+      const prevPanelData = prev[currentPanel.id] || emptyFillData();
+      const next = { ...prev, [currentPanel.id]: { ...prevPanelData, ...patch } };
+      try { localStorage.setItem(FILL_STORAGE_KEY, JSON.stringify(next)); } catch { /* storage unavailable */ }
+      return next;
+    });
   };
 
   const toggleReplacement = (item: string) => {
