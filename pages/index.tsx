@@ -2141,23 +2141,17 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <a
-            href="/scope-sheet-template.pdf"
-            download="Hail Estimator PRO Scope Sheet.pdf"
-            style={{
-              border: '1px solid var(--brd)', borderRadius: 12,
-              background: 'var(--card)', color: 'var(--text2)', textDecoration: 'none',
-              padding: 14, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
-              fontFamily: "'Public Sans', sans-serif", transition: 'all .15s',
-            }}
-          >
+          <div style={{
+            border: '1px solid var(--brd)', borderRadius: 12,
+            background: 'var(--card)', padding: 14,
+          }}>
             {previewUrl ? (
               <img
                 src={previewUrl}
                 alt="Scope sheet preview"
                 style={{
                   width: '100%', borderRadius: 8, border: '1px solid var(--brd)',
-                  boxShadow: '0 8px 24px rgba(0,0,0,.25)',
+                  boxShadow: '0 8px 24px rgba(0,0,0,.25)', display: 'block',
                 }}
               />
             ) : (
@@ -2169,8 +2163,35 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
                 Loading preview…
               </div>
             )}
-            <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--gold)' }}>Download Scope Sheet PDF</div>
-          </a>
+          </div>
+
+          <div style={{ display: 'flex', gap: 10 }}>
+            <a
+              href="/scope-sheet-template.pdf"
+              download="Hail Estimator PRO Scope Sheet.pdf"
+              style={{
+                flex: 1, textAlign: 'center', textDecoration: 'none',
+                padding: '11px 16px', borderRadius: 9,
+                background: 'var(--gold2)', color: 'var(--on-gold)',
+                border: '1px solid var(--gold2)', fontFamily: "'Public Sans', sans-serif",
+                fontWeight: 700, fontSize: 13.5, cursor: 'pointer',
+              }}
+            >
+              Download
+            </a>
+            <button
+              onClick={() => { /* Fill flow — spec coming */ }}
+              style={{
+                flex: 1, textAlign: 'center',
+                padding: '11px 16px', borderRadius: 9,
+                background: 'var(--card)', color: 'var(--text2)',
+                border: '1px solid var(--brd)', fontFamily: "'Public Sans', sans-serif",
+                fontWeight: 700, fontSize: 13.5, cursor: 'pointer',
+              }}
+            >
+              Fill
+            </button>
+          </div>
         </div>
       </div>
     </div>
