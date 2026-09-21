@@ -2114,27 +2114,56 @@ interface FillPanelData {
 const emptyFillData = (): FillPanelData => ({ dentRange: '', mode: '', replacements: [], note: '', mirrorOverlap: false, oversize: '' });
 
 const FILL_STORAGE_KEY = 'hep-scope-fill-v1';
+const HEADER_STORAGE_KEY = 'hep-scope-header-v1';
 
 const LABEL_TO_ID: Record<string, string> = Object.fromEntries(FILL_PANELS.map(p => [p.label, p.id]));
 
-// Where each panel's printed "OVERSIZE:" blank sits on
-// scope-sheet-template.pdf, in PDF point space (612x792, origin bottom-left —
-// pulled directly from the template's text layer via pdf.js getTextContent,
-// not eyeballed). The dent range is drawn just above that blank (larger y =
-// higher up the page), the oversize count directly on it.
+interface HeaderInfo {
+  date: string; carrier: string; claim: string;
+  member: string; email: string; phone: string;
+  year: string; make: string; model: string; color: string; trim: string;
+  vin: string; manuDate: string; plate: string; mileage: string;
+}
+const emptyHeaderInfo = (): HeaderInfo => ({
+  date: '', carrier: '', claim: '', member: '', email: '', phone: '',
+  year: '', make: '', model: '', color: '', trim: '', vin: '', manuDate: '', plate: '', mileage: '',
+});
+const HEADER_FIELDS: { key: keyof HeaderInfo; label: string }[] = [
+  { key: 'date', label: 'Date' }, { key: 'carrier', label: 'Carrier' }, { key: 'claim', label: 'Claim #' },
+  { key: 'member', label: 'Member' }, { key: 'email', label: 'Email' }, { key: 'phone', label: 'Phone #' },
+  { key: 'year', label: 'Year' }, { key: 'make', label: 'Make' }, { key: 'model', label: 'Model' },
+  { key: 'color', label: 'Color' }, { key: 'trim', label: 'Trim' },
+  { key: 'vin', label: 'VIN' }, { key: 'manuDate', label: 'Manu. Date' }, { key: 'plate', label: 'License Plate / State' }, { key: 'mileage', label: 'Mileage' },
+];
+// Where each header label sits on scope-sheet-template.pdf (PDF points,
+// 612x792, origin bottom-left) — the typed value is drawn just above the
+// printed blank line under each label.
+const HEADER_OVERLAY_POINTS: Record<keyof HeaderInfo, { x: number; y: number }> = {
+  date: { x: 22, y: 684 }, carrier: { x: 159, y: 684 }, claim: { x: 344, y: 684 },
+  member: { x: 22, y: 649 }, email: { x: 244, y: 649 }, phone: { x: 446, y: 649 },
+  year: { x: 22, y: 614 }, make: { x: 92, y: 614 }, model: { x: 212, y: 614 },
+  color: { x: 366, y: 614 }, trim: { x: 482, y: 614 },
+  vin: { x: 22, y: 579 }, manuDate: { x: 263, y: 579 }, plate: { x: 360, y: 579 }, mileage: { x: 507, y: 579 },
+};
+
+// Where each panel has genuinely open blank space on scope-sheet-template.pdf
+// (right under the panel title / BLEND row, or the open middle of Roof and
+// Deck Lid), in PDF point space (612x792, origin bottom-left) — matched to
+// Gabriel's hand-circled markup, not the tiny printed "OVERSIZE:" line. The
+// dent range is drawn at this point, the oversize count just below it.
 const SCOPE_OVERLAY_POINTS: Record<string, { x: number; y: number }> = {
-  'lt-fender': { x: 157, y: 466 },
-  'hood': { x: 387, y: 466 },
-  'rt-fender': { x: 570, y: 466 },
-  'lt-front-door': { x: 157, y: 310 },
-  'lt-rail': { x: 182, y: 232 },
-  'roof': { x: 324, y: 292 },
-  'rt-front-door': { x: 570, y: 310 },
-  'lt-rear-door': { x: 157, y: 154.5 },
-  'rt-rear-door': { x: 570, y: 154.5 },
-  'lt-quarter': { x: 157, y: 36 },
-  'rt-quarter': { x: 570, y: 36 },
-  'lift-gate': { x: 376, y: 38 },
+  'lt-fender': { x: 95, y: 528 },
+  'hood': { x: 337, y: 522 },
+  'rt-fender': { x: 508, y: 528 },
+  'lt-front-door': { x: 95, y: 420 },
+  'lt-rail': { x: 182, y: 227 },
+  'roof': { x: 300, y: 360 },
+  'rt-front-door': { x: 508, y: 420 },
+  'lt-rear-door': { x: 95, y: 265 },
+  'rt-rear-door': { x: 508, y: 265 },
+  'lt-quarter': { x: 95, y: 114 },
+  'rt-quarter': { x: 508, y: 114 },
+  'lift-gate': { x: 300, y: 70 },
 };
 const PDF_PAGE_W = 612;
 const PDF_PAGE_H = 792;
@@ -2142,7 +2171,7 @@ const PDF_PAGE_H = 792;
 // Draws the entered dent ranges + oversize counts onto a rendered copy of
 // the scope sheet template — used for both the in-app preview and as the
 // source canvas for the downloadable filled PDF.
-async function renderFilledScopeCanvas(fillData: Record<string, FillPanelData>): Promise<HTMLCanvasElement> {
+async function renderFilledScopeCanvas(fillData: Record<string, FillPanelData>, headerInfo?: HeaderInfo): Promise<HTMLCanvasElement> {
   const pdfjsLib = await import('pdfjs-dist');
   pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
   const pdf = await pdfjsLib.getDocument('/scope-sheet-template.pdf').promise;
@@ -2176,10 +2205,19 @@ async function renderFilledScopeCanvas(fillData: Record<string, FillPanelData>):
     }
   }
 
+  if (headerInfo) {
+    for (const field of HEADER_FIELDS) {
+      const value = headerInfo[field.key];
+      const pos = HEADER_OVERLAY_POINTS[field.key];
+      if (!value || !pos) continue;
+      ctx.fillText(value, pos.x * pxPerPt, canvas.height - pos.y * pxPerPt);
+    }
+  }
+
   return canvas;
 }
 
-async function downloadFilledScopePdf(fillData: Record<string, FillPanelData>, fileName: string) {
+async function downloadFilledScopePdf(fillData: Record<string, FillPanelData>, fileName: string, headerInfo?: HeaderInfo) {
   const [{ PDFDocument, rgb }, bytes] = await Promise.all([
     import('pdf-lib'),
     fetch('/scope-sheet-template.pdf').then(r => r.arrayBuffer()),
@@ -2197,6 +2235,15 @@ async function downloadFilledScopePdf(fillData: Record<string, FillPanelData>, f
     }
     if (data.oversize) {
       page.drawText(data.oversize, { x: pos.x, y: pos.y, size: 9, color: red });
+    }
+  }
+
+  if (headerInfo) {
+    for (const field of HEADER_FIELDS) {
+      const value = headerInfo[field.key];
+      const pos = HEADER_OVERLAY_POINTS[field.key];
+      if (!value || !pos) continue;
+      page.drawText(value, { x: pos.x, y: pos.y, size: 9, color: red });
     }
   }
 
@@ -2244,13 +2291,26 @@ function submissionToFillData(panels: SubmissionPanelRow[]): Record<string, Fill
 
 function ScopeSheetModal({ onClose }: { onClose: () => void }) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [mode, setMode] = useState<'history' | 'view' | 'fill' | 'summary' | 'past'>('history');
+  const [mode, setMode] = useState<'history' | 'view' | 'fill' | 'summary' | 'past' | 'header'>('history');
   const [fillIndex, setFillIndex] = useState(0);
   const [fillData, setFillData] = useState<Record<string, FillPanelData>>({});
   const [showJump, setShowJump] = useState(false);
   const [submissions, setSubmissions] = useState<Submission[] | null>(null);
   const [historyError, setHistoryError] = useState('');
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
+  const [headerInfo, setHeaderInfo] = useState<HeaderInfo>(emptyHeaderInfo());
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(HEADER_STORAGE_KEY);
+      if (saved) setHeaderInfo({ ...emptyHeaderInfo(), ...JSON.parse(saved) });
+    } catch { /* ignore — start blank */ }
+  }, []);
+
+  const saveHeaderInfo = (next: HeaderInfo) => {
+    setHeaderInfo(next);
+    try { localStorage.setItem(HEADER_STORAGE_KEY, JSON.stringify(next)); } catch { /* storage unavailable */ }
+  };
 
   useEffect(() => {
     (async () => {
@@ -2438,6 +2498,80 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
     );
   }
 
+  // ── Header mode: optional vehicle/claim info fields ──────────────────────
+  if (mode === 'header') {
+    return (
+      <div
+        onClick={onClose}
+        style={{
+          position: 'fixed', inset: 0, zIndex: 300,
+          background: 'rgba(0,0,0,.55)',
+          backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+        }}
+      >
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{
+            width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto',
+            background: 'var(--panel-bg)', borderRadius: 16,
+            border: '1px solid var(--brd-2)', boxShadow: '0 24px 80px rgba(0,0,0,.6)',
+          }}
+        >
+          <div style={{
+            padding: '18px 24px', borderBottom: '1px solid var(--brd)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          }}>
+            <div>
+              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 17, color: 'var(--gold)' }}>
+                Vehicle Info
+              </div>
+              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: 'var(--text3)', letterSpacing: 1.5, marginTop: 2 }}>
+                OPTIONAL — FILL ONLY WHAT YOU HAVE
+              </div>
+            </div>
+            <button onClick={() => setMode('view')} style={{
+              width: 32, height: 32, borderRadius: 8, border: '1px solid var(--brd)',
+              background: 'var(--input-bg)', color: 'var(--text2)', cursor: 'pointer',
+              fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>×</button>
+          </div>
+
+          <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {HEADER_FIELDS.map(field => (
+              <div key={field.key}>
+                <div style={{ fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", color: 'var(--text3)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6 }}>
+                  {field.label}
+                </div>
+                <input
+                  type="text"
+                  value={headerInfo[field.key]}
+                  onChange={e => saveHeaderInfo({ ...headerInfo, [field.key]: e.target.value })}
+                  style={{
+                    width: '100%', borderRadius: 9, border: '1px solid var(--brd)',
+                    background: 'var(--card)', color: 'var(--text)', padding: '10px 12px', fontSize: 14,
+                    fontFamily: "'Public Sans', sans-serif",
+                  }}
+                />
+              </div>
+            ))}
+
+            <button
+              onClick={() => setMode('view')}
+              style={{
+                marginTop: 4, padding: '13px 20px', borderRadius: 10, fontSize: 14, fontWeight: 700,
+                fontFamily: "'Public Sans', sans-serif", cursor: 'pointer',
+                background: 'var(--gold2)', color: 'var(--on-gold)', border: '1px solid var(--gold2)',
+              }}
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // ── View mode: preview + Download/Fill ──────────────────────────────────
   if (mode === 'view') {
     return (
@@ -2530,6 +2664,19 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
                 Fill
               </button>
             </div>
+
+            <button
+              onClick={() => setMode('header')}
+              style={{
+                width: '100%', textAlign: 'center',
+                padding: '11px 16px', borderRadius: 9,
+                background: 'var(--card)', color: 'var(--text2)',
+                border: '1px solid var(--brd)', fontFamily: "'Public Sans', sans-serif",
+                fontWeight: 700, fontSize: 13.5, cursor: 'pointer',
+              }}
+            >
+              Vehicle Info (optional)
+            </button>
           </div>
         </div>
       </div>
@@ -2545,6 +2692,7 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
     return (
       <ScopeSummaryScreen
         touched={touched}
+        headerInfo={headerInfo}
         onClose={onClose}
         onBackToFill={() => { setFillIndex(0); setMode('fill'); }}
         onEditPanel={(idx) => { setFillIndex(idx); setMode('fill'); }}
@@ -2816,7 +2964,7 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
 // ─── Scope Summary Screen (review + submit to Google Sheets) ──────────────
 
 function ScopeSummaryScreen({
-  touched, onClose, onBackToFill, onEditPanel, onStartOver, readOnly,
+  touched, onClose, onBackToFill, onEditPanel, onStartOver, readOnly, headerInfo,
 }: {
   touched: { panel: FillPanelDef; data: FillPanelData }[];
   onClose: () => void;
@@ -2824,6 +2972,7 @@ function ScopeSummaryScreen({
   onEditPanel: (idx: number) => void;
   onStartOver: () => void;
   readOnly?: boolean;
+  headerInfo?: HeaderInfo;
 }) {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -2838,7 +2987,7 @@ function ScopeSummaryScreen({
     let cancelled = false;
     let objectUrl: string | null = null;
     (async () => {
-      const canvas = await renderFilledScopeCanvas(fillDataMap);
+      const canvas = await renderFilledScopeCanvas(fillDataMap, headerInfo);
       const blob: Blob | null = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
       if (blob && !cancelled) {
         objectUrl = URL.createObjectURL(blob);
@@ -2852,7 +3001,7 @@ function ScopeSummaryScreen({
   const handleDownload = async () => {
     setDownloading(true);
     try {
-      await downloadFilledScopePdf(fillDataMap, 'Hail Estimator PRO Scope Sheet (filled).pdf');
+      await downloadFilledScopePdf(fillDataMap, 'Hail Estimator PRO Scope Sheet (filled).pdf', headerInfo);
     } finally {
       setDownloading(false);
     }
