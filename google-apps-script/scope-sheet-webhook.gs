@@ -18,12 +18,11 @@
  * used by the app's Scope Sheet history screen.
  *
  * IMPORTANT: if you already deployed an older version of this script, redeploy
- * (Deploy -> Manage deployments -> edit -> New version) after pasting this in,
- * so the Web App URL picks up the doGet handler and the new Oversize column.
+ * (Deploy -> Manage deployments -> edit -> New version) after pasting this in.
  */
 
 var SHEET_NAME = 'Scope Sheet Submissions';
-var HEADERS = ['Submitted At', 'Panel', 'Dent Range', 'Mode', 'Replacements', 'Note', 'Oversize'];
+var HEADERS = ['Submitted At', 'Name', 'Panel', 'Dent Range', 'Mode', 'Replacements', 'Note', 'Oversize'];
 
 function doPost(e) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -32,13 +31,18 @@ function doPost(e) {
     sheet = ss.insertSheet(SHEET_NAME);
     sheet.appendRow(HEADERS);
   }
+  // Force every column to plain text — otherwise Sheets auto-parses values
+  // like "1-5" or "6-15" as dates (e.g. Jan 5) instead of keeping them as text.
+  sheet.getRange(1, 1, Math.max(sheet.getMaxRows(), 2), HEADERS.length).setNumberFormat('@');
 
   var data = JSON.parse(e.postData.contents);
   var submittedAt = data.submittedAt || new Date().toISOString();
+  var name = data.name || 'Untitled scope sheet';
 
   (data.panels || []).forEach(function (p) {
     sheet.appendRow([
       submittedAt,
+      name,
       p.panel || '',
       p.dentRange || '',
       p.mode || '',
@@ -66,21 +70,21 @@ function doGet(e) {
     var submittedAt = r[0];
     if (!submittedAt) return;
     var key = String(submittedAt);
-    if (!grouped[key]) grouped[key] = [];
-    grouped[key].push({
-      panel: r[1],
-      dentRange: r[2],
-      mode: r[3],
-      replacements: r[4] ? String(r[4]).split(',').map(function (s) { return s.trim(); }).filter(Boolean) : [],
-      note: r[5],
-      oversize: r[6],
+    if (!grouped[key]) grouped[key] = { name: r[1] || 'Untitled scope sheet', panels: [] };
+    grouped[key].panels.push({
+      panel: r[2],
+      dentRange: r[3],
+      mode: r[4],
+      replacements: r[5] ? String(r[5]).split(',').map(function (s) { return s.trim(); }).filter(Boolean) : [],
+      note: r[6],
+      oversize: r[7],
     });
   });
 
   var submissions = Object.keys(grouped)
     .sort()
     .reverse()
-    .map(function (key) { return { submittedAt: key, panels: grouped[key] }; });
+    .map(function (key) { return { submittedAt: key, name: grouped[key].name, panels: grouped[key].panels }; });
 
   return ContentService.createTextOutput(JSON.stringify({ submissions: submissions })).setMimeType(ContentService.MimeType.JSON);
 }

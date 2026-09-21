@@ -2221,6 +2221,7 @@ interface SubmissionPanelRow {
 }
 interface Submission {
   submittedAt: string;
+  name?: string;
   panels: SubmissionPanelRow[];
 }
 
@@ -2410,8 +2411,8 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
                     cursor: 'pointer', fontFamily: "'Public Sans', sans-serif",
                   }}
                 >
-                  <div style={{ fontWeight: 700, fontSize: 13.5 }}>{label}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 3 }}>{sub.panels.length} panel{sub.panels.length === 1 ? '' : 's'}</div>
+                  <div style={{ fontWeight: 700, fontSize: 13.5 }}>{sub.name || 'Untitled scope sheet'}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 3 }}>{label} · {sub.panels.length} panel{sub.panels.length === 1 ? '' : 's'}</div>
                 </button>
               );
             })}
@@ -2829,6 +2830,7 @@ function ScopeSummaryScreen({
   const [submitError, setSubmitError] = useState('');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [scopeName, setScopeName] = useState('');
 
   const fillDataMap = Object.fromEntries(touched.map(({ panel, data }) => [panel.id, data]));
 
@@ -2865,6 +2867,7 @@ function ScopeSummaryScreen({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           submittedAt: new Date().toISOString(),
+          name: scopeName.trim() || 'Untitled scope sheet',
           panels: touched.map(({ panel, data }) => ({
             panel: panel.label,
             dentRange: data.dentRange,
@@ -2902,6 +2905,25 @@ function ScopeSummaryScreen({
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 16px 100px', maxWidth: 480, margin: '0 auto', width: '100%', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {touched.length > 0 && !readOnly && (
+          <div>
+            <div style={{ fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", color: 'var(--text3)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 }}>
+              Name this scope sheet
+            </div>
+            <input
+              type="text"
+              value={scopeName}
+              onChange={e => setScopeName(e.target.value)}
+              placeholder="e.g. 2021 Silverado — Claim #12345"
+              style={{
+                width: '100%', borderRadius: 9, border: '1px solid var(--brd)',
+                background: 'var(--card)', color: 'var(--text)', padding: '11px 12px', fontSize: 14,
+                fontFamily: "'Public Sans', sans-serif",
+              }}
+            />
+          </div>
+        )}
+
         {touched.length > 0 && (
           <div style={{ border: '1px solid var(--brd)', borderRadius: 12, background: 'var(--card)', padding: 14 }}>
             {previewUrl ? (
