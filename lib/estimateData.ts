@@ -195,7 +195,7 @@ export const PANELS: CarPanel[] = [
         notes: [
           {
             id: 'nn-hml-1',
-            text: 'The high mount stop lamp (CHMSL) is mounted at the top of the cab rear window or tailgate and must be removed to allow full PDR tool access to the upper cab corners and roof trailing edge. Leaving it in place obstructs tool insertion and risks cracking the lamp housing from vibration or incidental contact during repair.',
+            text: 'The high mount stop lamp (CHMSL) must be removed to allow full PDR tool access to the roof, not the cab corners.',
           },
         ],
       },
