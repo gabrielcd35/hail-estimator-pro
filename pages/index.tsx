@@ -2108,18 +2108,161 @@ interface FillPanelData {
   replacements: string[];
   note: string;
   mirrorOverlap: boolean;
+  oversize: string;
 }
 
-const emptyFillData = (): FillPanelData => ({ dentRange: '', mode: '', replacements: [], note: '', mirrorOverlap: false });
+const emptyFillData = (): FillPanelData => ({ dentRange: '', mode: '', replacements: [], note: '', mirrorOverlap: false, oversize: '' });
 
 const FILL_STORAGE_KEY = 'hep-scope-fill-v1';
 
+const LABEL_TO_ID: Record<string, string> = Object.fromEntries(FILL_PANELS.map(p => [p.label, p.id]));
+
+// Fractions of the page (0-1, top-left origin) where each panel's printed
+// "OVERSIZE:" blank sits on scope-sheet-template.pdf — the dent range is
+// drawn just above that blank, the oversize count right on it.
+const SCOPE_OVERLAY_POS: Record<string, { x: number; y: number }> = {
+  'lt-fender': { x: 0.17, y: 0.407 },
+  'hood': { x: 0.50, y: 0.407 },
+  'rt-fender': { x: 0.83, y: 0.407 },
+  'lt-front-door': { x: 0.17, y: 0.614 },
+  'lt-rail': { x: 0.34, y: 0.46 },
+  'roof': { x: 0.52, y: 0.561 },
+  'rt-front-door': { x: 0.83, y: 0.614 },
+  'lt-rear-door': { x: 0.17, y: 0.829 },
+  'rt-rear-door': { x: 0.83, y: 0.829 },
+  'lt-quarter': { x: 0.17, y: 0.972 },
+  'rt-quarter': { x: 0.83, y: 0.972 },
+  'lift-gate': { x: 0.50, y: 0.972 },
+};
+
+// Draws the entered dent ranges + oversize counts onto a rendered copy of
+// the scope sheet template — used for both the in-app preview and as the
+// source canvas for the downloadable filled PDF.
+async function renderFilledScopeCanvas(fillData: Record<string, FillPanelData>): Promise<HTMLCanvasElement> {
+  const pdfjsLib = await import('pdfjs-dist');
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+  const pdf = await pdfjsLib.getDocument('/scope-sheet-template.pdf').promise;
+  const page = await pdf.getPage(1);
+  const viewport = page.getViewport({ scale: 2.5 });
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.ceil(viewport.width);
+  canvas.height = Math.ceil(viewport.height);
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return canvas;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  await page.render({ canvas: null, canvasContext: ctx, viewport }).promise;
+
+  ctx.fillStyle = '#c8971a';
+  ctx.font = `700 ${Math.round(canvas.width * 0.013)}px "IBM Plex Mono", monospace`;
+  ctx.textAlign = 'center';
+
+  for (const panel of FILL_PANELS) {
+    const data = fillData[panel.id];
+    const pos = SCOPE_OVERLAY_POS[panel.id];
+    if (!data || !pos) continue;
+    const x = pos.x * canvas.width;
+    const y = pos.y * canvas.height;
+    if (data.dentRange && data.dentRange !== 'None') {
+      ctx.fillText(data.dentRange, x, y - canvas.height * 0.02);
+    }
+    if (data.oversize) {
+      ctx.fillText(data.oversize, x, y);
+    }
+  }
+
+  return canvas;
+}
+
+async function downloadFilledScopePdf(fillData: Record<string, FillPanelData>, fileName: string) {
+  const [{ PDFDocument, rgb }, bytes] = await Promise.all([
+    import('pdf-lib'),
+    fetch('/scope-sheet-template.pdf').then(r => r.arrayBuffer()),
+  ]);
+  const pdfDoc = await PDFDocument.load(bytes);
+  const page = pdfDoc.getPages()[0];
+  const { width, height } = page.getSize();
+  const gold = rgb(0.784, 0.592, 0.102);
+
+  for (const panel of FILL_PANELS) {
+    const data = fillData[panel.id];
+    const pos = SCOPE_OVERLAY_POS[panel.id];
+    if (!data || !pos) continue;
+    const x = pos.x * width;
+    const y = height - pos.y * height;
+    if (data.dentRange && data.dentRange !== 'None') {
+      const w = data.dentRange.length * 5.5;
+      page.drawText(data.dentRange, { x: x - w / 2, y: y + height * 0.016, size: 9, color: gold });
+    }
+    if (data.oversize) {
+      const w = data.oversize.length * 5.5;
+      page.drawText(data.oversize, { x: x - w / 2, y, size: 9, color: gold });
+    }
+  }
+
+  const outBytes = await pdfDoc.save();
+  const blob = new Blob([outBytes], { type: 'application/pdf' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(a.href);
+}
+
+interface SubmissionPanelRow {
+  panel: string;
+  dentRange: string;
+  mode: string;
+  replacements: string[];
+  note: string;
+  oversize: string;
+}
+interface Submission {
+  submittedAt: string;
+  panels: SubmissionPanelRow[];
+}
+
+function submissionToFillData(panels: SubmissionPanelRow[]): Record<string, FillPanelData> {
+  const out: Record<string, FillPanelData> = {};
+  for (const row of panels) {
+    const id = LABEL_TO_ID[row.panel];
+    if (!id) continue;
+    out[id] = {
+      dentRange: row.dentRange || '',
+      mode: (row.mode as FillPanelData['mode']) || '',
+      replacements: row.replacements || [],
+      note: row.note || '',
+      mirrorOverlap: false,
+      oversize: row.oversize || '',
+    };
+  }
+  return out;
+}
+
 function ScopeSheetModal({ onClose }: { onClose: () => void }) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [mode, setMode] = useState<'view' | 'fill' | 'summary'>('view');
+  const [mode, setMode] = useState<'history' | 'view' | 'fill' | 'summary' | 'past'>('history');
   const [fillIndex, setFillIndex] = useState(0);
   const [fillData, setFillData] = useState<Record<string, FillPanelData>>({});
   const [showJump, setShowJump] = useState(false);
+  const [submissions, setSubmissions] = useState<Submission[] | null>(null);
+  const [historyError, setHistoryError] = useState('');
+  const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/scope-sheet-list');
+        const body = await res.json();
+        if (!res.ok) { setHistoryError(body.error || 'Could not load history.'); return; }
+        setSubmissions(body.submissions || []);
+      } catch {
+        setHistoryError('Could not load history.');
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     try {
@@ -2178,6 +2321,112 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
     })();
     return () => { cancelled = true; if (objectUrl) URL.revokeObjectURL(objectUrl); };
   }, []);
+
+  // ── History mode: past submissions saved to the Google Sheet ────────────
+  if (mode === 'history') {
+    return (
+      <div
+        onClick={onClose}
+        style={{
+          position: 'fixed', inset: 0, zIndex: 300,
+          background: 'rgba(0,0,0,.55)',
+          backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+        }}
+      >
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{
+            width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto',
+            background: 'var(--panel-bg)', borderRadius: 16,
+            border: '1px solid var(--brd-2)', boxShadow: '0 24px 80px rgba(0,0,0,.6)',
+          }}
+        >
+          <div style={{
+            padding: '18px 24px', borderBottom: '1px solid var(--brd)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          }}>
+            <div>
+              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 17, color: 'var(--gold)' }}>
+                Scope Sheet
+              </div>
+              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: 'var(--text3)', letterSpacing: 1.5, marginTop: 2 }}>
+                SAVED SUBMISSIONS
+              </div>
+            </div>
+            <button onClick={onClose} style={{
+              width: 32, height: 32, borderRadius: 8, border: '1px solid var(--brd)',
+              background: 'var(--input-bg)', color: 'var(--text2)', cursor: 'pointer',
+              fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>×</button>
+          </div>
+
+          <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <button
+              onClick={() => setMode('view')}
+              style={{
+                padding: '13px 16px', borderRadius: 10, fontSize: 14, fontWeight: 700,
+                fontFamily: "'Public Sans', sans-serif", cursor: 'pointer',
+                background: 'var(--gold2)', color: 'var(--on-gold)', border: '1px solid var(--gold2)',
+              }}
+            >
+              + New Scope Sheet
+            </button>
+
+            {historyError && (
+              <div style={{ fontSize: 12.5, color: 'var(--text3)', textAlign: 'center', padding: '16px 8px' }}>
+                {historyError}
+              </div>
+            )}
+            {!historyError && submissions === null && (
+              <div style={{ fontSize: 12.5, color: 'var(--text3)', textAlign: 'center', padding: '16px 8px' }}>
+                Loading saved submissions…
+              </div>
+            )}
+            {!historyError && submissions !== null && submissions.length === 0 && (
+              <div style={{ fontSize: 12.5, color: 'var(--text3)', textAlign: 'center', padding: '16px 8px' }}>
+                No submissions saved yet.
+              </div>
+            )}
+            {submissions && submissions.map(sub => {
+              const date = new Date(sub.submittedAt);
+              const label = isNaN(date.getTime()) ? sub.submittedAt : date.toLocaleString();
+              return (
+                <button
+                  key={sub.submittedAt}
+                  onClick={() => { setSelectedSubmission(sub); setMode('past'); }}
+                  style={{
+                    textAlign: 'left', padding: '12px 14px', borderRadius: 10,
+                    background: 'var(--card)', color: 'var(--text)', border: '1px solid var(--brd)',
+                    cursor: 'pointer', fontFamily: "'Public Sans', sans-serif",
+                  }}
+                >
+                  <div style={{ fontWeight: 700, fontSize: 13.5 }}>{label}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 3 }}>{sub.panels.length} panel{sub.panels.length === 1 ? '' : 's'}</div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Past mode: view/download a previously saved submission ──────────────
+  if (mode === 'past' && selectedSubmission) {
+    return (
+      <ScopeSummaryScreen
+        touched={selectedSubmission.panels
+          .map(row => ({ panel: FILL_PANELS.find(p => p.id === LABEL_TO_ID[row.panel]), data: submissionToFillData(selectedSubmission.panels)[LABEL_TO_ID[row.panel]] }))
+          .filter((x): x is { panel: FillPanelDef; data: FillPanelData } => !!x.panel && !!x.data)}
+        onClose={onClose}
+        onBackToFill={() => setMode('history')}
+        onEditPanel={() => { /* read-only history view */ }}
+        onStartOver={() => setMode('history')}
+        readOnly
+      />
+    );
+  }
 
   // ── View mode: preview + Download/Fill ──────────────────────────────────
   if (mode === 'view') {
@@ -2281,7 +2530,7 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
   if (mode === 'summary') {
     const touched = FILL_PANELS
       .map(p => ({ panel: p, data: fillData[p.id] }))
-      .filter(({ data }) => data && (data.dentRange && data.dentRange !== 'None' || data.replacements.length > 0 || data.note.trim() || data.mirrorOverlap));
+      .filter(({ data }) => data && (data.dentRange && data.dentRange !== 'None' || data.replacements.length > 0 || data.note.trim() || data.mirrorOverlap || data.oversize));
 
     return (
       <ScopeSummaryScreen
@@ -2399,6 +2648,32 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
           </div>
         </div>
 
+        {/* Oversize dents */}
+        <div>
+          <div style={{ fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", color: 'var(--text3)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 }}>
+            Oversize Dents (optional)
+          </div>
+          <input
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={30}
+            value={currentData.oversize}
+            onChange={e => {
+              const raw = e.target.value;
+              if (raw === '') { updateCurrent({ oversize: '' }); return; }
+              const n = Math.max(1, Math.min(30, parseInt(raw, 10) || 1));
+              updateCurrent({ oversize: String(n) });
+            }}
+            placeholder="1–30"
+            style={{
+              width: '100%', borderRadius: 9, border: '1px solid var(--brd)',
+              background: 'var(--card)', color: 'var(--text)', padding: '11px 12px', fontSize: 14,
+              fontFamily: "'Public Sans', sans-serif",
+            }}
+          />
+        </div>
+
         {/* Mirror overlap — front doors only */}
         {currentPanel.isFrontDoor && (
           <label style={{
@@ -2501,7 +2776,7 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {FILL_PANELS.map((p, idx) => {
                 const d = fillData[p.id];
-                const hasData = d && (d.dentRange && d.dentRange !== 'None' || d.replacements.length > 0 || d.note.trim() || d.mirrorOverlap);
+                const hasData = d && (d.dentRange && d.dentRange !== 'None' || d.replacements.length > 0 || d.note.trim() || d.mirrorOverlap || d.oversize);
                 return (
                   <button
                     key={p.id}
@@ -2531,17 +2806,46 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
 // ─── Scope Summary Screen (review + submit to Google Sheets) ──────────────
 
 function ScopeSummaryScreen({
-  touched, onClose, onBackToFill, onEditPanel, onStartOver,
+  touched, onClose, onBackToFill, onEditPanel, onStartOver, readOnly,
 }: {
   touched: { panel: FillPanelDef; data: FillPanelData }[];
   onClose: () => void;
   onBackToFill: () => void;
   onEditPanel: (idx: number) => void;
   onStartOver: () => void;
+  readOnly?: boolean;
 }) {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
+
+  const fillDataMap = Object.fromEntries(touched.map(({ panel, data }) => [panel.id, data]));
+
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl: string | null = null;
+    (async () => {
+      const canvas = await renderFilledScopeCanvas(fillDataMap);
+      const blob: Blob | null = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+      if (blob && !cancelled) {
+        objectUrl = URL.createObjectURL(blob);
+        setPreviewUrl(objectUrl);
+      }
+    })();
+    return () => { cancelled = true; if (objectUrl) URL.revokeObjectURL(objectUrl); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [touched]);
+
+  const handleDownload = async () => {
+    setDownloading(true);
+    try {
+      await downloadFilledScopePdf(fillDataMap, 'Hail Estimator PRO Scope Sheet (filled).pdf');
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -2561,6 +2865,7 @@ function ScopeSummaryScreen({
               ...(panel.isFrontDoor && data.mirrorOverlap ? ['Interior Trim (mirror overlap)', 'Mirror (mirror overlap)'] : []),
             ],
             note: data.note,
+            oversize: data.oversize,
           })),
         }),
       });
@@ -2588,6 +2893,37 @@ function ScopeSummaryScreen({
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 16px 100px', maxWidth: 480, margin: '0 auto', width: '100%', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {touched.length > 0 && (
+          <div style={{ border: '1px solid var(--brd)', borderRadius: 12, background: 'var(--card)', padding: 14 }}>
+            {previewUrl ? (
+              <img
+                src={previewUrl}
+                alt="Filled scope sheet preview"
+                style={{ width: '100%', borderRadius: 8, border: '1px solid var(--brd)', boxShadow: '0 8px 24px rgba(0,0,0,.25)', display: 'block' }}
+              />
+            ) : (
+              <div style={{
+                width: '100%', aspectRatio: '8.5 / 11', borderRadius: 8, background: 'var(--input-bg)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text3)', fontSize: 12,
+              }}>
+                Rendering preview…
+              </div>
+            )}
+            <button
+              onClick={handleDownload}
+              disabled={downloading}
+              style={{
+                width: '100%', marginTop: 12, padding: '11px 16px', borderRadius: 9,
+                background: 'var(--card)', color: 'var(--text2)', border: '1px solid var(--brd)',
+                fontFamily: "'Public Sans', sans-serif", fontWeight: 700, fontSize: 13.5,
+                cursor: downloading ? 'wait' : 'pointer',
+              }}
+            >
+              {downloading ? 'Building PDF…' : 'Download Filled PDF'}
+            </button>
+          </div>
+        )}
+
         {touched.length === 0 && (
           <div style={{ color: 'var(--text3)', fontSize: 13.5, textAlign: 'center', padding: '40px 20px' }}>
             No panels have damage entered yet.
@@ -2607,6 +2943,9 @@ function ScopeSummaryScreen({
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, fontSize: 12 }}>
                 {data.dentRange && data.dentRange !== 'None' && (
                   <span style={{ background: 'var(--gold-soft)', color: 'var(--gold)', padding: '3px 8px', borderRadius: 6 }}>{data.dentRange} dents</span>
+                )}
+                {data.oversize && (
+                  <span style={{ background: 'var(--gold-soft)', color: 'var(--gold)', padding: '3px 8px', borderRadius: 6 }}>{data.oversize} oversize</span>
                 )}
                 {data.mode && (
                   <span style={{ background: 'var(--input-bg)', color: 'var(--text2)', padding: '3px 8px', borderRadius: 6 }}>{data.mode.toUpperCase()}</span>
@@ -2651,20 +2990,22 @@ function ScopeSummaryScreen({
           fontFamily: "'Public Sans', sans-serif", cursor: 'pointer',
           background: 'var(--card)', color: 'var(--text2)', border: '1px solid var(--brd)',
         }}>
-          Start Over
+          {readOnly ? 'Back to History' : 'Start Over'}
         </button>
-        <button
-          onClick={handleSubmit}
-          disabled={submitting || touched.length === 0}
-          style={{
-            flex: 1, padding: '13px 20px', borderRadius: 10, fontSize: 14, fontWeight: 700,
-            fontFamily: "'Public Sans', sans-serif", cursor: submitting ? 'wait' : 'pointer',
-            background: 'var(--gold2)', color: 'var(--on-gold)', border: '1px solid var(--gold2)',
-            opacity: touched.length === 0 ? 0.5 : 1,
-          }}
-        >
-          {submitting ? 'Saving…' : 'Save to Sheet'}
-        </button>
+        {!readOnly && (
+          <button
+            onClick={handleSubmit}
+            disabled={submitting || touched.length === 0}
+            style={{
+              flex: 1, padding: '13px 20px', borderRadius: 10, fontSize: 14, fontWeight: 700,
+              fontFamily: "'Public Sans', sans-serif", cursor: submitting ? 'wait' : 'pointer',
+              background: 'var(--gold2)', color: 'var(--on-gold)', border: '1px solid var(--gold2)',
+              opacity: touched.length === 0 ? 0.5 : 1,
+            }}
+          >
+            {submitting ? 'Saving…' : 'Save to Sheet'}
+          </button>
+        )}
       </div>
     </div>
   );
