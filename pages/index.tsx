@@ -2190,6 +2190,15 @@ async function renderFilledScopeCanvas(fillData: Record<string, FillPanelData>, 
   ctx.fillStyle = '#b3231c';
   ctx.font = `700 ${Math.round(9 * pxPerPt)}px "IBM Plex Mono", monospace`;
   ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  // Wait for the web font to actually be loaded before drawing — on a cold
+  // cache (common on mobile) the browser silently substitutes a fallback
+  // font for the first paint, which uses different glyph metrics and throws
+  // the overlay text off from where it was positioned for the real font.
+  try {
+    await document.fonts.load(`700 ${Math.round(9 * pxPerPt)}px "IBM Plex Mono"`);
+    await document.fonts.ready;
+  } catch { /* font API unavailable — fall back to whatever's loaded */ }
 
   for (const panel of FILL_PANELS) {
     const data = fillData[panel.id];
@@ -2198,10 +2207,10 @@ async function renderFilledScopeCanvas(fillData: Record<string, FillPanelData>, 
     const x = pos.x * pxPerPt;
     const y = canvas.height - pos.y * pxPerPt;
     if (data.dentRange && data.dentRange !== 'None') {
-      ctx.fillText(data.dentRange, x, y - 14 * pxPerPt);
+      ctx.fillText(data.dentRange, x, y);
     }
     if (data.oversize) {
-      ctx.fillText(data.oversize, x, y);
+      ctx.fillText(data.oversize, x, y + 14 * pxPerPt);
     }
   }
 
@@ -2231,10 +2240,10 @@ async function downloadFilledScopePdf(fillData: Record<string, FillPanelData>, f
     const pos = SCOPE_OVERLAY_POINTS[panel.id];
     if (!data || !pos) continue;
     if (data.dentRange && data.dentRange !== 'None') {
-      page.drawText(data.dentRange, { x: pos.x, y: pos.y + 14, size: 9, color: red });
+      page.drawText(data.dentRange, { x: pos.x, y: pos.y, size: 9, color: red });
     }
     if (data.oversize) {
-      page.drawText(data.oversize, { x: pos.x, y: pos.y, size: 9, color: red });
+      page.drawText(data.oversize, { x: pos.x, y: pos.y - 14, size: 9, color: red });
     }
   }
 
