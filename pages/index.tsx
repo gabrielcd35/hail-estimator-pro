@@ -2156,19 +2156,31 @@ const SCOPE_OVERLAY_POINTS: Record<string, { x: number; y: number }> = {
   'lt-fender': { x: 95, y: 528 },
   'hood': { x: 290, y: 522 },
   'rt-fender': { x: 508, y: 528 },
-  'lt-front-door': { x: 95, y: 420 },
+  'lt-front-door': { x: 95, y: 425 },
   'lt-rail': { x: 182, y: 320 },
   'rt-rail': { x: 395, y: 320 },
   'roof': { x: 300, y: 360 },
-  'rt-front-door': { x: 508, y: 420 },
-  'lt-rear-door': { x: 95, y: 265 },
-  'rt-rear-door': { x: 508, y: 265 },
+  'rt-front-door': { x: 508, y: 425 },
+  'lt-rear-door': { x: 95, y: 270 },
+  'rt-rear-door': { x: 508, y: 270 },
   'lt-quarter': { x: 95, y: 120 },
   'rt-quarter': { x: 508, y: 120 },
-  'lift-gate': { x: 300, y: 70 },
+  'lift-gate': { x: 300, y: 115 },
 };
 const PDF_PAGE_W = 612;
 const PDF_PAGE_H = 792;
+
+// Combines dent range + oversize into a single line ("6-15  O.S 4") so the
+// overlay only ever needs one line of vertical room per panel — some panel
+// boxes are too tight for two stacked lines without colliding with the
+// printed checklist.
+function overlayLineFor(data: FillPanelData): string {
+  const hasDent = data.dentRange && data.dentRange !== 'None';
+  const parts: string[] = [];
+  if (hasDent) parts.push(data.dentRange);
+  if (data.oversize) parts.push(`O.S ${data.oversize}`);
+  return parts.join('   ');
+}
 
 // Draws the entered dent ranges + oversize counts onto a rendered copy of
 // the scope sheet template — used for both the in-app preview and as the
@@ -2206,14 +2218,9 @@ async function renderFilledScopeCanvas(fillData: Record<string, FillPanelData>, 
     const data = fillData[panel.id];
     const pos = SCOPE_OVERLAY_POINTS[panel.id];
     if (!data || !pos) continue;
-    const x = pos.x * pxPerPt;
-    const y = canvas.height - pos.y * pxPerPt;
-    if (data.dentRange && data.dentRange !== 'None') {
-      ctx.fillText(data.dentRange, x, y);
-    }
-    if (data.oversize) {
-      ctx.fillText(data.oversize, x, y + 11 * pxPerPt);
-    }
+    const text = overlayLineFor(data);
+    if (!text) continue;
+    ctx.fillText(text, pos.x * pxPerPt, canvas.height - pos.y * pxPerPt);
   }
 
   if (headerInfo) {
@@ -2241,12 +2248,8 @@ async function downloadFilledScopePdf(fillData: Record<string, FillPanelData>, f
     const data = fillData[panel.id];
     const pos = SCOPE_OVERLAY_POINTS[panel.id];
     if (!data || !pos) continue;
-    if (data.dentRange && data.dentRange !== 'None') {
-      page.drawText(data.dentRange, { x: pos.x, y: pos.y, size: 9, color: red });
-    }
-    if (data.oversize) {
-      page.drawText(data.oversize, { x: pos.x, y: pos.y - 11, size: 9, color: red });
-    }
+    const text = overlayLineFor(data);
+    if (text) page.drawText(text, { x: pos.x, y: pos.y, size: 9, color: red });
   }
 
   if (headerInfo) {
@@ -2568,14 +2571,14 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
             ))}
 
             <button
-              onClick={() => setMode('view')}
+              onClick={() => setMode('fill')}
               style={{
                 marginTop: 4, padding: '13px 20px', borderRadius: 10, fontSize: 14, fontWeight: 700,
                 fontFamily: "'Public Sans', sans-serif", cursor: 'pointer',
                 background: 'var(--gold2)', color: 'var(--on-gold)', border: '1px solid var(--gold2)',
               }}
             >
-              Done
+              Continue to Panels
             </button>
           </div>
         </div>
@@ -2663,7 +2666,7 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
                 Download
               </a>
               <button
-                onClick={() => setMode('fill')}
+                onClick={() => setMode('header')}
                 style={{
                   flex: 1, textAlign: 'center',
                   padding: '11px 16px', borderRadius: 9,
@@ -2675,19 +2678,6 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
                 Fill
               </button>
             </div>
-
-            <button
-              onClick={() => setMode('header')}
-              style={{
-                width: '100%', textAlign: 'center',
-                padding: '11px 16px', borderRadius: 9,
-                background: 'var(--card)', color: 'var(--text2)',
-                border: '1px solid var(--brd)', fontFamily: "'Public Sans', sans-serif",
-                fontWeight: 700, fontSize: 13.5, cursor: 'pointer',
-              }}
-            >
-              Vehicle Info (optional)
-            </button>
           </div>
         </div>
       </div>
@@ -3136,7 +3126,7 @@ function ScopeSummaryScreen({
                   <span style={{ background: 'var(--gold-soft)', color: 'var(--gold)', padding: '3px 8px', borderRadius: 6 }}>{data.dentRange} dents</span>
                 )}
                 {data.oversize && (
-                  <span style={{ background: 'var(--gold-soft)', color: 'var(--gold)', padding: '3px 8px', borderRadius: 6 }}>{data.oversize} oversize</span>
+                  <span style={{ background: 'var(--gold-soft)', color: 'var(--gold)', padding: '3px 8px', borderRadius: 6 }}>O.S {data.oversize}</span>
                 )}
                 {data.mode && (
                   <span style={{ background: 'var(--input-bg)', color: 'var(--text2)', padding: '3px 8px', borderRadius: 6 }}>{data.mode.toUpperCase()}</span>
