@@ -2821,7 +2821,7 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
                   fontWeight: 700, fontSize: 13.5, cursor: 'pointer',
                 }}
               >
-                Download
+                Download Blank
               </a>
               <button
                 onClick={() => setMode('header')}
