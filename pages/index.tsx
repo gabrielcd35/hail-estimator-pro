@@ -2083,8 +2083,12 @@ interface FillPanelDef {
 // Replacement option labels match the printed lines on scope-sheet-template.pdf
 // exactly (word for word) so each selection can be circled on the real form —
 // see REPLACEMENT_CIRCLES below for where each one is drawn.
-const DOOR_FULL_OPTIONS = ['R&I Belt Molding', 'R&I Upper Molding', 'R&I Applique', 'R&I Handle', 'R&I Mirror Assy', 'R&I Bodyside Mldg', 'R&I Mirror Glass'];
-const DOOR_REAR_OPTIONS = ['R&I Belt Molding', 'R&I Upper Molding', 'R&I Applique', 'R&I Handle', 'R&I Bodyside Mldg'];
+// "R&I Interior Trim" isn't printed on the template — it's drawn into the
+// blank gap already sitting below each door's checklist (between the last
+// printed line and the U.P.D./OVERSIZE row), so it never eats into the space
+// used for the dent count at the top of the box.
+const DOOR_FULL_OPTIONS = ['R&I Belt Molding', 'R&I Upper Molding', 'R&I Applique', 'R&I Handle', 'R&I Mirror Assy', 'R&I Bodyside Mldg', 'R&I Mirror Glass', 'R&I Interior Trim'];
+const DOOR_REAR_OPTIONS = ['R&I Belt Molding', 'R&I Upper Molding', 'R&I Applique', 'R&I Handle', 'R&I Bodyside Mldg', 'R&I Interior Trim'];
 const QUARTER_OPTIONS = ['R&I Rear Lamp', 'R&I Glass', "R&R Qtr Glass Mldg"];
 
 const FILL_PANELS: FillPanelDef[] = [
@@ -2251,13 +2255,24 @@ const REPLACEMENT_CIRCLES: Record<string, Record<string, CircleSpec>> = {
 
 // Mirror overlap auto-implies these two real form lines get circled too,
 // even if the adjuster didn't also tap them as separate replacement chips.
-const MIRROR_OVERLAP_ITEMS = ['R&I Mirror Assy', 'R&I Mirror Glass'];
+const MIRROR_OVERLAP_ITEMS = ['R&I Mirror Assy', 'R&I Mirror Glass', 'R&I Interior Trim'];
 
 function effectiveReplacements(panel: FillPanelDef, data: FillPanelData): string[] {
   const set = new Set(data.replacements);
   if (panel.isFrontDoor && data.mirrorOverlap) MIRROR_OVERLAP_ITEMS.forEach(i => set.add(i));
   return Array.from(set);
 }
+
+// "R&I Interior Trim" has no printed line to circle, so it's written as its
+// own small red line in the blank gap already sitting below each door's
+// checklist (well clear of the dent-count space at the top of the box).
+const INTERIOR_TRIM_LABEL = 'R&I Interior Trim';
+const INTERIOR_TRIM_POINTS: Record<string, { x: number; y: number }> = {
+  'lt-front-door': { x: 29, y: 318 },
+  'rt-front-door': { x: 442, y: 318 },
+  'lt-rear-door': { x: 29, y: 175 },
+  'rt-rear-door': { x: 442, y: 175 },
+};
 
 // Combines dent range + oversize into a single line ("6-15  O.S 4") so the
 // overlay only ever needs one line of vertical room per panel — some panel
@@ -2324,6 +2339,10 @@ async function renderFilledScopeCanvas(fillData: Record<string, FillPanelData>, 
       ctx.stroke();
     }
     ctx.restore();
+    const trimPos = INTERIOR_TRIM_POINTS[panel.id];
+    if (trimPos && effectiveReplacements(panel, data).includes(INTERIOR_TRIM_LABEL)) {
+      ctx.fillText(INTERIOR_TRIM_LABEL.toUpperCase(), trimPos.x * pxPerPt, canvas.height - trimPos.y * pxPerPt);
+    }
   }
 
   if (headerInfo) {
@@ -2361,6 +2380,10 @@ async function downloadFilledScopePdf(fillData: Record<string, FillPanelData>, f
       const c = circles[item];
       if (!c) continue;
       page.drawEllipse({ x: c.cx, y: c.cy, xScale: c.rx, yScale: c.ry, borderColor: red, borderWidth: 1.4 });
+    }
+    const trimPos = INTERIOR_TRIM_POINTS[panel.id];
+    if (trimPos && effectiveReplacements(panel, data).includes(INTERIOR_TRIM_LABEL)) {
+      page.drawText(INTERIOR_TRIM_LABEL.toUpperCase(), { x: trimPos.x, y: trimPos.y, size: 9, color: red });
     }
   }
 
@@ -2960,7 +2983,7 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
             <div>
               <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>Mirror overlap</div>
               <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>
-                Automatically adds R&I Mirror Assy and R&I Mirror Glass to the final scope.
+                Automatically adds R&I Mirror Assy, R&I Mirror Glass, and R&I Interior Trim to the final scope.
               </div>
             </div>
           </label>
@@ -2970,7 +2993,7 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
             fontSize: 12, color: 'var(--gold)', background: 'var(--gold-soft)',
             border: '1px solid var(--gold2)', borderRadius: 8, padding: '8px 12px',
           }}>
-            ✓ Auto-added: R&I Mirror Assy, R&I Mirror Glass
+            ✓ Auto-added: R&I Mirror Assy, R&I Mirror Glass, R&I Interior Trim
           </div>
         )}
 
