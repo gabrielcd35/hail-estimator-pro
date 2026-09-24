@@ -2080,20 +2080,27 @@ interface FillPanelDef {
   isFrontDoor?: boolean;
 }
 
+// Replacement option labels match the printed lines on scope-sheet-template.pdf
+// exactly (word for word) so each selection can be circled on the real form —
+// see REPLACEMENT_CIRCLES below for where each one is drawn.
+const DOOR_FULL_OPTIONS = ['R&I Belt Molding', 'R&I Upper Molding', 'R&I Applique', 'R&I Handle', 'R&I Mirror Assy', 'R&I Bodyside Mldg', 'R&I Mirror Glass'];
+const DOOR_REAR_OPTIONS = ['R&I Belt Molding', 'R&I Upper Molding', 'R&I Applique', 'R&I Handle', 'R&I Bodyside Mldg'];
+const QUARTER_OPTIONS = ['R&I Rear Lamp', 'R&I Glass', "R&R Qtr Glass Mldg"];
+
 const FILL_PANELS: FillPanelDef[] = [
-  { id: 'hood', label: 'Hood', replacementOptions: ['Hood Insulation Pad', 'Hood Emblem'] },
-  { id: 'lt-fender', label: 'LT Fender', replacementOptions: ['Fender Liner', 'Wheel Opening Molding'] },
-  { id: 'lt-front-door', label: 'LT Front Door', replacementOptions: ['Belt Molding', 'Door Handle'], isFrontDoor: true },
-  { id: 'lt-rear-door', label: 'LT Rear Door', replacementOptions: ['Belt Molding', 'Door Handle'] },
-  { id: 'lt-quarter', label: 'LT Quarter Panel', replacementOptions: ['Quarter Glass', 'Fuel Door'] },
-  { id: 'lt-rail', label: 'LT Rail', replacementOptions: ['Roof Rail Molding', 'Roof Rack / Luggage Carrier'] },
-  { id: 'roof', label: 'Roof', replacementOptions: ['Antenna', 'Sunroof Frame', 'Overhead Console'] },
-  { id: 'lift-gate', label: 'Lift Gate', replacementOptions: ['Lift Gate Glass', 'Wiper Arm'] },
-  { id: 'rt-rail', label: 'RT Rail', replacementOptions: ['Roof Rail Molding', 'Roof Rack / Luggage Carrier'] },
-  { id: 'rt-quarter', label: 'RT Quarter Panel', replacementOptions: ['Quarter Glass', 'Fuel Door'] },
-  { id: 'rt-rear-door', label: 'RT Rear Door', replacementOptions: ['Belt Molding', 'Door Handle'] },
-  { id: 'rt-front-door', label: 'RT Front Door', replacementOptions: ['Belt Molding', 'Door Handle'], isFrontDoor: true },
-  { id: 'rt-fender', label: 'RT Fender', replacementOptions: ['Fender Liner', 'Wheel Opening Molding'] },
+  { id: 'hood', label: 'Hood', replacementOptions: ['R&I Hood', 'R&I Insulator', 'R&I Emblem', 'R&I Front Bumper'] },
+  { id: 'lt-fender', label: 'LT Fender', replacementOptions: ['R&I Front Lamp', 'R&I Flare', 'R&I Vent'] },
+  { id: 'lt-front-door', label: 'LT Front Door', replacementOptions: DOOR_FULL_OPTIONS, isFrontDoor: true },
+  { id: 'lt-rear-door', label: 'LT Rear Door', replacementOptions: DOOR_REAR_OPTIONS },
+  { id: 'lt-quarter', label: 'LT Quarter Panel', replacementOptions: QUARTER_OPTIONS },
+  { id: 'lt-rail', label: 'LT Rail', replacementOptions: [] },
+  { id: 'roof', label: 'Roof', replacementOptions: ['R&I Headliner', 'R&I Sunroof Frame', 'R&I Antenna', 'R&I Luggage Rack', 'R&I High Mount Lamp', 'R&I Back Glass', 'R&I LT Roof Mldg', 'R&I RT Roof Mldg', 'R&I Cowl LT/RT'] },
+  { id: 'lift-gate', label: 'Lift Gate', replacementOptions: ['R&I Deck Lid', 'R&I Trim', 'R&I Spoiler', 'R&I Emblems', 'R&I Bumper Cover'] },
+  { id: 'rt-rail', label: 'RT Rail', replacementOptions: [] },
+  { id: 'rt-quarter', label: 'RT Quarter Panel', replacementOptions: QUARTER_OPTIONS },
+  { id: 'rt-rear-door', label: 'RT Rear Door', replacementOptions: DOOR_REAR_OPTIONS },
+  { id: 'rt-front-door', label: 'RT Front Door', replacementOptions: DOOR_FULL_OPTIONS, isFrontDoor: true },
+  { id: 'rt-fender', label: 'RT Fender', replacementOptions: ['R&I Front Lamp', 'R&I Flare', 'R&I Vent'] },
 ];
 
 const DENT_RANGES = ['None', '1-5', '6-15', '16-30', '31-50', '51-75', '76-100', '101-150', '151-200', '201-300', '301+'];
@@ -2170,6 +2177,88 @@ const SCOPE_OVERLAY_POINTS: Record<string, { x: number; y: number }> = {
 const PDF_PAGE_W = 612;
 const PDF_PAGE_H = 792;
 
+// Circle geometry (PDF points) around each printed replacement line on
+// scope-sheet-template.pdf, pulled from the template's real text-layer
+// coordinates — so a selected replacement gets circled exactly like Gabriel
+// hand-marks a physical scope sheet.
+interface CircleSpec { cx: number; cy: number; rx: number; ry: number }
+const circle = (x0: number, x1: number, y: number, ry = 10): CircleSpec => ({ cx: (x0 + x1) / 2, cy: y + 4, rx: (x1 - x0) / 2 + 6, ry });
+const mirrorCircle = (c: CircleSpec, dx = 413): CircleSpec => ({ ...c, cx: c.cx + dx });
+const mirrorSet = (set: Record<string, CircleSpec>): Record<string, CircleSpec> =>
+  Object.fromEntries(Object.entries(set).map(([k, v]) => [k, mirrorCircle(v)]));
+
+const FENDER_CIRCLES_LT: Record<string, CircleSpec> = {
+  'R&I Front Lamp': circle(29, 144, 501),
+  'R&I Flare': circle(29, 68, 490),
+  'R&I Vent': circle(29, 68, 479),
+};
+const DOOR_FULL_LT: Record<string, CircleSpec> = {
+  'R&I Belt Molding': circle(29, 121, 407),
+  'R&I Upper Molding': circle(29, 126, 396),
+  'R&I Applique': { cx: (29 + 102) / 2, cy: 381, rx: (102 - 29) / 2 + 6, ry: 16 },
+  'R&I Handle': circle(29, 97, 363),
+  'R&I Mirror Assy': circle(29, 116, 352),
+  'R&I Bodyside Mldg': circle(29, 127, 341),
+  'R&I Mirror Glass': circle(29, 121, 330),
+};
+const DOOR_REAR_LT: Record<string, CircleSpec> = {
+  'R&I Belt Molding': circle(29, 121, 252),
+  'R&I Upper Molding': circle(29, 126, 241),
+  'R&I Applique': { cx: (29 + 102) / 2, cy: 226, rx: (102 - 29) / 2 + 6, ry: 16 },
+  'R&I Handle': circle(29, 97, 208),
+  'R&I Bodyside Mldg': circle(29, 127, 197),
+};
+const QUARTER_CIRCLES_LT: Record<string, CircleSpec> = {
+  'R&I Rear Lamp': circle(29, 141, 89),
+  'R&I Glass': circle(29, 69, 78),
+  'R&R Qtr Glass Mldg': circle(29, 109, 67),
+};
+
+const REPLACEMENT_CIRCLES: Record<string, Record<string, CircleSpec>> = {
+  hood: {
+    'R&I Hood': circle(184, 244, 501),
+    'R&I Insulator': circle(184, 241, 490),
+    'R&I Emblem': circle(184, 252, 479),
+    'R&I Front Bumper': circle(184, 257, 468),
+  },
+  'lt-fender': FENDER_CIRCLES_LT,
+  'rt-fender': mirrorSet(FENDER_CIRCLES_LT),
+  'lt-front-door': DOOR_FULL_LT,
+  'rt-front-door': mirrorSet(DOOR_FULL_LT),
+  'lt-rear-door': DOOR_REAR_LT,
+  'rt-rear-door': mirrorSet(DOOR_REAR_LT),
+  roof: {
+    'R&I Headliner': circle(230, 289, 262),
+    'R&I Sunroof Frame': circle(230, 310, 250),
+    'R&I Antenna': circle(230, 336, 237),
+    'R&I Luggage Rack': circle(230, 336, 225),
+    'R&I High Mount Lamp': circle(230, 338, 212),
+    'R&I Back Glass': circle(230, 337, 200),
+    'R&I LT Roof Mldg': circle(230, 337, 187),
+    'R&I RT Roof Mldg': circle(230, 338, 175),
+    'R&I Cowl LT/RT': circle(230, 338, 162),
+  },
+  'lt-quarter': QUARTER_CIRCLES_LT,
+  'rt-quarter': mirrorSet(QUARTER_CIRCLES_LT),
+  'lift-gate': {
+    'R&I Deck Lid': circle(184, 237, 102),
+    'R&I Trim': circle(184, 220, 89),
+    'R&I Spoiler': circle(184, 257, 76),
+    'R&I Emblems': circle(184, 261, 63),
+    'R&I Bumper Cover': circle(184, 262, 50),
+  },
+};
+
+// Mirror overlap auto-implies these two real form lines get circled too,
+// even if the adjuster didn't also tap them as separate replacement chips.
+const MIRROR_OVERLAP_ITEMS = ['R&I Mirror Assy', 'R&I Mirror Glass'];
+
+function effectiveReplacements(panel: FillPanelDef, data: FillPanelData): string[] {
+  const set = new Set(data.replacements);
+  if (panel.isFrontDoor && data.mirrorOverlap) MIRROR_OVERLAP_ITEMS.forEach(i => set.add(i));
+  return Array.from(set);
+}
+
 // Combines dent range + oversize into a single line ("6-15  O.S 4") so the
 // overlay only ever needs one line of vertical room per panel — some panel
 // boxes are too tight for two stacked lines without colliding with the
@@ -2217,10 +2306,24 @@ async function renderFilledScopeCanvas(fillData: Record<string, FillPanelData>, 
   for (const panel of FILL_PANELS) {
     const data = fillData[panel.id];
     const pos = SCOPE_OVERLAY_POINTS[panel.id];
-    if (!data || !pos) continue;
-    const text = overlayLineFor(data);
-    if (!text) continue;
-    ctx.fillText(text, pos.x * pxPerPt, canvas.height - pos.y * pxPerPt);
+    if (data && pos) {
+      const text = overlayLineFor(data);
+      if (text) ctx.fillText(text, pos.x * pxPerPt, canvas.height - pos.y * pxPerPt);
+    }
+    if (!data) continue;
+    const circles = REPLACEMENT_CIRCLES[panel.id];
+    if (!circles) continue;
+    ctx.save();
+    ctx.strokeStyle = '#b3231c';
+    ctx.lineWidth = Math.max(1.4, 1.6 * pxPerPt);
+    for (const item of effectiveReplacements(panel, data)) {
+      const c = circles[item];
+      if (!c) continue;
+      ctx.beginPath();
+      ctx.ellipse(c.cx * pxPerPt, canvas.height - c.cy * pxPerPt, c.rx * pxPerPt, c.ry * pxPerPt, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 
   if (headerInfo) {
@@ -2247,9 +2350,18 @@ async function downloadFilledScopePdf(fillData: Record<string, FillPanelData>, f
   for (const panel of FILL_PANELS) {
     const data = fillData[panel.id];
     const pos = SCOPE_OVERLAY_POINTS[panel.id];
-    if (!data || !pos) continue;
-    const text = overlayLineFor(data);
-    if (text) page.drawText(text, { x: pos.x, y: pos.y, size: 9, color: red });
+    if (data && pos) {
+      const text = overlayLineFor(data);
+      if (text) page.drawText(text, { x: pos.x, y: pos.y, size: 9, color: red });
+    }
+    if (!data) continue;
+    const circles = REPLACEMENT_CIRCLES[panel.id];
+    if (!circles) continue;
+    for (const item of effectiveReplacements(panel, data)) {
+      const c = circles[item];
+      if (!c) continue;
+      page.drawEllipse({ x: c.cx, y: c.cy, xScale: c.rx, yScale: c.ry, borderColor: red, borderWidth: 1.4 });
+    }
   }
 
   if (headerInfo) {
@@ -2848,7 +2960,7 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
             <div>
               <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>Mirror overlap</div>
               <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>
-                Automatically adds R&I Interior Trim and R&I Mirror to the final scope.
+                Automatically adds R&I Mirror Assy and R&I Mirror Glass to the final scope.
               </div>
             </div>
           </label>
@@ -2858,7 +2970,7 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
             fontSize: 12, color: 'var(--gold)', background: 'var(--gold-soft)',
             border: '1px solid var(--gold2)', borderRadius: 8, padding: '8px 12px',
           }}>
-            ✓ Auto-added: R&I Interior Trim, R&I Mirror
+            ✓ Auto-added: R&I Mirror Assy, R&I Mirror Glass
           </div>
         )}
 
@@ -3022,10 +3134,7 @@ function ScopeSummaryScreen({
             panel: panel.label,
             dentRange: data.dentRange,
             mode: data.mode,
-            replacements: [
-              ...data.replacements,
-              ...(panel.isFrontDoor && data.mirrorOverlap ? ['Interior Trim (mirror overlap)', 'Mirror (mirror overlap)'] : []),
-            ],
+            replacements: effectiveReplacements(panel, data),
             note: data.note,
             oversize: data.oversize,
           })),
@@ -3131,15 +3240,9 @@ function ScopeSummaryScreen({
                 {data.mode && (
                   <span style={{ background: 'var(--input-bg)', color: 'var(--text2)', padding: '3px 8px', borderRadius: 6 }}>{data.mode.toUpperCase()}</span>
                 )}
-                {data.replacements.map(r => (
-                  <span key={r} style={{ background: 'var(--input-bg)', color: 'var(--text2)', padding: '3px 8px', borderRadius: 6 }}>{r}</span>
+                {effectiveReplacements(panel, data).map(r => (
+                  <span key={r} style={{ background: 'var(--input-bg)', color: 'var(--text2)', padding: '3px 8px', borderRadius: 6 }}>{r}{panel.isFrontDoor && data.mirrorOverlap && MIRROR_OVERLAP_ITEMS.includes(r) && !data.replacements.includes(r) ? ' (mirror overlap)' : ''}</span>
                 ))}
-                {panel.isFrontDoor && data.mirrorOverlap && (
-                  <>
-                    <span style={{ background: 'var(--input-bg)', color: 'var(--text2)', padding: '3px 8px', borderRadius: 6 }}>Interior Trim (mirror overlap)</span>
-                    <span style={{ background: 'var(--input-bg)', color: 'var(--text2)', padding: '3px 8px', borderRadius: 6 }}>Mirror (mirror overlap)</span>
-                  </>
-                )}
               </div>
               {data.note.trim() && (
                 <div style={{ fontSize: 12.5, color: 'var(--text3)', marginTop: 8, fontStyle: 'italic' }}>{data.note}</div>
