@@ -2293,7 +2293,7 @@ function overlayLineFor(data: FillPanelData): string {
   const hasDent = data.dentRange && data.dentRange !== 'None';
   const parts: string[] = [];
   if (hasDent) parts.push(data.dentRange);
-  if (data.oversize) parts.push(`O.S ${data.oversize}`);
+  if (data.oversize) parts.push(`${data.oversize} O.S`);
   return parts.join('   ');
 }
 
@@ -3307,7 +3307,7 @@ function ScopeSummaryScreen({
                   <span style={{ background: 'var(--gold-soft)', color: 'var(--gold)', padding: '3px 8px', borderRadius: 6 }}>{data.dentRange} dents</span>
                 )}
                 {data.oversize && (
-                  <span style={{ background: 'var(--gold-soft)', color: 'var(--gold)', padding: '3px 8px', borderRadius: 6 }}>O.S {data.oversize}</span>
+                  <span style={{ background: 'var(--gold-soft)', color: 'var(--gold)', padding: '3px 8px', borderRadius: 6 }}>{data.oversize} O.S</span>
                 )}
                 {data.mode && (
                   <span style={{ background: 'var(--input-bg)', color: 'var(--text2)', padding: '3px 8px', borderRadius: 6 }}>{data.mode.toUpperCase()}</span>
