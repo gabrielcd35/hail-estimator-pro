@@ -2087,24 +2087,28 @@ interface FillPanelDef {
 // blank gap already sitting below each door's checklist (between the last
 // printed line and the U.P.D./OVERSIZE row), so it never eats into the space
 // used for the dent count at the top of the box.
+// Only items that are actually printed with a real "R&R" alternative belong
+// in the Replacement section — R&I-only lines (Flare, Vent, Insulator, etc.)
+// aren't a replacement choice, so they're left out entirely. "R&I Interior
+// Trim" is the one deliberate exception (not printed at all, see below).
 const DOOR_FULL_OPTIONS = ['R&I Belt Molding', 'R&I Upper Molding', 'R&I Applique', 'R&I Handle', 'R&I Mirror Assy', 'R&I Bodyside Mldg', 'R&I Mirror Glass', 'R&I Interior Trim'];
 const DOOR_REAR_OPTIONS = ['R&I Belt Molding', 'R&I Upper Molding', 'R&I Applique', 'R&I Handle', 'R&I Bodyside Mldg', 'R&I Interior Trim'];
-const QUARTER_OPTIONS = ['R&I Rear Lamp', 'R&I Glass', "R&R Qtr Glass Mldg"];
+const QUARTER_OPTIONS = ['R&I Rear Lamp', 'R&R Qtr Glass Mldg'];
 
 const FILL_PANELS: FillPanelDef[] = [
-  { id: 'hood', label: 'Hood', replacementOptions: ['R&I Hood', 'R&I Insulator', 'R&I Emblem', 'R&I Front Bumper'] },
-  { id: 'lt-fender', label: 'LT Fender', replacementOptions: ['R&I Front Lamp', 'R&I Flare', 'R&I Vent'] },
+  { id: 'hood', label: 'Hood', replacementOptions: ['R&I Hood', 'R&I Emblem'] },
+  { id: 'lt-fender', label: 'LT Fender', replacementOptions: ['R&I Front Lamp'] },
   { id: 'lt-front-door', label: 'LT Front Door', replacementOptions: DOOR_FULL_OPTIONS, isFrontDoor: true },
   { id: 'lt-rear-door', label: 'LT Rear Door', replacementOptions: DOOR_REAR_OPTIONS },
   { id: 'lt-quarter', label: 'LT Quarter Panel', replacementOptions: QUARTER_OPTIONS },
   { id: 'lt-rail', label: 'LT Rail', replacementOptions: [] },
-  { id: 'roof', label: 'Roof', replacementOptions: ['R&I Headliner', 'R&I Sunroof Frame', 'R&I Antenna', 'R&I Luggage Rack', 'R&I High Mount Lamp', 'R&I Back Glass', 'R&I LT Roof Mldg', 'R&I RT Roof Mldg', 'R&I Cowl LT/RT'] },
-  { id: 'lift-gate', label: 'Lift Gate', replacementOptions: ['R&I Deck Lid', 'R&I Trim', 'R&I Spoiler', 'R&I Emblems', 'R&I Bumper Cover'] },
+  { id: 'roof', label: 'Roof', replacementOptions: ['R&I Antenna', 'R&I Luggage Rack', 'R&I High Mount Lamp', 'R&I Back Glass', 'R&I LT Roof Mldg', 'R&I RT Roof Mldg', 'R&I Cowl LT/RT'] },
+  { id: 'lift-gate', label: 'Lift Gate', replacementOptions: ['R&I Spoiler'] },
   { id: 'rt-rail', label: 'RT Rail', replacementOptions: [] },
   { id: 'rt-quarter', label: 'RT Quarter Panel', replacementOptions: QUARTER_OPTIONS },
   { id: 'rt-rear-door', label: 'RT Rear Door', replacementOptions: DOOR_REAR_OPTIONS },
   { id: 'rt-front-door', label: 'RT Front Door', replacementOptions: DOOR_FULL_OPTIONS, isFrontDoor: true },
-  { id: 'rt-fender', label: 'RT Fender', replacementOptions: ['R&I Front Lamp', 'R&I Flare', 'R&I Vent'] },
+  { id: 'rt-fender', label: 'RT Fender', replacementOptions: ['R&I Front Lamp'] },
 ];
 
 const DENT_RANGES = ['None', '1-5', '6-15', '16-30', '31-50', '51-75', '76-100', '101-150', '151-200', '201-300', '301+'];
@@ -2118,12 +2122,13 @@ interface FillPanelData {
   dentRange: string;
   mode: 'pdr' | 'repair' | 'rr' | '';
   replacements: string[];
+  replacementModes: Record<string, 'ri' | 'rr'>;
   note: string;
   mirrorOverlap: boolean;
   oversize: string;
 }
 
-const emptyFillData = (): FillPanelData => ({ dentRange: '', mode: '', replacements: [], note: '', mirrorOverlap: false, oversize: '' });
+const emptyFillData = (): FillPanelData => ({ dentRange: '', mode: '', replacements: [], replacementModes: {}, note: '', mirrorOverlap: false, oversize: '' });
 
 const FILL_STORAGE_KEY = 'hep-scope-fill-v1';
 const HEADER_STORAGE_KEY = 'hep-scope-header-v1';
@@ -2181,49 +2186,55 @@ const SCOPE_OVERLAY_POINTS: Record<string, { x: number; y: number }> = {
 const PDF_PAGE_W = 612;
 const PDF_PAGE_H = 792;
 
-// Circle geometry (PDF points) around each printed replacement line on
-// scope-sheet-template.pdf, pulled from the template's real text-layer
-// coordinates — so a selected replacement gets circled exactly like Gabriel
-// hand-marks a physical scope sheet.
+// Circle geometry (PDF points) around each printed R&I/R&R WORD on
+// scope-sheet-template.pdf — not the whole line — pulled from the template's
+// real text-layer coordinates, so picking a mode circles just that word
+// exactly like Gabriel hand-marks a physical scope sheet. `rr` is omitted
+// for lines that only print "R&I" (no replace alternative exists).
 interface CircleSpec { cx: number; cy: number; rx: number; ry: number }
-const circle = (x0: number, x1: number, y: number, ry = 10): CircleSpec => ({ cx: (x0 + x1) / 2, cy: y + 4, rx: (x1 - x0) / 2 + 6, ry });
-const mirrorCircle = (c: CircleSpec, dx = 413): CircleSpec => ({ ...c, cx: c.cx + dx });
-const mirrorSet = (set: Record<string, CircleSpec>): Record<string, CircleSpec> =>
-  Object.fromEntries(Object.entries(set).map(([k, v]) => [k, mirrorCircle(v)]));
+interface ItemCircles { ri: CircleSpec; rr?: CircleSpec }
+const wordCircle = (x: number, y: number, w = 15): CircleSpec => ({ cx: x + w / 2, cy: y + 4, rx: w / 2 + 7, ry: 9 });
+const mirrorItem = (c: ItemCircles, dx = 413): ItemCircles => ({
+  ri: { ...c.ri, cx: c.ri.cx + dx },
+  rr: c.rr ? { ...c.rr, cx: c.rr.cx + dx } : undefined,
+});
+const mirrorSet = (set: Record<string, ItemCircles>): Record<string, ItemCircles> =>
+  Object.fromEntries(Object.entries(set).map(([k, v]) => [k, mirrorItem(v)]));
 
-const FENDER_CIRCLES_LT: Record<string, CircleSpec> = {
-  'R&I Front Lamp': circle(29, 144, 501),
-  'R&I Flare': circle(29, 68, 490),
-  'R&I Vent': circle(29, 68, 479),
+const FENDER_CIRCLES_LT: Record<string, ItemCircles> = {
+  'R&I Front Lamp': { ri: wordCircle(29, 501), rr: wordCircle(129, 501) },
+  'R&I Flare': { ri: wordCircle(29, 490) },
+  'R&I Vent': { ri: wordCircle(29, 479) },
 };
-const DOOR_FULL_LT: Record<string, CircleSpec> = {
-  'R&I Belt Molding': circle(29, 121, 407),
-  'R&I Upper Molding': circle(29, 126, 396),
-  'R&I Applique': { cx: (29 + 102) / 2, cy: 381, rx: (102 - 29) / 2 + 6, ry: 16 },
-  'R&I Handle': circle(29, 97, 363),
-  'R&I Mirror Assy': circle(29, 116, 352),
-  'R&I Bodyside Mldg': circle(29, 127, 341),
-  'R&I Mirror Glass': circle(29, 121, 330),
+const DOOR_FULL_LT: Record<string, ItemCircles> = {
+  'R&I Belt Molding': { ri: wordCircle(29, 407), rr: wordCircle(106, 407) },
+  'R&I Upper Molding': { ri: wordCircle(29, 396), rr: wordCircle(111, 396) },
+  'R&I Applique': { ri: wordCircle(29, 385), rr: wordCircle(87, 385) },
+  'R&I Handle': { ri: wordCircle(29, 363), rr: wordCircle(82, 363) },
+  'R&I Mirror Assy': { ri: wordCircle(29, 352), rr: wordCircle(101, 352) },
+  'R&I Bodyside Mldg': { ri: wordCircle(29, 341), rr: wordCircle(112, 341) },
+  'R&I Mirror Glass': { ri: wordCircle(29, 330), rr: wordCircle(106, 330) },
 };
-const DOOR_REAR_LT: Record<string, CircleSpec> = {
-  'R&I Belt Molding': circle(29, 121, 252),
-  'R&I Upper Molding': circle(29, 126, 241),
-  'R&I Applique': { cx: (29 + 102) / 2, cy: 226, rx: (102 - 29) / 2 + 6, ry: 16 },
-  'R&I Handle': circle(29, 97, 208),
-  'R&I Bodyside Mldg': circle(29, 127, 197),
+const DOOR_REAR_LT: Record<string, ItemCircles> = {
+  'R&I Belt Molding': { ri: wordCircle(29, 252), rr: wordCircle(106, 252) },
+  'R&I Upper Molding': { ri: wordCircle(29, 241), rr: wordCircle(111, 241) },
+  'R&I Applique': { ri: wordCircle(29, 230), rr: wordCircle(87, 230) },
+  'R&I Handle': { ri: wordCircle(29, 208), rr: wordCircle(82, 208) },
+  'R&I Bodyside Mldg': { ri: wordCircle(29, 197), rr: wordCircle(112, 197) },
 };
-const QUARTER_CIRCLES_LT: Record<string, CircleSpec> = {
-  'R&I Rear Lamp': circle(29, 141, 89),
-  'R&I Glass': circle(29, 69, 78),
-  'R&R Qtr Glass Mldg': circle(29, 109, 67),
+const QUARTER_CIRCLES_LT: Record<string, ItemCircles> = {
+  'R&I Rear Lamp': { ri: wordCircle(29, 89), rr: wordCircle(126, 89) },
+  'R&I Glass': { ri: wordCircle(29, 78) },
+  // Printed as "R&R QTR GLASS MLDG" only — no R&I alternative exists on the form.
+  'R&R Qtr Glass Mldg': { ri: wordCircle(29, 67, 80) },
 };
 
-const REPLACEMENT_CIRCLES: Record<string, Record<string, CircleSpec>> = {
+const REPLACEMENT_CIRCLES: Record<string, Record<string, ItemCircles>> = {
   hood: {
-    'R&I Hood': circle(184, 244, 501),
-    'R&I Insulator': circle(184, 241, 490),
-    'R&I Emblem': circle(184, 252, 479),
-    'R&I Front Bumper': circle(184, 257, 468),
+    'R&I Hood': { ri: wordCircle(184, 501), rr: wordCircle(229, 501) },
+    'R&I Insulator': { ri: wordCircle(184, 490) },
+    'R&I Emblem': { ri: wordCircle(184, 479), rr: wordCircle(237, 479) },
+    'R&I Front Bumper': { ri: wordCircle(184, 468) },
   },
   'lt-fender': FENDER_CIRCLES_LT,
   'rt-fender': mirrorSet(FENDER_CIRCLES_LT),
@@ -2232,24 +2243,24 @@ const REPLACEMENT_CIRCLES: Record<string, Record<string, CircleSpec>> = {
   'lt-rear-door': DOOR_REAR_LT,
   'rt-rear-door': mirrorSet(DOOR_REAR_LT),
   roof: {
-    'R&I Headliner': circle(230, 289, 262),
-    'R&I Sunroof Frame': circle(230, 310, 250),
-    'R&I Antenna': circle(230, 336, 237),
-    'R&I Luggage Rack': circle(230, 336, 225),
-    'R&I High Mount Lamp': circle(230, 338, 212),
-    'R&I Back Glass': circle(230, 337, 200),
-    'R&I LT Roof Mldg': circle(230, 337, 187),
-    'R&I RT Roof Mldg': circle(230, 338, 175),
-    'R&I Cowl LT/RT': circle(230, 338, 162),
+    'R&I Headliner': { ri: wordCircle(230, 262) },
+    'R&I Sunroof Frame': { ri: wordCircle(230, 250) },
+    'R&I Antenna': { ri: wordCircle(230, 237), rr: wordCircle(321, 237) },
+    'R&I Luggage Rack': { ri: wordCircle(230, 225), rr: wordCircle(321, 225) },
+    'R&I High Mount Lamp': { ri: wordCircle(230, 212), rr: wordCircle(323, 212) },
+    'R&I Back Glass': { ri: wordCircle(230, 200), rr: wordCircle(322, 200) },
+    'R&I LT Roof Mldg': { ri: wordCircle(230, 187), rr: wordCircle(322, 187) },
+    'R&I RT Roof Mldg': { ri: wordCircle(230, 175), rr: wordCircle(323, 175) },
+    'R&I Cowl LT/RT': { ri: wordCircle(230, 162), rr: wordCircle(323, 162) },
   },
   'lt-quarter': QUARTER_CIRCLES_LT,
   'rt-quarter': mirrorSet(QUARTER_CIRCLES_LT),
   'lift-gate': {
-    'R&I Deck Lid': circle(184, 237, 102),
-    'R&I Trim': circle(184, 220, 89),
-    'R&I Spoiler': circle(184, 257, 76),
-    'R&I Emblems': circle(184, 261, 63),
-    'R&I Bumper Cover': circle(184, 262, 50),
+    'R&I Deck Lid': { ri: wordCircle(184, 102) },
+    'R&I Trim': { ri: wordCircle(184, 89) },
+    'R&I Spoiler': { ri: wordCircle(184, 76), rr: wordCircle(241, 76) },
+    'R&I Emblems': { ri: wordCircle(184, 63) },
+    'R&I Bumper Cover': { ri: wordCircle(184, 50) },
   },
 };
 
@@ -2332,8 +2343,10 @@ async function renderFilledScopeCanvas(fillData: Record<string, FillPanelData>, 
     ctx.strokeStyle = '#b3231c';
     ctx.lineWidth = Math.max(1.4, 1.6 * pxPerPt);
     for (const item of effectiveReplacements(panel, data)) {
-      const c = circles[item];
-      if (!c) continue;
+      const spec = circles[item];
+      if (!spec) continue;
+      const mode = data.replacementModes[item] === 'rr' && spec.rr ? 'rr' : 'ri';
+      const c = spec[mode]!;
       ctx.beginPath();
       ctx.ellipse(c.cx * pxPerPt, canvas.height - c.cy * pxPerPt, c.rx * pxPerPt, c.ry * pxPerPt, 0, 0, Math.PI * 2);
       ctx.stroke();
@@ -2341,7 +2354,10 @@ async function renderFilledScopeCanvas(fillData: Record<string, FillPanelData>, 
     ctx.restore();
     const trimPos = INTERIOR_TRIM_POINTS[panel.id];
     if (trimPos && effectiveReplacements(panel, data).includes(INTERIOR_TRIM_LABEL)) {
+      ctx.save();
+      ctx.fillStyle = '#000000';
       ctx.fillText(INTERIOR_TRIM_LABEL.toUpperCase(), trimPos.x * pxPerPt, canvas.height - trimPos.y * pxPerPt);
+      ctx.restore();
     }
   }
 
@@ -2377,13 +2393,15 @@ async function downloadFilledScopePdf(fillData: Record<string, FillPanelData>, f
     const circles = REPLACEMENT_CIRCLES[panel.id];
     if (!circles) continue;
     for (const item of effectiveReplacements(panel, data)) {
-      const c = circles[item];
-      if (!c) continue;
+      const spec = circles[item];
+      if (!spec) continue;
+      const mode = data.replacementModes[item] === 'rr' && spec.rr ? 'rr' : 'ri';
+      const c = spec[mode]!;
       page.drawEllipse({ x: c.cx, y: c.cy, xScale: c.rx, yScale: c.ry, borderColor: red, borderWidth: 1.4 });
     }
     const trimPos = INTERIOR_TRIM_POINTS[panel.id];
     if (trimPos && effectiveReplacements(panel, data).includes(INTERIOR_TRIM_LABEL)) {
-      page.drawText(INTERIOR_TRIM_LABEL.toUpperCase(), { x: trimPos.x, y: trimPos.y, size: 9, color: red });
+      page.drawText(INTERIOR_TRIM_LABEL.toUpperCase(), { x: trimPos.x, y: trimPos.y, size: 9, color: rgb(0, 0, 0) });
     }
   }
 
@@ -2430,6 +2448,7 @@ function submissionToFillData(panels: SubmissionPanelRow[]): Record<string, Fill
       dentRange: row.dentRange || '',
       mode: (row.mode as FillPanelData['mode']) || '',
       replacements: row.replacements || [],
+      replacementModes: {},
       note: row.note || '',
       mirrorOverlap: false,
       oversize: row.oversize || '',
@@ -2505,6 +2524,10 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
   const toggleReplacement = (item: string) => {
     const has = currentData.replacements.includes(item);
     updateCurrent({ replacements: has ? currentData.replacements.filter(r => r !== item) : [...currentData.replacements, item] });
+  };
+
+  const setReplacementMode = (item: string, mode: 'ri' | 'rr') => {
+    updateCurrent({ replacementModes: { ...currentData.replacementModes, [item]: mode } });
   };
 
   const goNext = () => {
@@ -2928,17 +2951,43 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
             Replacement (if needed)
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {currentPanel.replacementOptions.map(item => (
-              <button key={item} onClick={() => toggleReplacement(item)} style={{
-                padding: '9px 14px', borderRadius: 9, fontSize: 13, fontWeight: 600,
-                fontFamily: "'Public Sans', sans-serif", cursor: 'pointer',
-                background: currentData.replacements.includes(item) ? 'var(--gold-soft)' : 'var(--card)',
-                color: currentData.replacements.includes(item) ? 'var(--gold)' : 'var(--text2)',
-                border: currentData.replacements.includes(item) ? '1px solid var(--gold2)' : '1px solid var(--brd)',
-              }}>
-                {item}
-              </button>
-            ))}
+            {currentPanel.replacementOptions.map(item => {
+              const selected = currentData.replacements.includes(item);
+              const hasRR = !!REPLACEMENT_CIRCLES[currentPanel.id]?.[item]?.rr;
+              const mode = currentData.replacementModes[item] === 'rr' ? 'rr' : 'ri';
+              return (
+                <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 0, borderRadius: 9, overflow: 'hidden', border: selected ? '1px solid var(--gold2)' : '1px solid var(--brd)' }}>
+                  <button onClick={() => toggleReplacement(item)} style={{
+                    padding: '9px 14px', fontSize: 13, fontWeight: 600, border: 'none',
+                    fontFamily: "'Public Sans', sans-serif", cursor: 'pointer',
+                    background: selected ? 'var(--gold-soft)' : 'var(--card)',
+                    color: selected ? 'var(--gold)' : 'var(--text2)',
+                  }}>
+                    {item}
+                  </button>
+                  {selected && hasRR && (
+                    <>
+                      <button onClick={() => setReplacementMode(item, 'ri')} style={{
+                        padding: '9px 10px', fontSize: 11.5, fontWeight: 700, border: 'none', borderLeft: '1px solid var(--brd)',
+                        fontFamily: "'IBM Plex Mono', monospace", cursor: 'pointer',
+                        background: mode === 'ri' ? 'var(--gold2)' : 'var(--input-bg)',
+                        color: mode === 'ri' ? 'var(--on-gold)' : 'var(--text3)',
+                      }}>
+                        R&I
+                      </button>
+                      <button onClick={() => setReplacementMode(item, 'rr')} style={{
+                        padding: '9px 10px', fontSize: 11.5, fontWeight: 700, border: 'none', borderLeft: '1px solid var(--brd)',
+                        fontFamily: "'IBM Plex Mono', monospace", cursor: 'pointer',
+                        background: mode === 'rr' ? 'var(--gold2)' : 'var(--input-bg)',
+                        color: mode === 'rr' ? 'var(--on-gold)' : 'var(--text3)',
+                      }}>
+                        R&R
+                      </button>
+                    </>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -3263,9 +3312,15 @@ function ScopeSummaryScreen({
                 {data.mode && (
                   <span style={{ background: 'var(--input-bg)', color: 'var(--text2)', padding: '3px 8px', borderRadius: 6 }}>{data.mode.toUpperCase()}</span>
                 )}
-                {effectiveReplacements(panel, data).map(r => (
-                  <span key={r} style={{ background: 'var(--input-bg)', color: 'var(--text2)', padding: '3px 8px', borderRadius: 6 }}>{r}{panel.isFrontDoor && data.mirrorOverlap && MIRROR_OVERLAP_ITEMS.includes(r) && !data.replacements.includes(r) ? ' (mirror overlap)' : ''}</span>
-                ))}
+                {effectiveReplacements(panel, data).map(r => {
+                  const hasRR = !!REPLACEMENT_CIRCLES[panel.id]?.[r]?.rr;
+                  const mode = data.replacementModes[r] === 'rr' ? 'R&R' : 'R&I';
+                  return (
+                    <span key={r} style={{ background: 'var(--input-bg)', color: 'var(--text2)', padding: '3px 8px', borderRadius: 6 }}>
+                      {r}{hasRR ? ` (${mode})` : ''}{panel.isFrontDoor && data.mirrorOverlap && MIRROR_OVERLAP_ITEMS.includes(r) && !data.replacements.includes(r) ? ' (mirror overlap)' : ''}
+                    </span>
+                  );
+                })}
               </div>
               {data.note.trim() && (
                 <div style={{ fontSize: 12.5, color: 'var(--text3)', marginTop: 8, fontStyle: 'italic' }}>{data.note}</div>
