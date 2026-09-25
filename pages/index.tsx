@@ -2274,10 +2274,12 @@ function effectiveReplacements(panel: FillPanelDef, data: FillPanelData): string
 }
 
 
-// Combines dent range + oversize into a single line ("6-15  O.S 4") so the
-// overlay only ever needs one line of vertical room per panel — some panel
-// boxes are too tight for two stacked lines without colliding with the
-// printed checklist.
+// Doors (front + rear) and Deck Lid/Lift Gate only have a narrow blank gap
+// below their checklist, so dent range + oversize have to share one line
+// there. Every other panel (Hood, Fenders, Rails, Roof, Quarters) has a tall
+// open area, so oversize goes on its own line directly below the dent range.
+const TIGHT_OVERLAY_PANELS = new Set(['lt-front-door', 'rt-front-door', 'lt-rear-door', 'rt-rear-door', 'lift-gate']);
+
 function overlayLineFor(data: FillPanelData): string {
   const hasDent = data.dentRange && data.dentRange !== 'None';
   const parts: string[] = [];
@@ -2322,8 +2324,16 @@ async function renderFilledScopeCanvas(fillData: Record<string, FillPanelData>, 
     const data = fillData[panel.id];
     const pos = SCOPE_OVERLAY_POINTS[panel.id];
     if (data && pos) {
-      const text = overlayLineFor(data);
-      if (text) ctx.fillText(text, pos.x * pxPerPt, canvas.height - pos.y * pxPerPt);
+      const x = pos.x * pxPerPt;
+      const y = canvas.height - pos.y * pxPerPt;
+      if (TIGHT_OVERLAY_PANELS.has(panel.id)) {
+        const text = overlayLineFor(data);
+        if (text) ctx.fillText(text, x, y);
+      } else {
+        const hasDent = data.dentRange && data.dentRange !== 'None';
+        if (hasDent) ctx.fillText(data.dentRange, x, y);
+        if (data.oversize) ctx.fillText(`${data.oversize} O.S`, x, y + 11 * pxPerPt);
+      }
     }
     if (!data) continue;
     const circles = REPLACEMENT_CIRCLES[panel.id];
@@ -2368,8 +2378,14 @@ async function downloadFilledScopePdf(fillData: Record<string, FillPanelData>, f
     const data = fillData[panel.id];
     const pos = SCOPE_OVERLAY_POINTS[panel.id];
     if (data && pos) {
-      const text = overlayLineFor(data);
-      if (text) page.drawText(text, { x: pos.x, y: pos.y, size: 9, color: red });
+      if (TIGHT_OVERLAY_PANELS.has(panel.id)) {
+        const text = overlayLineFor(data);
+        if (text) page.drawText(text, { x: pos.x, y: pos.y, size: 9, color: red });
+      } else {
+        const hasDent = data.dentRange && data.dentRange !== 'None';
+        if (hasDent) page.drawText(data.dentRange, { x: pos.x, y: pos.y, size: 9, color: red });
+        if (data.oversize) page.drawText(`${data.oversize} O.S`, { x: pos.x, y: pos.y - 11, size: 9, color: red });
+      }
     }
     if (!data) continue;
     const circles = REPLACEMENT_CIRCLES[panel.id];
