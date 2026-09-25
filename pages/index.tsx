@@ -2082,15 +2082,12 @@ interface FillPanelDef {
 
 // Replacement option labels match the printed lines on scope-sheet-template.pdf
 // exactly (word for word) so each selection can be circled on the real form —
-// see REPLACEMENT_CIRCLES below for where each one is drawn.
-// "R&I Interior Trim" isn't printed on the template — it's drawn into the
-// blank gap already sitting below each door's checklist (between the last
-// printed line and the U.P.D./OVERSIZE row), so it never eats into the space
-// used for the dent count at the top of the box.
+// see REPLACEMENT_CIRCLES below for where each one is drawn. "R&I Interior
+// Trim" is baked into the door boxes' blank gap below the checklist (see
+// scripts/bake-interior-trim.js), so it never eats into the dent-count space.
 // Only items that are actually printed with a real "R&R" alternative belong
 // in the Replacement section — R&I-only lines (Flare, Vent, Insulator, etc.)
-// aren't a replacement choice, so they're left out entirely. "R&I Interior
-// Trim" is the one deliberate exception (not printed at all, see below).
+// aren't a replacement choice, so they're left out entirely.
 const DOOR_FULL_OPTIONS = ['R&I Belt Molding', 'R&I Upper Molding', 'R&I Applique', 'R&I Handle', 'R&I Mirror Assy', 'R&I Bodyside Mldg', 'R&I Mirror Glass', 'R&I Interior Trim'];
 const DOOR_REAR_OPTIONS = ['R&I Belt Molding', 'R&I Upper Molding', 'R&I Applique', 'R&I Handle', 'R&I Bodyside Mldg', 'R&I Interior Trim'];
 const QUARTER_OPTIONS = ['R&I Rear Lamp', 'R&R Qtr Glass Mldg'];
@@ -2214,6 +2211,7 @@ const DOOR_FULL_LT: Record<string, ItemCircles> = {
   'R&I Mirror Assy': { ri: wordCircle(29, 352), rr: wordCircle(101, 352) },
   'R&I Bodyside Mldg': { ri: wordCircle(29, 341), rr: wordCircle(112, 341) },
   'R&I Mirror Glass': { ri: wordCircle(29, 330), rr: wordCircle(106, 330) },
+  'R&I Interior Trim': { ri: wordCircle(29, 318), rr: wordCircle(106, 318) },
 };
 const DOOR_REAR_LT: Record<string, ItemCircles> = {
   'R&I Belt Molding': { ri: wordCircle(29, 252), rr: wordCircle(106, 252) },
@@ -2221,6 +2219,7 @@ const DOOR_REAR_LT: Record<string, ItemCircles> = {
   'R&I Applique': { ri: wordCircle(29, 230), rr: wordCircle(87, 230) },
   'R&I Handle': { ri: wordCircle(29, 208), rr: wordCircle(82, 208) },
   'R&I Bodyside Mldg': { ri: wordCircle(29, 197), rr: wordCircle(112, 197) },
+  'R&I Interior Trim': { ri: wordCircle(29, 175), rr: wordCircle(106, 175) },
 };
 const QUARTER_CIRCLES_LT: Record<string, ItemCircles> = {
   'R&I Rear Lamp': { ri: wordCircle(29, 89), rr: wordCircle(126, 89) },
@@ -2274,16 +2273,6 @@ function effectiveReplacements(panel: FillPanelDef, data: FillPanelData): string
   return Array.from(set);
 }
 
-// "R&I Interior Trim" has no printed line to circle, so it's written as its
-// own small red line in the blank gap already sitting below each door's
-// checklist (well clear of the dent-count space at the top of the box).
-const INTERIOR_TRIM_LABEL = 'R&I Interior Trim';
-const INTERIOR_TRIM_POINTS: Record<string, { x: number; y: number }> = {
-  'lt-front-door': { x: 29, y: 318 },
-  'rt-front-door': { x: 442, y: 318 },
-  'lt-rear-door': { x: 29, y: 175 },
-  'rt-rear-door': { x: 442, y: 175 },
-};
 
 // Combines dent range + oversize into a single line ("6-15  O.S 4") so the
 // overlay only ever needs one line of vertical room per panel — some panel
@@ -2352,13 +2341,6 @@ async function renderFilledScopeCanvas(fillData: Record<string, FillPanelData>, 
       ctx.stroke();
     }
     ctx.restore();
-    const trimPos = INTERIOR_TRIM_POINTS[panel.id];
-    if (trimPos && effectiveReplacements(panel, data).includes(INTERIOR_TRIM_LABEL)) {
-      ctx.save();
-      ctx.fillStyle = '#000000';
-      ctx.fillText(INTERIOR_TRIM_LABEL.toUpperCase(), trimPos.x * pxPerPt, canvas.height - trimPos.y * pxPerPt);
-      ctx.restore();
-    }
   }
 
   if (headerInfo) {
@@ -2398,10 +2380,6 @@ async function downloadFilledScopePdf(fillData: Record<string, FillPanelData>, f
       const mode = data.replacementModes[item] === 'rr' && spec.rr ? 'rr' : 'ri';
       const c = spec[mode]!;
       page.drawEllipse({ x: c.cx, y: c.cy, xScale: c.rx, yScale: c.ry, borderColor: red, borderWidth: 1.4 });
-    }
-    const trimPos = INTERIOR_TRIM_POINTS[panel.id];
-    if (trimPos && effectiveReplacements(panel, data).includes(INTERIOR_TRIM_LABEL)) {
-      page.drawText(INTERIOR_TRIM_LABEL.toUpperCase(), { x: trimPos.x, y: trimPos.y, size: 9, color: rgb(0, 0, 0) });
     }
   }
 
