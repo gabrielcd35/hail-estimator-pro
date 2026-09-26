@@ -3180,7 +3180,7 @@ function ScopeSummaryScreen({
   const handleDownload = async () => {
     setDownloading(true);
     try {
-      await downloadFilledScopePdf(fillDataMap, 'Hail Estimator PRO Scope Sheet (filled).pdf', headerInfo);
+      await downloadFilledScopePdf(fillDataMap, 'HEP Scope Sheet (Filled).pdf', headerInfo);
     } finally {
       setDownloading(false);
     }
