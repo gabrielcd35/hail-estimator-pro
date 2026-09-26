@@ -19,17 +19,55 @@
  *
  * IMPORTANT: if you already deployed an older version of this script, redeploy
  * (Deploy -> Manage deployments -> edit -> New version) after pasting this in.
+ *
+ * If you already have a "Scope Sheet Submissions" sheet with the old plain
+ * headers, open this project in the Apps Script editor, select
+ * "renameHeaders" from the function dropdown next to the Run button, and
+ * click Run once — it rewrites row 1 in place (existing data rows are
+ * untouched) and adds the explanations as little hover notes on each header.
  */
 
 var SHEET_NAME = 'Scope Sheet Submissions';
-var HEADERS = ['Submitted At', 'Name', 'Panel', 'Dent Range', 'Mode', 'Replacements', 'Note', 'Oversize'];
+var HEADERS = [
+  'Date Submitted',
+  'Scope Sheet Name',
+  'Car Panel',
+  'Number of Dents (Range)',
+  'Repair Type',
+  'Parts Replaced',
+  'Notes',
+  'Oversize Dents (O.S)',
+];
+var HEADER_NOTES = [
+  'The date and time this scope sheet was saved from the app.',
+  'The name typed in for this scope sheet (like a car or claim number). Shows "Untitled scope sheet" if it was left blank.',
+  'Which part of the car this row is about — Hood, Fender, Door, Roof, etc.',
+  'How many hail dents were counted on this panel (e.g. "16-30" means somewhere between 16 and 30 dents).',
+  'How the panel is being fixed:\nPDR = Paintless Dent Repair (pushing dents out without paint)\nRepair = regular bodywork + paint\nR&R = Remove & Replace (the whole panel is swapped for a new one)',
+  'Extra parts that need work, in the same style printed on the scope sheet:\nR&I = Remove & Install (take the part off, then put the same one back on)\nR&R = Remove & Replace (take the part off and put on a brand new one)',
+  'Any extra handwritten-style note added for this panel.',
+  'O.S = Oversize — dents bigger than a half dollar coin, counted separately from the regular dent range.',
+];
+
+function renameHeaders() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) { Logger.log('No "' + SHEET_NAME + '" sheet found yet — nothing to rename.'); return; }
+  var range = sheet.getRange(1, 1, 1, HEADERS.length);
+  range.setValues([HEADERS]);
+  range.setFontWeight('bold');
+  for (var i = 0; i < HEADER_NOTES.length; i++) {
+    sheet.getRange(1, i + 1).setNote(HEADER_NOTES[i]);
+  }
+  Logger.log('Headers updated.');
+}
 
 function doPost(e) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(SHEET_NAME);
   if (!sheet) {
     sheet = ss.insertSheet(SHEET_NAME);
-    sheet.appendRow(HEADERS);
+    renameHeaders();
   }
 
   var data = JSON.parse(e.postData.contents);
