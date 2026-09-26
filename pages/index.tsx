@@ -2344,7 +2344,7 @@ async function renderFilledScopeCanvas(fillData: Record<string, FillPanelData>, 
     for (const item of effectiveReplacements(panel, data)) {
       const spec = circles[item];
       if (!spec) continue;
-      const mode = data.replacementModes[item] === 'rr' && spec.rr ? 'rr' : 'ri';
+      const mode = (data.replacementModes || {})[item] === 'rr' && spec.rr ? 'rr' : 'ri';
       const c = spec[mode]!;
       ctx.beginPath();
       ctx.ellipse(c.cx * pxPerPt, canvas.height - c.cy * pxPerPt, c.rx * pxPerPt, c.ry * pxPerPt, 0, 0, Math.PI * 2);
@@ -2393,7 +2393,7 @@ async function downloadFilledScopePdf(fillData: Record<string, FillPanelData>, f
     for (const item of effectiveReplacements(panel, data)) {
       const spec = circles[item];
       if (!spec) continue;
-      const mode = data.replacementModes[item] === 'rr' && spec.rr ? 'rr' : 'ri';
+      const mode = (data.replacementModes || {})[item] === 'rr' && spec.rr ? 'rr' : 'ri';
       const c = spec[mode]!;
       page.drawEllipse({ x: c.cx, y: c.cy, xScale: c.rx, yScale: c.ry, borderColor: red, borderWidth: 1.4 });
     }
@@ -2490,7 +2490,17 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     try {
       const saved = localStorage.getItem(FILL_STORAGE_KEY);
-      if (saved) setFillData(JSON.parse(saved));
+      if (saved) {
+        const parsed = JSON.parse(saved) as Record<string, Partial<FillPanelData>>;
+        // Merge onto emptyFillData() — older saves (before a field like
+        // replacementModes existed) would otherwise load with that field
+        // missing and crash the first time it's read.
+        const normalized: Record<string, FillPanelData> = {};
+        for (const [id, entry] of Object.entries(parsed)) {
+          normalized[id] = { ...emptyFillData(), ...entry };
+        }
+        setFillData(normalized);
+      }
     } catch { /* ignore — start blank */ }
   }, []);
 
@@ -2521,7 +2531,7 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
   };
 
   const setReplacementMode = (item: string, mode: 'ri' | 'rr') => {
-    updateCurrent({ replacementModes: { ...currentData.replacementModes, [item]: mode } });
+    updateCurrent({ replacementModes: { ...(currentData.replacementModes || {}), [item]: mode } });
   };
 
   const goNext = () => {
@@ -2948,7 +2958,7 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
             {currentPanel.replacementOptions.map(item => {
               const selected = currentData.replacements.includes(item);
               const hasRR = !!REPLACEMENT_CIRCLES[currentPanel.id]?.[item]?.rr;
-              const mode = currentData.replacementModes[item] === 'rr' ? 'rr' : 'ri';
+              const mode = (currentData.replacementModes || {})[item] === 'rr' ? 'rr' : 'ri';
               return (
                 <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 0, borderRadius: 9, overflow: 'hidden', border: selected ? '1px solid var(--gold2)' : '1px solid var(--brd)' }}>
                   <button onClick={() => toggleReplacement(item)} style={{
