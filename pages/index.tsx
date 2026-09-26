@@ -2609,7 +2609,7 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
 
           <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 10 }}>
             <button
-              onClick={() => setMode('view')}
+              onClick={() => { saveFillData({}); saveHeaderInfo(emptyHeaderInfo()); setFillIndex(0); setMode('view'); }}
               style={{
                 padding: '13px 16px', borderRadius: 10, fontSize: 14, fontWeight: 700,
                 fontFamily: "'Public Sans', sans-serif", cursor: 'pointer',
