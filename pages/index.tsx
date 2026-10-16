@@ -2123,9 +2123,10 @@ interface FillPanelData {
   note: string;
   mirrorOverlap: boolean;
   oversize: string;
+  repairHours: string;
 }
 
-const emptyFillData = (): FillPanelData => ({ dentRange: '', mode: '', replacements: [], replacementModes: {}, note: '', mirrorOverlap: false, oversize: '' });
+const emptyFillData = (): FillPanelData => ({ dentRange: '', mode: '', replacements: [], replacementModes: {}, note: '', mirrorOverlap: false, oversize: '', repairHours: '' });
 
 const FILL_STORAGE_KEY = 'hep-scope-fill-v1';
 const HEADER_STORAGE_KEY = 'hep-scope-header-v1';
@@ -2280,12 +2281,33 @@ function effectiveReplacements(panel: FillPanelDef, data: FillPanelData): string
 // open area, so oversize goes on its own line directly below the dent range.
 const TIGHT_OVERLAY_PANELS = new Set(['lt-front-door', 'rt-front-door', 'lt-rear-door', 'rt-rear-door', 'lift-gate']);
 
+// Repair-mode panels are measured in labor hours, not dents — the hours
+// replace the dent range everywhere it's drawn or listed.
+function primaryCountText(data: FillPanelData): string {
+  if (data.mode === 'repair') return data.repairHours ? `${data.repairHours} HRS` : '';
+  return data.dentRange && data.dentRange !== 'None' ? data.dentRange : '';
+}
+
 function overlayLineFor(data: FillPanelData): string {
-  const hasDent = data.dentRange && data.dentRange !== 'None';
   const parts: string[] = [];
-  if (hasDent) parts.push(data.dentRange);
+  const primary = primaryCountText(data);
+  if (primary) parts.push(primary);
   if (data.oversize) parts.push(`${data.oversize} O.S`);
   return parts.join('   ');
+}
+
+// "R&R Belt Molding" / "R&I Handle": the part name with whichever action
+// (Remove & Install vs Remove & Replace) the adjuster picked for it.
+function partActionLine(item: string, data: FillPanelData): string {
+  if (!/^R&[IR]\s/.test(item)) return item; // legacy saved names with no action prefix
+  const base = item.replace(/^R&[IR]\s+/, '');
+  const rrOnly = item.startsWith('R&R ');
+  const action = rrOnly || (data.replacementModes || {})[item] === 'rr' ? 'R&R' : 'R&I';
+  return `${action} ${base}`;
+}
+
+function autoNotesFor(panel: FillPanelDef, data: FillPanelData): string[] {
+  return effectiveReplacements(panel, data).map(item => partActionLine(item, data));
 }
 
 // Draws the entered dent ranges + oversize counts onto a rendered copy of
@@ -2330,8 +2352,8 @@ async function renderFilledScopeCanvas(fillData: Record<string, FillPanelData>, 
         const text = overlayLineFor(data);
         if (text) ctx.fillText(text, x, y);
       } else {
-        const hasDent = data.dentRange && data.dentRange !== 'None';
-        if (hasDent) ctx.fillText(data.dentRange, x, y);
+        const primary = primaryCountText(data);
+        if (primary) ctx.fillText(primary, x, y);
         if (data.oversize) ctx.fillText(`${data.oversize} O.S`, x, y + 11 * pxPerPt);
       }
     }
@@ -2382,8 +2404,8 @@ async function downloadFilledScopePdf(fillData: Record<string, FillPanelData>, f
         const text = overlayLineFor(data);
         if (text) page.drawText(text, { x: pos.x, y: pos.y, size: 9, color: red });
       } else {
-        const hasDent = data.dentRange && data.dentRange !== 'None';
-        if (hasDent) page.drawText(data.dentRange, { x: pos.x, y: pos.y, size: 9, color: red });
+        const primary = primaryCountText(data);
+        if (primary) page.drawText(primary, { x: pos.x, y: pos.y, size: 9, color: red });
         if (data.oversize) page.drawText(`${data.oversize} O.S`, { x: pos.x, y: pos.y - 11, size: 9, color: red });
       }
     }
@@ -2438,14 +2460,31 @@ function submissionToFillData(panels: SubmissionPanelRow[]): Record<string, Fill
   for (const row of panels) {
     const id = LABEL_TO_ID[row.panel];
     if (!id) continue;
+    const panelDef = FILL_PANELS.find(p => p.id === id);
+    const rowMode = (row.mode as FillPanelData['mode']) || '';
+    // Repair-mode rows store their labor hours in the dent-range column ("3.5 hrs").
+    const hoursMatch = rowMode === 'repair' ? String(row.dentRange || '').match(/^([\d.]+)\s*hrs?$/i) : null;
+    // Saved parts look like "R&R Belt Molding" (older saves: "R&I Belt Molding") —
+    // map each back to the panel option it came from and its R&I/R&R action.
+    const replacements: string[] = [];
+    const replacementModes: Record<string, 'ri' | 'rr'> = {};
+    for (const saved of row.replacements || []) {
+      const clean = String(saved).replace(/\s*\(mirror overlap\)\s*$/i, '').trim();
+      const base = clean.replace(/^R&[IR]\s+/i, '').toLowerCase();
+      const option = panelDef?.replacementOptions.find(o => o.replace(/^R&[IR]\s+/, '').toLowerCase() === base);
+      if (!option) { if (clean && !replacements.includes(clean)) replacements.push(clean); continue; }
+      if (!replacements.includes(option)) replacements.push(option);
+      if (/^R&R\s/i.test(clean)) replacementModes[option] = 'rr';
+    }
     out[id] = {
-      dentRange: row.dentRange || '',
-      mode: (row.mode as FillPanelData['mode']) || '',
-      replacements: row.replacements || [],
-      replacementModes: {},
+      dentRange: hoursMatch ? '' : (row.dentRange || ''),
+      mode: rowMode,
+      replacements,
+      replacementModes,
       note: row.note || '',
       mirrorOverlap: false,
       oversize: row.oversize || '',
+      repairHours: hoursMatch ? hoursMatch[1] : '',
     };
   }
   return out;
@@ -2850,7 +2889,7 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
   if (mode === 'summary') {
     const touched = FILL_PANELS
       .map(p => ({ panel: p, data: fillData[p.id] }))
-      .filter(({ data }) => data && (data.dentRange && data.dentRange !== 'None' || data.replacements.length > 0 || data.note.trim() || data.mirrorOverlap || data.oversize));
+      .filter(({ data }) => data && (data.dentRange && data.dentRange !== 'None' || data.replacements.length > 0 || data.note.trim() || data.mirrorOverlap || data.oversize || data.repairHours));
 
     return (
       <ScopeSummaryScreen
@@ -2909,27 +2948,7 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
           {currentPanel.label}
         </div>
 
-        {/* Dent range */}
-        <div>
-          <div style={{ fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", color: 'var(--text3)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 }}>
-            Dent Range
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {DENT_RANGES.map(r => (
-              <button key={r} onClick={() => updateCurrent({ dentRange: r })} style={{
-                padding: '10px 16px', borderRadius: 9, fontSize: 14, fontWeight: 600,
-                fontFamily: "'Public Sans', sans-serif", cursor: 'pointer',
-                background: currentData.dentRange === r ? 'var(--gold2)' : 'var(--card)',
-                color: currentData.dentRange === r ? 'var(--on-gold)' : 'var(--text2)',
-                border: currentData.dentRange === r ? '1px solid var(--gold2)' : '1px solid var(--brd)',
-              }}>
-                {r}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Repair mode */}
+        {/* Repair mode — first, because Repair swaps dent count for labor hours */}
         <div>
           <div style={{ fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", color: 'var(--text3)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 }}>
             Mode
@@ -2948,6 +2967,47 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
             ))}
           </div>
         </div>
+
+        {currentData.mode === 'repair' ? (
+          /* Repair hours (replaces dent range) */
+          <div>
+            <div style={{ fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", color: 'var(--text3)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 }}>
+              Repair Hours
+            </div>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={currentData.repairHours}
+              onChange={e => updateCurrent({ repairHours: e.target.value.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1').slice(0, 5) })}
+              placeholder="e.g. 3.5"
+              style={{
+                width: '100%', borderRadius: 9, border: '1px solid var(--brd)',
+                background: 'var(--card)', color: 'var(--text)', padding: '11px 12px', fontSize: 14,
+                fontFamily: "'Public Sans', sans-serif",
+              }}
+            />
+          </div>
+        ) : (
+          /* Dent range */
+          <div>
+            <div style={{ fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", color: 'var(--text3)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 }}>
+              Dent Range
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {DENT_RANGES.map(r => (
+                <button key={r} onClick={() => updateCurrent({ dentRange: r })} style={{
+                  padding: '10px 16px', borderRadius: 9, fontSize: 14, fontWeight: 600,
+                  fontFamily: "'Public Sans', sans-serif", cursor: 'pointer',
+                  background: currentData.dentRange === r ? 'var(--gold2)' : 'var(--card)',
+                  color: currentData.dentRange === r ? 'var(--on-gold)' : 'var(--text2)',
+                  border: currentData.dentRange === r ? '1px solid var(--gold2)' : '1px solid var(--brd)',
+                }}>
+                  {r}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Replacement dropdown (multi-toggle) */}
         <div>
@@ -3053,8 +3113,21 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
         {/* Note */}
         <div>
           <div style={{ fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", color: 'var(--text3)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 }}>
-            Note (optional)
+            Notes
           </div>
+          {autoNotesFor(currentPanel, currentData).length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+              {autoNotesFor(currentPanel, currentData).map(line => (
+                <span key={line} style={{
+                  background: 'var(--gold-soft)', color: 'var(--gold)', border: '1px solid var(--gold2)',
+                  padding: '5px 10px', borderRadius: 7, fontSize: 12.5, fontWeight: 600,
+                  fontFamily: "'IBM Plex Mono', monospace",
+                }}>
+                  {line}
+                </span>
+              ))}
+            </div>
+          )}
           <textarea
             value={currentData.note}
             onChange={e => updateCurrent({ note: e.target.value })}
@@ -3123,7 +3196,7 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {FILL_PANELS.map((p, idx) => {
                 const d = fillData[p.id];
-                const hasData = d && (d.dentRange && d.dentRange !== 'None' || d.replacements.length > 0 || d.note.trim() || d.mirrorOverlap || d.oversize);
+                const hasData = d && (d.dentRange && d.dentRange !== 'None' || d.replacements.length > 0 || d.note.trim() || d.mirrorOverlap || d.oversize || d.repairHours);
                 return (
                   <button
                     key={p.id}
@@ -3208,9 +3281,10 @@ function ScopeSummaryScreen({
           name: scopeName.trim() || 'Untitled scope sheet',
           panels: touched.map(({ panel, data }) => ({
             panel: panel.label,
-            dentRange: data.dentRange,
+            // Repair panels are counted in labor hours, saved in the count column as "3.5 hrs".
+            dentRange: data.mode === 'repair' ? (data.repairHours ? `${data.repairHours} hrs` : '') : data.dentRange,
             mode: data.mode,
-            replacements: effectiveReplacements(panel, data),
+            replacements: autoNotesFor(panel, data),
             note: data.note,
             oversize: data.oversize,
           })),
@@ -3307,8 +3381,14 @@ function ScopeSummaryScreen({
                 <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: "'IBM Plex Mono', monospace" }}>edit ›</div>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, fontSize: 12 }}>
-                {data.dentRange && data.dentRange !== 'None' && (
-                  <span style={{ background: 'var(--gold-soft)', color: 'var(--gold)', padding: '3px 8px', borderRadius: 6 }}>{data.dentRange} dents</span>
+                {data.mode === 'repair' ? (
+                  data.repairHours && (
+                    <span style={{ background: 'var(--gold-soft)', color: 'var(--gold)', padding: '3px 8px', borderRadius: 6 }}>{data.repairHours} hrs</span>
+                  )
+                ) : (
+                  data.dentRange && data.dentRange !== 'None' && (
+                    <span style={{ background: 'var(--gold-soft)', color: 'var(--gold)', padding: '3px 8px', borderRadius: 6 }}>{data.dentRange} dents</span>
+                  )
                 )}
                 {data.oversize && (
                   <span style={{ background: 'var(--gold-soft)', color: 'var(--gold)', padding: '3px 8px', borderRadius: 6 }}>{data.oversize} O.S</span>
@@ -3316,15 +3396,11 @@ function ScopeSummaryScreen({
                 {data.mode && (
                   <span style={{ background: 'var(--input-bg)', color: 'var(--text2)', padding: '3px 8px', borderRadius: 6 }}>{data.mode.toUpperCase()}</span>
                 )}
-                {effectiveReplacements(panel, data).map(r => {
-                  const hasRR = !!REPLACEMENT_CIRCLES[panel.id]?.[r]?.rr;
-                  const mode = data.replacementModes[r] === 'rr' ? 'R&R' : 'R&I';
-                  return (
-                    <span key={r} style={{ background: 'var(--input-bg)', color: 'var(--text2)', padding: '3px 8px', borderRadius: 6 }}>
-                      {r}{hasRR ? ` (${mode})` : ''}{panel.isFrontDoor && data.mirrorOverlap && MIRROR_OVERLAP_ITEMS.includes(r) && !data.replacements.includes(r) ? ' (mirror overlap)' : ''}
-                    </span>
-                  );
-                })}
+                {effectiveReplacements(panel, data).map(r => (
+                  <span key={r} style={{ background: 'var(--input-bg)', color: 'var(--text2)', padding: '3px 8px', borderRadius: 6 }}>
+                    {partActionLine(r, data)}{panel.isFrontDoor && data.mirrorOverlap && MIRROR_OVERLAP_ITEMS.includes(r) && !data.replacements.includes(r) ? ' (mirror overlap)' : ''}
+                  </span>
+                ))}
               </div>
               {data.note.trim() && (
                 <div style={{ fontSize: 12.5, color: 'var(--text3)', marginTop: 8, fontStyle: 'italic' }}>{data.note}</div>
