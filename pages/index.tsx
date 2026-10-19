@@ -2387,6 +2387,31 @@ async function renderFilledScopeCanvas(fillData: Record<string, FillPanelData>, 
   return canvas;
 }
 
+// Opens the print dialog for the blank template. Touch devices (phones) don't
+// reliably print a PDF from a hidden iframe — it can print the whole app page
+// instead — so there it opens the PDF in a new tab where the viewer's own
+// print/share menu works.
+function printScopeSheetTemplate() {
+  const url = '/scope-sheet-template.pdf';
+  if (window.matchMedia('(pointer: coarse)').matches) {
+    window.open(url, '_blank');
+    return;
+  }
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
+  iframe.src = url;
+  iframe.onload = () => {
+    try {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+    } catch {
+      window.open(url, '_blank');
+    }
+    setTimeout(() => iframe.remove(), 60000);
+  };
+  document.body.appendChild(iframe);
+}
+
 async function downloadFilledScopePdf(fillData: Record<string, FillPanelData>, fileName: string, headerInfo?: HeaderInfo) {
   const [{ PDFDocument, rgb }, bytes] = await Promise.all([
     import('pdf-lib'),
@@ -2866,6 +2891,18 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
               >
                 Download Blank
               </a>
+              <button
+                onClick={printScopeSheetTemplate}
+                style={{
+                  flex: 1, textAlign: 'center',
+                  padding: '11px 16px', borderRadius: 9,
+                  background: 'var(--card)', color: 'var(--text2)',
+                  border: '1px solid var(--brd)', fontFamily: "'Public Sans', sans-serif",
+                  fontWeight: 700, fontSize: 13.5, cursor: 'pointer',
+                }}
+              >
+                Print
+              </button>
               <button
                 onClick={() => setMode('header')}
                 style={{
