@@ -2078,6 +2078,7 @@ interface FillPanelDef {
   label: string;
   replacementOptions: string[];
   isFrontDoor?: boolean;
+  truckOnly?: boolean;
 }
 
 // Replacement option labels match the printed lines on scope-sheet-template.pdf
@@ -2099,9 +2100,11 @@ const FILL_PANELS: FillPanelDef[] = [
   { id: 'lt-rear-door', label: 'LT Rear Door', replacementOptions: DOOR_REAR_OPTIONS },
   { id: 'lt-quarter', label: 'LT Quarter Panel', replacementOptions: QUARTER_OPTIONS },
   { id: 'lt-rail', label: 'LT Rail', replacementOptions: [] },
+  { id: 'lt-cab', label: 'LT Cab Corner', replacementOptions: [], truckOnly: true },
   { id: 'roof', label: 'Roof', replacementOptions: ['R&I Antenna', 'R&I Luggage Rack', 'R&I High Mount Lamp', 'R&I Back Glass', 'R&I LT Roof Mldg', 'R&I RT Roof Mldg', 'R&I Cowl LT/RT'] },
   { id: 'lift-gate', label: 'Lift Gate', replacementOptions: ['R&I Spoiler'] },
   { id: 'rt-rail', label: 'RT Rail', replacementOptions: [] },
+  { id: 'rt-cab', label: 'RT Cab Corner', replacementOptions: [], truckOnly: true },
   { id: 'rt-quarter', label: 'RT Quarter Panel', replacementOptions: QUARTER_OPTIONS },
   { id: 'rt-rear-door', label: 'RT Rear Door', replacementOptions: DOOR_REAR_OPTIONS },
   { id: 'rt-front-door', label: 'RT Front Door', replacementOptions: DOOR_FULL_OPTIONS, isFrontDoor: true },
@@ -2173,6 +2176,9 @@ const SCOPE_OVERLAY_POINTS: Record<string, { x: number; y: number }> = {
   'lt-front-door': { x: 95, y: 425 },
   'lt-rail': { x: 182, y: 320 },
   'rt-rail': { x: 395, y: 320 },
+  // Cab corners (trucks only) sit just under the printed LT CAB / RT CAB labels.
+  'lt-cab': { x: 182, y: 190 },
+  'rt-cab': { x: 396, y: 190 },
   'roof': { x: 300, y: 360 },
   'rt-front-door': { x: 508, y: 425 },
   'lt-rear-door': { x: 95, y: 270 },
@@ -2515,11 +2521,15 @@ function submissionToFillData(panels: SubmissionPanelRow[]): Record<string, Fill
   return out;
 }
 
-function ScopeSheetModal({ onClose }: { onClose: () => void }) {
+function ScopeSheetModal({ onClose, initialVehicleType }: { onClose: () => void; initialVehicleType: VehicleType | null }) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [mode, setMode] = useState<'history' | 'view' | 'fill' | 'summary' | 'past' | 'header'>('history');
   const [fillIndex, setFillIndex] = useState(0);
   const [fillData, setFillData] = useState<Record<string, FillPanelData>>({});
+  // Trucks have cab corners on the scope sheet; sedans/SUVs don't. Prefilled
+  // from the vehicle already picked in the main app, but always confirmable here.
+  const [vehicleKind, setVehicleKind] = useState<VehicleType | ''>(initialVehicleType ?? '');
+  const activePanels = FILL_PANELS.filter(p => !p.truckOnly || vehicleKind === 'truck');
   const [showJump, setShowJump] = useState(false);
   const [submissions, setSubmissions] = useState<Submission[] | null>(null);
   const [historyError, setHistoryError] = useState('');
@@ -2573,7 +2583,7 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
     try { localStorage.setItem(FILL_STORAGE_KEY, JSON.stringify(next)); } catch { /* storage unavailable */ }
   };
 
-  const currentPanel = FILL_PANELS[fillIndex];
+  const currentPanel = activePanels[Math.min(fillIndex, activePanels.length - 1)];
   const currentData = fillData[currentPanel?.id] || emptyFillData();
 
   // Functional update — two rapid taps (e.g. picking a dent range then typing
@@ -2599,7 +2609,7 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
   };
 
   const goNext = () => {
-    if (fillIndex < FILL_PANELS.length - 1) setFillIndex(fillIndex + 1);
+    if (fillIndex < activePanels.length - 1) setFillIndex(fillIndex + 1);
     else setMode('summary');
   };
   const goBack = () => {
@@ -2673,7 +2683,7 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
 
           <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 10 }}>
             <button
-              onClick={() => { saveFillData({}); saveHeaderInfo(emptyHeaderInfo()); setFillIndex(0); setMode('view'); }}
+              onClick={() => { saveFillData({}); saveHeaderInfo(emptyHeaderInfo()); setVehicleKind(initialVehicleType ?? ''); setFillIndex(0); setMode('view'); }}
               style={{
                 padding: '13px 16px', borderRadius: 10, fontSize: 14, fontWeight: 700,
                 fontFamily: "'Public Sans', sans-serif", cursor: 'pointer',
@@ -2778,6 +2788,29 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
           </div>
 
           <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {/* Required: trucks get extra Cab Corner panels */}
+            <div>
+              <div style={{ fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", color: 'var(--gold)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6 }}>
+                Vehicle Type (required)
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {([['sedan', 'Sedan'], ['suv', 'SUV'], ['truck', 'Truck']] as const).map(([vt, label]) => (
+                  <button key={vt} onClick={() => setVehicleKind(vt)} style={{
+                    flex: 1, padding: '10px 12px', borderRadius: 9, fontSize: 13.5, fontWeight: 600,
+                    fontFamily: "'Public Sans', sans-serif", cursor: 'pointer',
+                    background: vehicleKind === vt ? 'var(--gold2)' : 'var(--card)',
+                    color: vehicleKind === vt ? 'var(--on-gold)' : 'var(--text2)',
+                    border: vehicleKind === vt ? '1px solid var(--gold2)' : '1px solid var(--brd)',
+                  }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div style={{ fontSize: 11.5, color: 'var(--text3)', marginTop: 6 }}>
+                Trucks add the LT / RT Cab Corner panels.
+              </div>
+            </div>
+
             {HEADER_FIELDS.map(field => (
               <div key={field.key}>
                 <div style={{ fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", color: 'var(--text3)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6 }}>
@@ -2797,14 +2830,16 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
             ))}
 
             <button
-              onClick={() => setMode('fill')}
+              onClick={() => { setFillIndex(0); setMode('fill'); }}
+              disabled={!vehicleKind}
               style={{
                 marginTop: 4, padding: '13px 20px', borderRadius: 10, fontSize: 14, fontWeight: 700,
-                fontFamily: "'Public Sans', sans-serif", cursor: 'pointer',
+                fontFamily: "'Public Sans', sans-serif", cursor: vehicleKind ? 'pointer' : 'not-allowed',
                 background: 'var(--gold2)', color: 'var(--on-gold)', border: '1px solid var(--gold2)',
+                opacity: vehicleKind ? 1 : 0.45,
               }}
             >
-              Continue to Panels
+              {vehicleKind ? 'Continue to Panels' : 'Pick a vehicle type to continue'}
             </button>
           </div>
         </div>
@@ -2924,7 +2959,7 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
 
   // ── Summary mode: review everything entered, submit ─────────────────────
   if (mode === 'summary') {
-    const touched = FILL_PANELS
+    const touched = activePanels
       .map(p => ({ panel: p, data: fillData[p.id] }))
       .filter(({ data }) => data && (data.dentRange && data.dentRange !== 'None' || data.replacements.length > 0 || data.note.trim() || data.mirrorOverlap || data.oversize || data.repairHours));
 
@@ -2934,7 +2969,7 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
         headerInfo={headerInfo}
         onClose={onClose}
         onBackToFill={() => { setFillIndex(0); setMode('fill'); }}
-        onEditPanel={(idx) => { setFillIndex(idx); setMode('fill'); }}
+        onEditPanel={(idx) => { const id = FILL_PANELS[idx]?.id; setFillIndex(Math.max(0, activePanels.findIndex(p => p.id === id))); setMode('fill'); }}
         onStartOver={() => { saveFillData({}); setFillIndex(0); setMode('fill'); }}
       />
     );
@@ -2967,7 +3002,7 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
             padding: '5px 10px', cursor: 'pointer', letterSpacing: 0.5,
           }}
         >
-          {fillIndex + 1} / {FILL_PANELS.length} · Jump
+          {fillIndex + 1} / {activePanels.length} · Jump
         </button>
       </div>
 
@@ -2975,7 +3010,7 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
       <div style={{ height: 3, background: 'var(--brd)', flexShrink: 0 }}>
         <div style={{
           height: '100%', background: 'var(--gold2)', transition: 'width .2s',
-          width: `${((fillIndex + 1) / FILL_PANELS.length) * 100}%`,
+          width: `${((fillIndex + 1) / activePanels.length) * 100}%`,
         }} />
       </div>
 
@@ -3206,7 +3241,7 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
             background: 'var(--gold2)', color: 'var(--on-gold)', border: '1px solid var(--gold2)',
           }}
         >
-          {fillIndex < FILL_PANELS.length - 1 ? 'Next' : 'Review'}
+          {fillIndex < activePanels.length - 1 ? 'Next' : 'Review'}
         </button>
       </div>
 
@@ -3231,7 +3266,7 @@ function ScopeSheetModal({ onClose }: { onClose: () => void }) {
               Jump to panel
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              {FILL_PANELS.map((p, idx) => {
+              {activePanels.map((p, idx) => {
                 const d = fillData[p.id];
                 const hasData = d && (d.dentRange && d.dentRange !== 'None' || d.replacements.length > 0 || d.note.trim() || d.mirrorOverlap || d.oversize || d.repairHours);
                 return (
@@ -5266,7 +5301,7 @@ export default function Home() {
         {/* ── PDF to JPG Modal ── */}
         {showPdfModal && <PdfToJpgModal onClose={() => setShowPdfModal(false)} />}
 
-        {showScopeSheetModal && <ScopeSheetModal onClose={() => setShowScopeSheetModal(false)} />}
+        {showScopeSheetModal && <ScopeSheetModal onClose={() => setShowScopeSheetModal(false)} initialVehicleType={vehicleType} />}
 
         {/* ── Budget App Gate ── */}
         {showBudgetGate && <BudgetGateModal onClose={() => setShowBudgetGate(false)} />}
