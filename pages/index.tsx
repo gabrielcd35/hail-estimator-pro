@@ -2091,6 +2091,8 @@ interface FillPanelDef {
 // aren't a replacement choice, so they're left out entirely.
 const DOOR_FULL_OPTIONS = ['R&I Belt Molding', 'R&I Upper Molding', 'R&I Applique', 'R&I Handle', 'R&I Mirror Assy', 'R&I Bodyside Mldg', 'R&I Mirror Glass', 'R&I Interior Trim'];
 const DOOR_REAR_OPTIONS = ['R&I Belt Molding', 'R&I Upper Molding', 'R&I Applique', 'R&I Handle', 'R&I Bodyside Mldg', 'R&I Interior Trim'];
+// Chips that start out as R&R instead of R&I when tapped on.
+const RR_DEFAULT_ITEMS = ['R&I Belt Molding', 'R&I Upper Molding'];
 const QUARTER_OPTIONS = ['R&I Rear Lamp', 'R&R Qtr Glass Mldg'];
 
 const FILL_PANELS: FillPanelDef[] = [
@@ -2601,7 +2603,15 @@ function ScopeSheetModal({ onClose, initialVehicleType }: { onClose: () => void;
 
   const toggleReplacement = (item: string) => {
     const has = currentData.replacements.includes(item);
-    updateCurrent({ replacements: has ? currentData.replacements.filter(r => r !== item) : [...currentData.replacements, item] });
+    if (has) {
+      updateCurrent({ replacements: currentData.replacements.filter(r => r !== item) });
+    } else {
+      // Door moldings are almost always replaced, so they start out as R&R
+      // (still switchable back to R&I with the toggle).
+      const patch: Partial<FillPanelData> = { replacements: [...currentData.replacements, item] };
+      if (RR_DEFAULT_ITEMS.includes(item)) patch.replacementModes = { ...(currentData.replacementModes || {}), [item]: 'rr' };
+      updateCurrent(patch);
+    }
   };
 
   const setReplacementMode = (item: string, mode: 'ri' | 'rr') => {
