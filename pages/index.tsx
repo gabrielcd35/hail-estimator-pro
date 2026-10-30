@@ -2270,9 +2270,9 @@ const REPLACEMENT_CIRCLES: Record<string, Record<string, ItemCircles>> = {
   },
 };
 
-// Mirror overlap auto-implies these two real form lines get circled too,
+// Mirror overlap auto-implies these real form lines get circled too,
 // even if the adjuster didn't also tap them as separate replacement chips.
-const MIRROR_OVERLAP_ITEMS = ['R&I Mirror Assy', 'R&I Mirror Glass', 'R&I Interior Trim'];
+const MIRROR_OVERLAP_ITEMS = ['R&I Mirror Assy', 'R&I Interior Trim'];
 
 function effectiveReplacements(panel: FillPanelDef, data: FillPanelData): string[] {
   const set = new Set(data.replacements);
@@ -3168,7 +3168,7 @@ function ScopeSheetModal({ onClose, initialVehicleType }: { onClose: () => void;
             <div>
               <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>Mirror overlap</div>
               <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>
-                Automatically adds R&I Mirror Assy, R&I Mirror Glass, and R&I Interior Trim to the final scope.
+                Automatically adds R&I Mirror Assy and R&I Interior Trim to the final scope.
               </div>
             </div>
           </label>
@@ -3178,7 +3178,7 @@ function ScopeSheetModal({ onClose, initialVehicleType }: { onClose: () => void;
             fontSize: 12, color: 'var(--gold)', background: 'var(--gold-soft)',
             border: '1px solid var(--gold2)', borderRadius: 8, padding: '8px 12px',
           }}>
-            ✓ Auto-added: R&I Mirror Assy, R&I Mirror Glass, R&I Interior Trim
+            ✓ Auto-added: R&I Mirror Assy, R&I Interior Trim
           </div>
         )}
 
