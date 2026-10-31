@@ -2135,6 +2135,8 @@ const emptyFillData = (): FillPanelData => ({ dentRange: '', mode: '', replaceme
 
 const FILL_STORAGE_KEY = 'hep-scope-fill-v1';
 const HEADER_STORAGE_KEY = 'hep-scope-header-v1';
+// iOS Safari zooms the page on focus when an input's font is smaller than 16px.
+const IOS_INPUT_FONT = 16;
 
 const LABEL_TO_ID: Record<string, string> = Object.fromEntries(FILL_PANELS.map(p => [p.label, p.id]));
 
@@ -2832,7 +2834,7 @@ function ScopeSheetModal({ onClose, initialVehicleType }: { onClose: () => void;
                   onChange={e => saveHeaderInfo({ ...headerInfo, [field.key]: e.target.value })}
                   style={{
                     width: '100%', borderRadius: 9, border: '1px solid var(--brd)',
-                    background: 'var(--card)', color: 'var(--text)', padding: '10px 12px', fontSize: 14,
+                    background: 'var(--card)', color: 'var(--text)', padding: '10px 12px', fontSize: IOS_INPUT_FONT,
                     fontFamily: "'Public Sans', sans-serif",
                   }}
                 />
@@ -3064,7 +3066,7 @@ function ScopeSheetModal({ onClose, initialVehicleType }: { onClose: () => void;
               placeholder="e.g. 3.5"
               style={{
                 width: '100%', borderRadius: 9, border: '1px solid var(--brd)',
-                background: 'var(--card)', color: 'var(--text)', padding: '11px 12px', fontSize: 14,
+                background: 'var(--card)', color: 'var(--text)', padding: '11px 12px', fontSize: IOS_INPUT_FONT,
                 fontFamily: "'Public Sans', sans-serif",
               }}
             />
@@ -3157,7 +3159,7 @@ function ScopeSheetModal({ onClose, initialVehicleType }: { onClose: () => void;
             placeholder="1–30"
             style={{
               width: '100%', borderRadius: 9, border: '1px solid var(--brd)',
-              background: 'var(--card)', color: 'var(--text)', padding: '11px 12px', fontSize: 14,
+              background: 'var(--card)', color: 'var(--text)', padding: '11px 12px', fontSize: IOS_INPUT_FONT,
               fontFamily: "'Public Sans', sans-serif",
             }}
           />
@@ -3217,7 +3219,7 @@ function ScopeSheetModal({ onClose, initialVehicleType }: { onClose: () => void;
             rows={3}
             style={{
               width: '100%', borderRadius: 9, border: '1px solid var(--brd)',
-              background: 'var(--card)', color: 'var(--text)', padding: 12, fontSize: 13.5,
+              background: 'var(--card)', color: 'var(--text)', padding: 12, fontSize: IOS_INPUT_FONT,
               fontFamily: "'Public Sans', sans-serif", resize: 'vertical',
             }}
           />
@@ -3408,7 +3410,7 @@ function ScopeSummaryScreen({
               placeholder="e.g. 2021 Silverado — Claim #12345"
               style={{
                 width: '100%', borderRadius: 9, border: '1px solid var(--brd)',
-                background: 'var(--card)', color: 'var(--text)', padding: '11px 12px', fontSize: 14,
+                background: 'var(--card)', color: 'var(--text)', padding: '11px 12px', fontSize: IOS_INPUT_FONT,
                 fontFamily: "'Public Sans', sans-serif",
               }}
             />
