@@ -3518,6 +3518,20 @@ function ScopeSummaryScreen({
         }}>
           {readOnly ? 'Back to History' : 'Start Over'}
         </button>
+        {touched.length > 0 && (
+          <button
+            onClick={handleDownload}
+            disabled={downloading}
+            style={{
+              padding: '13px 14px', borderRadius: 10, fontSize: 13.5, fontWeight: 700,
+              fontFamily: "'Public Sans', sans-serif", cursor: downloading ? 'wait' : 'pointer',
+              background: 'var(--card)', color: 'var(--gold)', border: '1px solid var(--gold-brd)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {downloading ? 'Building…' : '⬇ PDF'}
+          </button>
+        )}
         {!readOnly && (
           <button
             onClick={handleSubmit}
