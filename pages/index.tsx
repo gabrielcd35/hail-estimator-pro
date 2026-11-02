@@ -4913,9 +4913,9 @@ export default function Home() {
             )}
           </div>
 
-          {/* Estimate Assistant (guided) button */}
+          {/* Scope Sheet (printable template) button */}
           <button
-            onClick={() => setShowAssistModal(true)}
+            onClick={() => setShowScopeSheetModal(true)}
             style={{
               marginLeft: 'auto', flexShrink: 0,
               fontFamily: "'IBM Plex Mono', monospace", fontSize: 11,
@@ -4924,35 +4924,7 @@ export default function Home() {
               cursor: 'pointer', transition: 'all .15s', whiteSpace: 'nowrap', fontWeight: 600,
             }}
           >
-            Estimate Assistant
-          </button>
-
-          {/* Scope Sheet (printable template) button */}
-          <button
-            onClick={() => setShowScopeSheetModal(true)}
-            style={{
-              flexShrink: 0,
-              fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: 'var(--text2)',
-              background: 'none', letterSpacing: 0.5,
-              padding: '6px 12px', border: '1px solid var(--brd)', borderRadius: 8,
-              cursor: 'pointer', transition: 'all .15s', whiteSpace: 'nowrap',
-            }}
-          >
             Scope Sheet
-          </button>
-
-          {/* Scan Scope Sheet button */}
-          <button
-            onClick={() => setShowScopeModal(true)}
-            style={{
-              flexShrink: 0,
-              fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: 'var(--text2)',
-              background: 'none', letterSpacing: 0.5,
-              padding: '6px 12px', border: '1px solid var(--brd)', borderRadius: 8,
-              cursor: 'pointer', transition: 'all .15s', whiteSpace: 'nowrap',
-            }}
-          >
-            Scan Scope Sheet
           </button>
 
           {/* Hail History button */}
