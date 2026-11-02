@@ -2105,12 +2105,12 @@ const FILL_PANELS: FillPanelDef[] = [
   { id: 'lt-cab', label: 'LT Cab Corner', replacementOptions: [], truckOnly: true },
   { id: 'roof', label: 'Roof', replacementOptions: ['R&I Antenna', 'R&I Luggage Rack', 'R&I High Mount Lamp', 'R&I Back Glass', 'R&I LT Roof Mldg', 'R&I RT Roof Mldg', 'R&I Cowl LT/RT'] },
   { id: 'lift-gate', label: 'Lift Gate', replacementOptions: ['R&I Spoiler'] },
-  { id: 'rt-rail', label: 'RT Rail', replacementOptions: [] },
-  { id: 'rt-cab', label: 'RT Cab Corner', replacementOptions: [], truckOnly: true },
   { id: 'rt-quarter', label: 'RT Quarter Panel', replacementOptions: QUARTER_OPTIONS },
   { id: 'rt-rear-door', label: 'RT Rear Door', replacementOptions: DOOR_REAR_OPTIONS },
   { id: 'rt-front-door', label: 'RT Front Door', replacementOptions: DOOR_FULL_OPTIONS, isFrontDoor: true },
   { id: 'rt-fender', label: 'RT Fender', replacementOptions: ['R&I Front Lamp'] },
+  { id: 'rt-rail', label: 'RT Rail', replacementOptions: [] },
+  { id: 'rt-cab', label: 'RT Cab Corner', replacementOptions: [], truckOnly: true },
 ];
 
 const DENT_RANGES = ['None', '1-5', '6-15', '16-30', '31-50', '51-75', '76-100', '101-150', '151-200', '201-300', '301+'];
@@ -3111,7 +3111,7 @@ function ScopeSheetModal({ onClose, initialVehicleType }: { onClose: () => void;
                     background: selected ? 'var(--gold-soft)' : 'var(--card)',
                     color: selected ? 'var(--gold)' : 'var(--text2)',
                   }}>
-                    {item}
+                    {item.replace(/^R&[IR] /, '')}
                   </button>
                   {selected && hasRR && (
                     <>
@@ -4657,8 +4657,8 @@ export default function Home() {
           /* ── Dark theme (default) ── */
           :root {
             --bg: #0a1526;
-            --panel-bg: #0c1727;
-            --header-bg: #081120;
+            --panel-bg: rgba(10,20,36,.55);
+            --header-bg: rgba(8,17,32,.62);
             --card: rgba(255,255,255,.04);
             --brd: rgba(255,255,255,.10);
             --brd-2: rgba(255,255,255,.17);
@@ -4743,12 +4743,46 @@ export default function Home() {
           ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.14); border-radius: 4px; }
           [data-theme="light"] ::-webkit-scrollbar-thumb { background: rgba(15,34,64,.2); }
           @keyframes hepFadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+          /* ── Premium ambient layer ── */
+          .hep-root { position: relative; isolation: isolate; }
+          .hep-root main, .hep-root > div:has(> main) { background: transparent !important; }
+          .hep-bg { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+          .hep-orb { position: absolute; border-radius: 50%; filter: blur(90px); will-change: transform; }
+          .hep-orb.o1 { width: 620px; height: 620px; top: -220px; left: -160px; background: radial-gradient(circle, rgba(224,182,74,.50), transparent 68%); animation: hepDrift1 22s ease-in-out infinite; }
+          .hep-orb.o2 { width: 700px; height: 700px; bottom: -260px; right: -200px; background: radial-gradient(circle, rgba(46,110,255,.48), transparent 68%); animation: hepDrift2 28s ease-in-out infinite; }
+          .hep-orb.o3 { width: 440px; height: 440px; top: 38%; left: 46%; background: radial-gradient(circle, rgba(150,70,255,.32), transparent 70%); animation: hepDrift3 32s ease-in-out infinite; }
+          .hep-grid { position: absolute; inset: 0;
+            background-image: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+            background-size: 44px 44px;
+            -webkit-mask-image: radial-gradient(ellipse at 50% 30%, #000 10%, transparent 75%); mask-image: radial-gradient(ellipse at 50% 30%, #000 10%, transparent 75%); }
+          .hep-vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 45%, rgba(2,6,14,.55) 100%); }
+          [data-theme="light"] .hep-orb { opacity: .35; }
+          [data-theme="light"] .hep-grid { background-image: linear-gradient(rgba(15,34,64,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(15,34,64,.06) 1px, transparent 1px); }
+          [data-theme="light"] .hep-vignette { display: none; }
+          @keyframes hepDrift1 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(140px,110px) scale(1.15); } }
+          @keyframes hepDrift2 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-160px,-90px) scale(1.12); } }
+          @keyframes hepDrift3 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-120px,80px); } }
+          @keyframes hepSheen { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
+          @keyframes hepPulse { 0%,100% { box-shadow: 0 0 14px rgba(224,182,74,.35), 0 0 0 0 rgba(224,182,74,.25); } 50% { box-shadow: 0 0 26px rgba(224,182,74,.65), 0 0 0 6px rgba(224,182,74,0); } }
+          .hep-root > header { backdrop-filter: blur(18px) saturate(160%); -webkit-backdrop-filter: blur(18px) saturate(160%);
+            border-bottom: 1px solid var(--gold-brd) !important; box-shadow: 0 1px 0 rgba(224,182,74,.5), 0 10px 40px -10px rgba(224,182,74,.35); position: relative; }
+          .hep-root > header::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
+            background: linear-gradient(90deg, transparent, #ffe9a8, transparent); background-size: 50% 100%; background-repeat: no-repeat; animation: hepSheenLine 6s linear infinite; }
+          @keyframes hepSheenLine { 0% { background-position: -50% 0; } 100% { background-position: 150% 0; } }
+          .hep-root button { transition: transform .18s ease, box-shadow .2s ease, border-color .2s ease, background .2s ease, filter .2s ease; }
+          .hep-root button:not(:disabled):hover { transform: translateY(-1px); border-color: var(--gold-brd) !important; box-shadow: 0 6px 22px -6px rgba(224,182,74,.55); }
+          .hep-root button:not(:disabled):active { transform: translateY(0) scale(.98); }
+          .hep-root header button[style*="gold2"] { background: linear-gradient(120deg, #c8971a, #f2cd62, #c8971a) !important; background-size: 200% 100% !important; animation: hepSheen 4s linear infinite, hepPulse 3s ease-in-out infinite; border-color: #f2cd62 !important; }
+          .hep-root button[style*="gold2"]:not(header button):hover { filter: brightness(1.08); }
+          [data-theme="dark"] .hep-glass, [data-theme="dark"] .hep-root > div:not(.hep-bg) > aside { backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+          [data-theme="dark"] button[style*="border-radius: 12"], [data-theme="dark"] button[style*="border-radius: 14"] { box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 8px 30px -14px rgba(0,0,0,.7); }
+          @media (prefers-reduced-motion: reduce) { .hep-orb, .hep-root header::after, .hep-root header button { animation: none !important; } }
           input::placeholder { color: var(--text3); }
           input:focus { outline: none; border-color: var(--gold2) !important; box-shadow: 0 0 0 3px var(--gold-soft); }
         `}</style>
       </Head>
 
-      <div data-theme={theme} style={{
+      <div data-theme={theme} className="hep-root" style={{
         minHeight: '100vh',
         maxHeight: '100vh',
         background: 'var(--bg)',
@@ -4758,6 +4792,10 @@ export default function Home() {
         flexDirection: 'column',
         overflow: 'hidden',
       }}>
+        <div className="hep-bg" aria-hidden="true">
+          <div className="hep-orb o1" /><div className="hep-orb o2" /><div className="hep-orb o3" />
+          <div className="hep-grid" /><div className="hep-vignette" />
+        </div>
 
         {/* ── Header ── */}
         <header style={{
