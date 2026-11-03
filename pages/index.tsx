@@ -2113,7 +2113,7 @@ const FILL_PANELS: FillPanelDef[] = [
   { id: 'rt-cab', label: 'RT Cab Corner', replacementOptions: [], truckOnly: true },
 ];
 
-const DENT_RANGES = ['None', '1-5', '6-15', '16-30', '31-50', '51-75', '76-100', '101-150', '151-200', '201-300', '301+'];
+const DENT_RANGES = ['None', '1-5', '6-15', '16-30', '31-50', '51-75', '76-100', '101-150', '151-200', '201-300', '301+', 'PDR MAX'];
 const REPAIR_MODES: { value: 'pdr' | 'repair' | 'rr'; label: string }[] = [
   { value: 'pdr', label: 'PDR' },
   { value: 'repair', label: 'Repair' },
@@ -3471,7 +3471,7 @@ function ScopeSummaryScreen({
                   )
                 ) : (
                   data.dentRange && data.dentRange !== 'None' && (
-                    <span style={{ background: 'var(--gold-soft)', color: 'var(--gold)', padding: '3px 8px', borderRadius: 6 }}>{data.dentRange} dents</span>
+                    <span style={{ background: 'var(--gold-soft)', color: 'var(--gold)', padding: '3px 8px', borderRadius: 6 }}>{data.dentRange === 'PDR MAX' ? 'PDR MAX' : `${data.dentRange} dents`}</span>
                   )
                 )}
                 {data.oversize && (
