@@ -2323,6 +2323,7 @@ function autoNotesFor(panel: FillPanelDef, data: FillPanelData): string[] {
 // Draws the entered dent ranges + oversize counts onto a rendered copy of
 // the scope sheet template — used for both the in-app preview and as the
 // source canvas for the downloadable filled PDF.
+const NOTE_STAR_CSS = '#1a59e6';
 async function renderFilledScopeCanvas(fillData: Record<string, FillPanelData>, headerInfo?: HeaderInfo): Promise<HTMLCanvasElement> {
   const pdfjsLib = await import('pdfjs-dist');
   pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
@@ -2361,9 +2362,19 @@ async function renderFilledScopeCanvas(fillData: Record<string, FillPanelData>, 
       if (TIGHT_OVERLAY_PANELS.has(panel.id)) {
         const text = overlayLineFor(data);
         if (text) ctx.fillText(text, x, y);
+        if ((data.note || "").trim()) {
+          ctx.save(); ctx.fillStyle = NOTE_STAR_CSS;
+          ctx.fillText('*', x + ctx.measureText(text).width + 2 * pxPerPt, y);
+          ctx.restore();
+        }
       } else {
         const primary = primaryCountText(data);
         if (primary) ctx.fillText(primary, x, y);
+        if ((data.note || "").trim()) {
+          ctx.save(); ctx.fillStyle = NOTE_STAR_CSS;
+          ctx.fillText('*', x + ctx.measureText(primary).width + 2 * pxPerPt, y);
+          ctx.restore();
+        }
         if (data.oversize) ctx.fillText(`${data.oversize} O.S`, x, y + 11 * pxPerPt);
       }
     }
@@ -2422,14 +2433,16 @@ function printScopeSheetTemplate() {
   document.body.appendChild(iframe);
 }
 
-async function downloadFilledScopePdf(fillData: Record<string, FillPanelData>, fileName: string, headerInfo?: HeaderInfo) {
-  const [{ PDFDocument, rgb }, bytes] = await Promise.all([
+async function downloadFilledScopePdf(fillData: Record<string, FillPanelData>, fileName: string, headerInfo?: HeaderInfo, scopeName = '') {
+  const [{ PDFDocument, StandardFonts, rgb }, bytes] = await Promise.all([
     import('pdf-lib'),
     fetch('/scope-sheet-template.pdf').then(r => r.arrayBuffer()),
   ]);
   const pdfDoc = await PDFDocument.load(bytes);
   const page = pdfDoc.getPages()[0];
   const red = rgb(0.70, 0.137, 0.11);
+  const noteBlue = rgb(0.10, 0.35, 0.90);
+  const starFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
   for (const panel of FILL_PANELS) {
     const data = fillData[panel.id];
@@ -2438,9 +2451,11 @@ async function downloadFilledScopePdf(fillData: Record<string, FillPanelData>, f
       if (TIGHT_OVERLAY_PANELS.has(panel.id)) {
         const text = overlayLineFor(data);
         if (text) page.drawText(text, { x: pos.x, y: pos.y, size: 9, color: red });
+        if ((data.note || "").trim()) page.drawText('*', { x: pos.x + starFont.widthOfTextAtSize(text, 9) + 2, y: pos.y, size: 11, font: starFont, color: noteBlue });
       } else {
         const primary = primaryCountText(data);
         if (primary) page.drawText(primary, { x: pos.x, y: pos.y, size: 9, color: red });
+        if ((data.note || "").trim()) page.drawText('*', { x: pos.x + starFont.widthOfTextAtSize(primary, 9) + 2, y: pos.y, size: 11, font: starFont, color: noteBlue });
         if (data.oversize) page.drawText(`${data.oversize} O.S`, { x: pos.x, y: pos.y - 11, size: 9, color: red });
       }
     }
@@ -2465,6 +2480,59 @@ async function downloadFilledScopePdf(fillData: Record<string, FillPanelData>, f
     }
   }
 
+
+  // Page 2+: typed notes per panel, only when at least one panel has a note.
+  const notePanels = FILL_PANELS
+    .map(p => ({ label: p.label, note: (fillData[p.id]?.note || '').trim() }))
+    .filter(n => n.note);
+  if (notePanels.length > 0) {
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const ink = rgb(0.1, 0.1, 0.12);
+    const gray = rgb(0.4, 0.42, 0.46);
+    const safe = (s: string) => s.replace(/[^\x20-\x7E\xA0-\xFF\n]/g, '?');
+    const L = 54, R = 558, TOP = 738, BOTTOM = 60, SIZE = 11, LEAD = 15;
+    const wrap = (text: string, f: typeof font, size: number, maxW: number) => {
+      const lines: string[] = [];
+      for (const para of safe(text).split('\n')) {
+        let line = '';
+        for (const word of para.split(/\s+/).filter(Boolean)) {
+          const test = line ? `${line} ${word}` : word;
+          if (f.widthOfTextAtSize(test, size) <= maxW) { line = test; continue; }
+          if (line) lines.push(line);
+          line = word;
+        }
+        lines.push(line);
+      }
+      return lines;
+    };
+    const subtitle = [headerInfo?.year, headerInfo?.make, headerInfo?.model].filter(Boolean).join(' ');
+    let np = pdfDoc.addPage([612, 792]);
+    let y = TOP;
+    const drawTitle = (cont: boolean) => {
+      np.drawText(cont ? 'Scope Notes (cont.)' : 'Scope Notes', { x: L, y, size: 18, font: bold, color: ink });
+      y -= 18;
+      const sub = safe([scopeName, subtitle].filter(Boolean).join('  -  '));
+      if (sub) { np.drawText(sub, { x: L, y, size: 10, font, color: gray }); y -= 8; }
+      np.drawLine({ start: { x: L, y }, end: { x: R, y }, thickness: 1, color: red });
+      y -= 24;
+    };
+    drawTitle(false);
+    for (const n of notePanels) {
+      const lines = wrap(n.note, font, SIZE, R - L);
+      let i = 0;
+      // keep the panel heading with at least its first note line
+      if (y - 18 - LEAD < BOTTOM) { np = pdfDoc.addPage([612, 792]); y = TOP; drawTitle(true); }
+      np.drawText(safe(n.label), { x: L, y, size: 12, font: bold, color: red });
+      y -= 18;
+      while (i < lines.length) {
+        if (y < BOTTOM) { np = pdfDoc.addPage([612, 792]); y = TOP; drawTitle(true); }
+        np.drawText(lines[i], { x: L, y, size: SIZE, font, color: ink });
+        y -= LEAD; i++;
+      }
+      y -= 12;
+    }
+  }
   const outBytes = await pdfDoc.save();
   const blob = new Blob([outBytes], { type: 'application/pdf' });
   const a = document.createElement('a');
@@ -3347,7 +3415,7 @@ function ScopeSummaryScreen({
   const handleDownload = async () => {
     setDownloading(true);
     try {
-      await downloadFilledScopePdf(fillDataMap, 'HEP Scope Sheet (Filled).pdf', headerInfo);
+      await downloadFilledScopePdf(fillDataMap, 'HEP Scope Sheet (Filled).pdf', headerInfo, scopeName.trim());
     } finally {
       setDownloading(false);
     }
