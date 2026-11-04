@@ -3415,7 +3415,8 @@ function ScopeSummaryScreen({
   const handleDownload = async () => {
     setDownloading(true);
     try {
-      await downloadFilledScopePdf(fillDataMap, 'HEP Scope Sheet (Filled).pdf', headerInfo, scopeName.trim());
+      const cleanName = scopeName.replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, ' ').trim();
+      await downloadFilledScopePdf(fillDataMap, cleanName ? `${cleanName}.pdf` : 'HEP Scope Sheet (Filled).pdf', headerInfo, scopeName.trim());
     } finally {
       setDownloading(false);
     }
