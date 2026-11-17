@@ -2096,14 +2096,14 @@ const RR_DEFAULT_ITEMS = ['R&I Belt Molding', 'R&I Upper Molding'];
 const QUARTER_OPTIONS = ['R&I Rear Lamp', 'R&R Qtr Glass Mldg'];
 
 const FILL_PANELS: FillPanelDef[] = [
-  { id: 'hood', label: 'Hood', replacementOptions: ['R&I Hood', 'R&I Emblem'] },
+  { id: 'hood', label: 'Hood', replacementOptions: ['R&I Hood', 'R&I Emblem', 'R&I Windshield'] },
   { id: 'lt-fender', label: 'LT Fender', replacementOptions: ['R&I Front Lamp'] },
   { id: 'lt-front-door', label: 'LT Front Door', replacementOptions: DOOR_FULL_OPTIONS, isFrontDoor: true },
   { id: 'lt-rear-door', label: 'LT Rear Door', replacementOptions: DOOR_REAR_OPTIONS },
   { id: 'lt-quarter', label: 'LT Quarter Panel', replacementOptions: QUARTER_OPTIONS },
   { id: 'lt-rail', label: 'LT Rail', replacementOptions: [] },
   { id: 'lt-cab', label: 'LT Cab Corner', replacementOptions: [], truckOnly: true },
-  { id: 'roof', label: 'Roof', replacementOptions: ['R&I Antenna', 'R&I Luggage Rack', 'R&I High Mount Lamp', 'R&I Back Glass', 'R&I LT Roof Mldg', 'R&I RT Roof Mldg', 'R&I Cowl LT/RT'] },
+  { id: 'roof', label: 'Roof', replacementOptions: ['R&I Sunroof Frame', 'R&I Antenna', 'R&I Luggage Rack', 'R&I High Mount Lamp', 'R&I Back Glass', 'R&I LT Roof Mldg', 'R&I RT Roof Mldg', 'R&I Cowl LT/RT'] },
   { id: 'lift-gate', label: 'Lift Gate', replacementOptions: ['R&I Spoiler'] },
   { id: 'rt-quarter', label: 'RT Quarter Panel', replacementOptions: QUARTER_OPTIONS },
   { id: 'rt-rear-door', label: 'RT Rear Door', replacementOptions: DOOR_REAR_OPTIONS },
@@ -2245,6 +2245,11 @@ const REPLACEMENT_CIRCLES: Record<string, Record<string, ItemCircles>> = {
     'R&I Insulator': { ri: wordCircle(184, 490) },
     'R&I Emblem': { ri: wordCircle(184, 479), rr: wordCircle(237, 479) },
     'R&I Front Bumper': { ri: wordCircle(184, 468) },
+    // Windshield box printed beside the hood: "R&I   R&R" on one line (tight gap, so smaller circles).
+    'R&I Windshield': {
+      ri: { cx: 362.2, cy: 525, rx: 10, ry: 7.5 },
+      rr: { cx: 387.1, cy: 525, rx: 10, ry: 7.5 },
+    },
   },
   'lt-fender': FENDER_CIRCLES_LT,
   'rt-fender': mirrorSet(FENDER_CIRCLES_LT),
